@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NullKey AI – Instructions v1.2</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: #eee;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        h1, h2 {
+            color: #0f0;
+        }
+        pre {
+            background: #222;
+            padding: 1rem;
+            overflow-x: auto;
+            border-left: 5px solid #0f0;
+        }
+        .tagline {
+            font-style: italic;
+            color: #9f9;
+        }
+    </style>
+</head>
+<body>
+
+<h1>🔑 NullKey AI — Modular Clipboard Keyboard System</h1>
+<p class="tagline">“The voice of your vault. The memory of your mind.”</p>
+<p><strong>Version:</strong> 1.2<br>
+<strong>Package:</strong> com.nullverse.nullkeyai<br>
+<strong>Build:</strong> .aab (Google Play compliant)<br>
+<strong>UI:</strong> Jetpack Compose (IME), HTML/CSS (Settings site via WebView)<br>
+<strong>Architecture:</strong> Modular MVVM + Plugin System<br>
+<strong>Status:</strong> IN DEVELOPMENT</p>
+
+<h2>🎯 Purpose</h2>
+<p>NullKey AI is a next-gen keyboard that combines clipboard logging, AI tools, secure vaulting, OCR, tagging, plugin systems, and custom web-based configuration into one powerful, private Android IME.</p>
+
+<h2>🧭 New Features (v1.2)</h2>
+<ul>
+    <li><strong>Trashcan System:</strong> Deleted clips go to Trash, auto-expire after 30 days, manually purgeable.</li>
+    <li><strong>Swipe Actions:</strong> Configurable left/right swipe to Pin, Protect, Delete, or Tag clips.</li>
+    <li><strong>Tags & Categories:</strong> Up to 10 editable user-defined tags. Default: Personal, Work, Coding, Temp, Links.</li>
+    <li><strong>WebView Settings Panel:</strong> Full-screen web settings via assets/settings.html with collapsible UI groups.</li>
+    <li><strong>Upload System:</strong> Upload custom themes (.zip) or plugins (.jar) through web settings UI.</li>
+</ul>
+
+<h2>📁 Directory Structure</h2>
+<pre>
+com.nullverse.nullkeyai/
+├── ime/
+├── clipboard/
+├── vault/
+├── ai/
+├── grammar/
+├── swipe/
+├── ocr/
+├── plugins/
+├── themes/
+├── settingsweb/
+├── db/
+├── ui/
+├── utils/
+</pre>
+
+<h2>🧪 Test Cases</h2>
+<ul>
+    <li>Swiping clip → performs configured action</li>
+    <li>Upload plugin → loads .jar dynamically</li>
+    <li>Upload theme → applies CSS and style.json</li>
+    <li>Trash clips → auto-expire or manually purged</li>
+</ul>
+
+<h2>✅ Dependencies</h2>
+<pre>
+Room, ML Kit, LanguageTool, WebView, Compose
+</pre>
+
+<h2>🔒 Permissions</h2>
+<pre>
+SYSTEM_ALERT_WINDOW, FOREGROUND_SERVICE,
+BIND_ACCESSIBILITY_SERVICE, BIND_INPUT_METHOD,
+CAMERA, READ_EXTERNAL_STORAGE
+</pre>
+
+<h2>🌐 Default Settings</h2>
+<pre>
+tags: [Personal, Work, Coding, Temp, Links]
+swipe_left: trash
+swipe_right: pin
+trash_retention_days: 30
+vault_pin_required: true
+spellcheck_enabled: true
+grammarcheck_enabled: true
+theme: darkvault
+</pre>
+
+<h2>🧬 Identity</h2>
+<ul>
+    <li><strong>App:</strong> NullKey AI</li>
+    <li><strong>Codename:</strong> NullKey</li>
+    <li><strong>Repo:</strong> nullkey-ai-android</li>
+    <li><strong>Color Theme:</strong> neon green, black, slate gray, violet</li>
+</ul>
+
+<h2>✅ Next Steps</h2>
+<ul>
+    <li>Generate settings.html upload interface</li>
+    <li>Scaffold Trash logic</li>
+    <li>Build swipeable clip UI</li>
+    <li>Sync tags/settings.json</li>
+</ul>
+
+</body>
+</html>
