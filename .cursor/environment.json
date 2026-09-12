@@ -1,0 +1,16 @@
+{
+  "name": "NullKey AI Docs",
+  "terminals": [
+    {
+      "name": "docs-server",
+      "command": "python3 -m http.server 8000",
+      "description": "Serves the static NullKey AI instructions/settings HTML over HTTP at http://localhost:8000 (open instructions_1.2.html)."
+    }
+  ],
+  "ports": [
+    {
+      "name": "docs",
+      "port": 8000
+    }
+  ]
+}
