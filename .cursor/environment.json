@@ -1,0 +1,4 @@
+{
+  "name": "NullKey AI Android",
+  "install": "bash .cursor/install.sh"
+}

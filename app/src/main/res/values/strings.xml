@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">NullKey AI</string>
+    <string name="ime_label">NullKey AI Keyboard</string>
+    <string name="tagline">The voice of your vault. The memory of your mind.</string>
+
+    <string name="enable_keyboard">Enable keyboard</string>
+    <string name="switch_keyboard">Switch keyboard</string>
+    <string name="start_monitor">Start monitor</string>
+    <string name="stop_monitor">Stop monitor</string>
+    <string name="capture_clip">Capture clip</string>
+
+    <string name="search_clips">Search clips…</string>
+    <string name="files_only">Files only</string>
+    <string name="no_clips">No clips yet. Copy something or tap “Capture clip”.</string>
+    <string name="copied">Copied to clipboard</string>
+    <string name="nothing_to_capture">Clipboard is empty</string>
+    <string name="monitor_started">Clipboard monitor started</string>
+    <string name="monitor_stopped">Clipboard monitor stopped</string>
+
+    <string name="monitor_channel_name">Clipboard monitor</string>
+    <string name="monitor_title">NullKey clipboard monitor</string>
+    <string name="monitor_text">Capturing clips in the background</string>
+</resources>
