@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="neon">#00FF6A</color>
+    <color name="violet">#9B7BFF</color>
+    <color name="slate">#8A8F98</color>
+    <color name="background">#111111</color>
+    <color name="text_primary">#EEEEEE</color>
+
+    <color name="kb_background">#0B0B0B</color>
+    <color name="kb_key">#222222</color>
+
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+</resources>

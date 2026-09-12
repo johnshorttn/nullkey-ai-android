@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/kb_background"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="6dp">
+
+        <EditText
+            android:id="@+id/clip_search"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@color/kb_key"
+            android:hint="@string/search_clips"
+            android:inputType="text"
+            android:padding="8dp"
+            android:textColor="@color/neon"
+            android:textColorHint="@color/slate" />
+
+        <CheckBox
+            android:id="@+id/files_only"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:buttonTint="@color/neon"
+            android:text="@string/files_only"
+            android:textColor="@color/neon" />
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/clips_list"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:background="@color/kb_background" />
+
+    <android.inputmethodservice.KeyboardView
+        android:id="@+id/keyboard_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/kb_background"
+        android:keyBackground="@color/kb_key"
+        android:keyTextColor="@color/neon" />
+
+</LinearLayout>
