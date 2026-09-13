@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [ "main", "cursor/**" ]
+    branches: [ "main" ]
   pull_request:
   workflow_dispatch:
 
@@ -73,6 +73,12 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      # Warm the Gradle wrapper distribution and build the (app + test) APKs
+      # before the emulator step, so a transient services.gradle.org hiccup can't
+      # fail the emulator run and the emulator script reuses the cached build.
+      - name: Pre-build app + instrumented test APKs
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
 
       - name: Run instrumented tests on emulator
         uses: reactivecircus/android-emulator-runner@v2
