@@ -52,6 +52,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The API-34 emulator needs ~7.4 GB free for its userdata partition; remove
+      # large preinstalled toolchains we don't use so it can start.
+      - name: Free up disk space
+        run: |
+          echo "Before:"; df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/local/lib/android/sdk/ndk \
+            /usr/local/share/powershell /usr/share/swift || true
+          sudo docker image prune -a -f || true
+          echo "After:"; df -h /
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
