@@ -8,6 +8,13 @@
     <string name="start_monitor">Start monitor</string>
     <string name="stop_monitor">Stop monitor</string>
     <string name="capture_clip">Capture clip</string>
+    <string name="export_clips">Export</string>
+    <string name="import_clips">Import</string>
+    <string name="export_ok">Clips exported</string>
+    <string name="export_failed">Export failed</string>
+    <string name="import_ok">Imported %1$d clip(s)</string>
+    <string name="import_invalid">Not a valid NullKey backup file</string>
+    <string name="import_failed">Import failed</string>
 
     <string name="search_clips">Search clips…</string>
     <string name="files_only">Files only</string>
