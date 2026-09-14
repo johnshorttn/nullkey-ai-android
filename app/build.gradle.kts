@@ -1,8 +1,26 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
 }
+
+// Release signing is sourced from a git-ignored `keystore.properties` (local) or
+// environment variables (CI). No keystore or password is ever committed. When no
+// keystore is configured, `release` stays unsigned so ordinary builds still work.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        FileInputStream(keystorePropertiesFile).use { load(it) }
+    }
+}
+
+fun releaseSigningValue(propKey: String, envKey: String): String? =
+    (keystoreProperties.getProperty(propKey) ?: System.getenv(envKey))?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile: String? = releaseSigningValue("storeFile", "KEYSTORE_FILE")
 
 android {
     namespace = "com.nullverse.nullkeyai"
@@ -19,6 +37,17 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = rootProject.file(releaseStoreFile)
+                storePassword = releaseSigningValue("storePassword", "KEYSTORE_PASSWORD")
+                keyAlias = releaseSigningValue("keyAlias", "KEY_ALIAS")
+                keyPassword = releaseSigningValue("keyPassword", "KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -26,6 +55,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (releaseStoreFile != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 

@@ -14,3 +14,9 @@ build/
 *.aab
 *.keystore
 !debug.keystore
+
+# Release signing secrets (never commit these)
+keystore.properties
+*.jks
+release.keystore
+upload-keystore.jks
