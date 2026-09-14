@@ -49,6 +49,14 @@ interface ClipDao {
     @Query("SELECT * FROM clips WHERE trashedAt IS NOT NULL ORDER BY trashedAt DESC")
     fun trash(): Flow<List<Clip>>
 
+    /** All active clips, oldest first, for export. */
+    @Query("SELECT * FROM clips WHERE trashedAt IS NULL ORDER BY createdAt ASC")
+    suspend fun allActive(): List<Clip>
+
+    /** How many active clips already have this exact content (import de-duplication). */
+    @Query("SELECT COUNT(*) FROM clips WHERE trashedAt IS NULL AND content = :content")
+    suspend fun countByContent(content: String): Int
+
     @Query("UPDATE clips SET trashedAt = :now WHERE id = :id")
     suspend fun moveToTrash(id: Long, now: Long = System.currentTimeMillis())
 

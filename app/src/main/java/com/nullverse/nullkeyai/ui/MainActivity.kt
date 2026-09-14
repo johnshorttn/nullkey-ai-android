@@ -24,9 +24,11 @@ import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.clipboard.ClipboardMonitorService
 import com.nullverse.nullkeyai.db.NullKeyDatabase
 import com.nullverse.nullkeyai.ime.ClipAdapter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Setup + management screen. Guides the user to enable and select the NullKey
@@ -44,6 +46,16 @@ class MainActivity : AppCompatActivity() {
 
     private val notifPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    private val exportClips =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            uri?.let { writeExport(it) }
+        }
+
+    private val importClips =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            uri?.let { readImport(it) }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,6 +90,12 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.monitor_stopped, Toast.LENGTH_SHORT).show()
         }
         findViewById<Button>(R.id.btn_capture).setOnClickListener { captureSystemClip() }
+        findViewById<Button>(R.id.btn_export).setOnClickListener {
+            exportClips.launch("nullkey-clips-${System.currentTimeMillis()}.json")
+        }
+        findViewById<Button>(R.id.btn_import).setOnClickListener {
+            importClips.launch(arrayOf("application/json", "text/*", "*/*"))
+        }
 
         search.addTextChangedListener(SimpleWatcher { observeClips() })
         filesOnly.setOnCheckedChangeListener { _, _ -> observeClips() }
@@ -115,6 +133,43 @@ class MainActivity : AppCompatActivity() {
                 )
             } else {
                 repository.capture(item.text?.toString().orEmpty())
+            }
+        }
+    }
+
+    private fun writeExport(uri: android.net.Uri) {
+        lifecycleScope.launch {
+            try {
+                val json = repository.exportJson()
+                withContext(Dispatchers.IO) {
+                    contentResolver.openOutputStream(uri)?.use { out ->
+                        out.write(json.toByteArray(Charsets.UTF_8))
+                    } ?: throw java.io.IOException("Could not open output stream")
+                }
+                Toast.makeText(this@MainActivity, R.string.export_ok, Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, R.string.export_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun readImport(uri: android.net.Uri) {
+        lifecycleScope.launch {
+            try {
+                val json = withContext(Dispatchers.IO) {
+                    contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+                        ?: throw java.io.IOException("Could not open input stream")
+                }
+                val count = repository.importJson(json)
+                Toast.makeText(
+                    this@MainActivity,
+                    getString(R.string.import_ok, count),
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: IllegalArgumentException) {
+                Toast.makeText(this@MainActivity, R.string.import_invalid, Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, R.string.import_failed, Toast.LENGTH_LONG).show()
             }
         }
     }

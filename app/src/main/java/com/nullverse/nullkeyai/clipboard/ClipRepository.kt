@@ -46,6 +46,26 @@ class ClipRepository(private val dao: ClipDao) {
 
     suspend fun setPinned(id: Long, pinned: Boolean) = dao.setPinned(id, pinned)
 
+    /** Serialize all active clips to a portable JSON backup document. */
+    suspend fun exportJson(): String = ClipBackup.toJson(dao.allActive())
+
+    /**
+     * Import clips from a JSON backup. Blank clips and clips whose content already
+     * exists in the active vault are skipped. Returns the number actually inserted.
+     * Throws [IllegalArgumentException] if [json] is not a valid backup document.
+     */
+    suspend fun importJson(json: String): Int {
+        val clips = ClipBackup.fromJson(json)
+        var inserted = 0
+        for (clip in clips) {
+            if (clip.content.isBlank()) continue
+            if (dao.countByContent(clip.content) > 0) continue
+            dao.insert(clip.copy(id = 0, trashedAt = null))
+            inserted++
+        }
+        return inserted
+    }
+
     /**
      * Purge trashed clips whose trash timestamp is older than [retentionDays]
      * relative to [now]. Returns the number of rows removed.
