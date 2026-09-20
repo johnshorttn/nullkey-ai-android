@@ -37,7 +37,7 @@ class ClipboardLabActivity : AppCompatActivity() {
             runOnUiThread {
                 val latency = r.latencyMs?.toString()?.plus(" ms") ?: "n/a"
                 output.text = "NullKey Clipboard Capability Report\n" +
-                    "Android API: " + r.sdkInt + "\nDevice: " + r.manufacturer + " " + r.model + "\n\n" +
+                    "Android API: " + r.sdkInt + "\nTarget SDK: " + r.targetSdk + "\nDevice: " + r.manufacturer + " " + r.model + "\n\n" +
                     "Foreground generated-token test\n" +
                     "Change event: " + (if (r.changeEventReceived) "YES" else "NO") + "\n" +
                     "Content readable: " + (if (r.contentReadable) "YES" else "NO") + "\n" +
