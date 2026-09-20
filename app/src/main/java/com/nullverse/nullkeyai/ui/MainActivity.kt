@@ -23,6 +23,7 @@ import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.clipboard.ClipboardMonitorService
 import com.nullverse.nullkeyai.db.NullKeyDatabase
+import com.nullverse.nullkeyai.diagnostics.ClipboardLabActivity
 import com.nullverse.nullkeyai.ime.ClipAdapter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -90,6 +91,9 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.monitor_stopped, Toast.LENGTH_SHORT).show()
         }
         findViewById<Button>(R.id.btn_capture).setOnClickListener { captureSystemClip() }
+        findViewById<Button>(R.id.btn_clipboard_lab).setOnClickListener {
+            startActivity(Intent(this, ClipboardLabActivity::class.java))
+        }
         findViewById<Button>(R.id.btn_export).setOnClickListener {
             exportClips.launch("nullkey-clips-${System.currentTimeMillis()}.json")
         }
