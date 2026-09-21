@@ -54,6 +54,12 @@ class WordSuggesterGestureTest {
     }
 
     @Test
+    fun repeatedLetterWordMatchesSingleKeyVisit() {
+        val results = suggester().suggestGesture("helo", 3)
+        assertEquals("hello", results.first())
+    }
+
+    @Test
     fun shortGestureIsIgnored() {
         assertTrue(suggester().suggestGesture("h").isEmpty())
     }
