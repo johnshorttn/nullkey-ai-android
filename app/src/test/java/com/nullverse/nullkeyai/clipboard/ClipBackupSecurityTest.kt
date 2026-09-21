@@ -2,6 +2,7 @@ package com.nullverse.nullkeyai.clipboard
 
 import com.nullverse.nullkeyai.db.Clip
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -29,9 +30,10 @@ class ClipBackupSecurityTest {
             protected = true
         )
         val json = ClipBackup.toJson(listOf(source))
-        val error = assertThrows(IllegalArgumentException::class.java) {
+        val error = assertThrows(DeviceBoundProtectedImportException::class.java) {
             ClipBackup.fromJson(json)
         }
         assert(error.message?.contains("Secure Backup") == true)
+        assert(error is IllegalArgumentException)
     }
 }

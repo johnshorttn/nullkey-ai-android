@@ -2,7 +2,6 @@ package com.nullverse.nullkeyai
 
 import android.view.View
 import android.widget.TextView
-import androidx.test.core.app.ApplicationProvider
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.nullverse.nullkeyai.db.Tag
@@ -49,5 +48,35 @@ class VaultUiHardeningTest {
         assertEquals(setOf("Personal", "Coding"), suggested)
         (suggestedGroup.getChildAt(0) as Chip).performClick()
         assertTrue(added == "Personal" || added == "Coding")
+    }
+
+    @Test
+    fun vaultHomeLayoutIsScrollableSoSetupControlsStayReachable() {
+        val context = android.view.ContextThemeWrapper(
+            RuntimeEnvironment.getApplication(),
+            R.style.Theme_NullKey
+        )
+        val root = android.view.LayoutInflater.from(context)
+            .inflate(R.layout.activity_main, null)
+        assertTrue(root is android.widget.ScrollView)
+        assertEquals(R.id.main_scroll, root.id)
+        assertTrue(root.findViewById<android.view.View>(R.id.search) != null)
+        assertTrue(root.findViewById<android.view.View>(R.id.files_only) != null)
+        assertTrue(root.findViewById<android.view.View>(R.id.ime_status) != null)
+        assertTrue(root.findViewById<android.view.View>(R.id.tagline) != null)
+        assertTrue(root.findViewById<android.view.View>(R.id.btn_swipe_left_action) != null)
+        assertTrue(root.findViewById<android.view.View>(R.id.btn_swipe_right_action) != null)
+    }
+
+    @Test
+    fun imeClipPanelExposesEmptyState() {
+        val context = android.view.ContextThemeWrapper(
+            RuntimeEnvironment.getApplication(),
+            R.style.Theme_NullKey
+        )
+        val root = android.view.LayoutInflater.from(context)
+            .inflate(R.layout.keyboard, null)
+        assertTrue(root.findViewById<android.view.View>(R.id.clips_empty) != null)
+        assertTrue(root.findViewById<android.view.View>(R.id.clips_list) != null)
     }
 }

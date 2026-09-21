@@ -10,6 +10,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.espresso.matcher.ViewMatchers.isChecked
 import androidx.test.espresso.matcher.ViewMatchers.isNotChecked
 import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.nullverse.nullkeyai.ui.MainActivity
@@ -41,8 +42,9 @@ class MainActivityInstrumentedTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.btn_enable)).check(matches(isDisplayed()))
             onView(withId(R.id.btn_switch)).check(matches(isDisplayed()))
-            onView(withId(R.id.search)).check(matches(isDisplayed()))
-            onView(withId(R.id.files_only)).check(matches(isDisplayed()))
+            onView(withId(R.id.ime_status)).check(matches(isDisplayed()))
+            onView(withId(R.id.search)).perform(scrollTo()).check(matches(isDisplayed()))
+            onView(withId(R.id.files_only)).perform(scrollTo()).check(matches(isDisplayed()))
         }
     }
 
@@ -51,18 +53,31 @@ class MainActivityInstrumentedTest {
         val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
         KeyboardEnginePreferences.setSwipeTypingEnabled(context, true)
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withId(R.id.swipe_typing_enabled)).check(matches(isChecked()))
-            onView(withId(R.id.swipe_typing_enabled)).perform(click())
-            onView(withId(R.id.swipe_typing_enabled)).check(matches(isNotChecked()))
+            onView(withId(R.id.swipe_typing_enabled)).perform(scrollTo()).check(matches(isChecked()))
+            onView(withId(R.id.swipe_typing_enabled)).perform(scrollTo(), click())
+            onView(withId(R.id.swipe_typing_enabled)).perform(scrollTo()).check(matches(isNotChecked()))
             org.junit.Assert.assertFalse(KeyboardEnginePreferences.swipeTypingEnabled(context))
         }
         KeyboardEnginePreferences.setSwipeTypingEnabled(context, true)
     }
 
     @Test
-    fun showsAppTitle() {
+    fun swipeActionButtonsShowLocalizedDefaults() {
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withText("NullKey AI")).check(matches(isDisplayed()))
+            onView(withId(R.id.btn_swipe_left_action))
+                .perform(scrollTo())
+                .check(matches(withText("Left swipe: Delete")))
+            onView(withId(R.id.btn_swipe_right_action))
+                .perform(scrollTo())
+                .check(matches(withText("Right swipe: Pin")))
+        }
+    }
+
+    @Test
+    fun showsLocalizedTitleAndTagline() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onView(withText(R.string.app_name)).check(matches(isDisplayed()))
+            onView(withId(R.id.tagline)).check(matches(withText(R.string.tagline)))
         }
     }
 }
