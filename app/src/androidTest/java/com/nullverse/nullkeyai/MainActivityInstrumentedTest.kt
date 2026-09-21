@@ -7,9 +7,13 @@ import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
+import androidx.test.espresso.matcher.ViewMatchers.isChecked
+import androidx.test.espresso.matcher.ViewMatchers.isNotChecked
+import androidx.test.espresso.action.ViewActions.click
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.nullverse.nullkeyai.ui.MainActivity
+import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,6 +44,19 @@ class MainActivityInstrumentedTest {
             onView(withId(R.id.search)).check(matches(isDisplayed()))
             onView(withId(R.id.files_only)).check(matches(isDisplayed()))
         }
+    }
+
+    @Test
+    fun swipeTypingTogglePersistsPreference() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        KeyboardEnginePreferences.setSwipeTypingEnabled(context, true)
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onView(withId(R.id.swipe_typing_enabled)).check(matches(isChecked()))
+            onView(withId(R.id.swipe_typing_enabled)).perform(click())
+            onView(withId(R.id.swipe_typing_enabled)).check(matches(isNotChecked()))
+            org.junit.Assert.assertFalse(KeyboardEnginePreferences.swipeTypingEnabled(context))
+        }
+        KeyboardEnginePreferences.setSwipeTypingEnabled(context, true)
     }
 
     @Test
