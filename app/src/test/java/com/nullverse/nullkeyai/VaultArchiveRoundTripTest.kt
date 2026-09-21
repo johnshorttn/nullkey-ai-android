@@ -10,7 +10,6 @@ import com.nullverse.nullkeyai.clipboard.VaultAssetStore
 import com.nullverse.nullkeyai.db.ClipContentType
 import com.nullverse.nullkeyai.db.NullKeyDatabase
 import com.nullverse.nullkeyai.security.PortableVaultCrypto
-import com.nullverse.nullkeyai.security.VaultCrypto
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -39,7 +38,7 @@ class VaultArchiveRoundTripTest {
             .allowMainThreadQueries()
             .build()
         store = VaultAssetStore(context)
-        repo = ClipRepository(db.clipDao(), store, db.tagDao(), VaultCrypto())
+        repo = ClipRepository(db.clipDao(), store, db.tagDao())
     }
 
     @After
@@ -81,21 +80,6 @@ class VaultArchiveRoundTripTest {
         val restoredFile = store.resolve(image.localAssetPath)
         assertNotNull(restoredFile)
         assertArrayEquals(bytes, restoredFile!!.readBytes())
-    }
-
-    @Test
-    fun archiveBuildParse_roundTripsWithoutPasswordEnvelope() = runBlocking {
-        val id = repo.capture("tagged clip")!!
-        repo.addTag(id, "Personal")
-        val clips = db.clipDao().allActive()
-        val json = VaultArchive.build(clips, store, VaultCrypto()) { clipId ->
-            db.tagDao().forClip(clipId).map { it.name }
-        }
-        val parsed = VaultArchive.parse(json)
-        assertEquals(1, parsed.size)
-        assertEquals("tagged clip", parsed[0].clip.content)
-        assertEquals(listOf("Personal"), parsed[0].tags)
-        assertFalse(parsed[0].restoreProtected)
     }
 
     @Test
