@@ -56,7 +56,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Clipboard capture for the NullKey clipboard keyboard" />
+                android:value="@string/monitor_fgs_subtype" />
         </service>
 
         <provider
