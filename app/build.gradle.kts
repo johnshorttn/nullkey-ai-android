@@ -26,6 +26,10 @@ android {
     namespace = "com.nullverse.nullkeyai"
     compileSdk = 34
 
+    ksp {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
+
     defaultConfig {
         applicationId = "com.nullverse.nullkeyai"
         minSdk = 24
