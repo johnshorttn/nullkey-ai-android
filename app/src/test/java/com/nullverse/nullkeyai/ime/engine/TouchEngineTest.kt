@@ -79,6 +79,18 @@ class TouchEngineTest {
     }
 
     @Test
+    fun smallNeighborSlipDoesNotBecomeGesture() {
+        val q = key("q")
+        val w = key("w")
+        val boundaryX = q.slot.right + 1f
+        engine.down(1, q.slot.right - 1f, q.slot.centerY)
+        engine.move(1, boundaryX, q.slot.centerY)
+        engine.up(1, boundaryX, q.slot.centerY)
+        assertTrue(recorder.gestures.isEmpty())
+        assertEquals(listOf("w"), recorder.taps)
+    }
+
+    @Test
     fun gesturePathDoesNotDuplicateSameKeyMoves() {
         val q = key("q")
         val w = key("w")
