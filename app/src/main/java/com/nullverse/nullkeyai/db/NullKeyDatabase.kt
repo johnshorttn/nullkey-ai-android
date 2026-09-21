@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Clip::class, Tag::class, ClipTagCrossRef::class],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class NullKeyDatabase : RoomDatabase() {
@@ -82,6 +82,21 @@ abstract class NullKeyDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE clips ADD COLUMN syncId TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE clips ADD COLUMN revision INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE clips ADD COLUMN originDeviceId TEXT")
+                db.execSQL("ALTER TABLE clips ADD COLUMN modifiedByDeviceId TEXT")
+                db.execSQL("ALTER TABLE clips ADD COLUMN syncDeletedAt INTEGER")
+                db.execSQL("ALTER TABLE clips ADD COLUMN syncState TEXT NOT NULL DEFAULT 'LOCAL'")
+                db.execSQL("ALTER TABLE clips ADD COLUMN syncExcluded INTEGER NOT NULL DEFAULT 0")
+                // Existing rows get deterministic migration IDs without relying on local IDs after sync begins.
+                db.execSQL("UPDATE clips SET syncId = lower(hex(randomblob(16))) WHERE syncId = ''")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_clips_syncId ON clips(syncId)")
+            }
+        }
+
         fun get(context: Context): NullKeyDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -89,7 +104,7 @@ abstract class NullKeyDatabase : RoomDatabase() {
                     NullKeyDatabase::class.java,
                     "nullkey.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                     .also { INSTANCE = it }
             }
