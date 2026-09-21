@@ -98,6 +98,9 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.monitor_stopped, Toast.LENGTH_SHORT).show()
         }
         findViewById<Button>(R.id.btn_capture).setOnClickListener { captureSystemClip() }
+        findViewById<Button>(R.id.btn_trash).setOnClickListener {
+            startActivity(Intent(this, TrashActivity::class.java))
+        }
         findViewById<Button>(R.id.btn_clipboard_lab).setOnClickListener {
             startActivity(Intent(this, ClipboardLabActivity::class.java))
         }
