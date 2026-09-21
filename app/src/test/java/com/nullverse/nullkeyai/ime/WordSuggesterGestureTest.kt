@@ -10,7 +10,8 @@ class WordSuggesterGestureTest {
     private fun prefs(): SharedPreferences {
         val values = mutableMapOf<String, Any?>()
         lateinit var proxy: SharedPreferences
-        val editor = Proxy.newProxyInstance(
+        lateinit var editor: SharedPreferences.Editor
+        editor = Proxy.newProxyInstance(
             javaClass.classLoader,
             arrayOf(SharedPreferences.Editor::class.java)
         ) { _, method, args ->
