@@ -24,12 +24,14 @@ See [docs/PRIVACY.md](docs/PRIVACY.md).
 ./gradlew :app:testDebugUnitTest
 ```
 
-Signed Play bundle (requires a local, git-ignored `keystore.properties` — copy [keystore.properties.example](keystore.properties.example)):
+Signed Play bundle (requires a local, git-ignored `keystore.properties` — copy [keystore.properties.example](keystore.properties.example)). Release runs R8 minify and resource shrinking; debug does not:
 
 ```bash
 ./gradlew :app:checkReleaseScaffold
 ./gradlew :app:bundleRelease
 ```
+
+Unminified diagnostic AAB: `./gradlew :app:bundleRelease -Pnullkey.releaseMinify=false`.
 
 Throwaway signed-AAB smoke (do **not** upload to Play):
 

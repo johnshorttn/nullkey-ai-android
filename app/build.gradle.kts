@@ -31,6 +31,24 @@ fun resolveReleaseStoreFile(path: String): File {
 val releaseStoreFilePath: String? = releaseSigningValue("storeFile", "KEYSTORE_FILE")
 val releaseStoreFileResolved: File? = releaseStoreFilePath?.let { resolveReleaseStoreFile(it) }
 
+// Release R8 is on by default and does not affect debug or unit tests.
+// Environment wins over -P so CI can force a value. Unset means minify on.
+//   ./gradlew :app:bundleRelease -Pnullkey.releaseMinify=false
+//   NULLKEY_RELEASE_MINIFY=false ./gradlew :app:bundleRelease
+fun parseReleaseMinifyFlag(raw: String?): Boolean? = when (raw?.trim()?.lowercase()) {
+    null, "" -> null
+    "1", "true", "on", "yes" -> true
+    "0", "false", "off", "no" -> false
+    else -> error(
+        "NULLKEY_RELEASE_MINIFY / -Pnullkey.releaseMinify must be true or false (got '$raw')"
+    )
+}
+
+val minifyRelease: Boolean =
+    parseReleaseMinifyFlag(System.getenv("NULLKEY_RELEASE_MINIFY"))
+        ?: parseReleaseMinifyFlag(findProperty("nullkey.releaseMinify")?.toString())
+        ?: true
+
 android {
     namespace = "com.nullverse.nullkeyai"
     compileSdk = 36
@@ -62,8 +80,15 @@ android {
     }
 
     buildTypes {
-        release {
+        debug {
+            // Unit tests and the debug APK stay unminified. R8 is release-only.
             isMinifyEnabled = false
+            isShrinkResources = false
+        }
+        release {
+            isMinifyEnabled = minifyRelease
+            // Resource shrinking requires minify. Both follow the same opt-out flag.
+            isShrinkResources = minifyRelease
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -106,7 +131,8 @@ tasks.register("printReleaseSigningStatus") {
         println("minSdk=24")
         println("compileSdk=36")
         println("targetSdk=36")
-        println("minifyRelease=false")
+        println("minifyRelease=$minifyRelease")
+        println("shrinkResourcesRelease=$minifyRelease")
         println("releaseSigningConfigured=$configured")
         println("releaseStoreFileExists=$exists")
         println("playTargetApiNote=compileSdk/targetSdk 36; see docs/PLAY_STORE.md")

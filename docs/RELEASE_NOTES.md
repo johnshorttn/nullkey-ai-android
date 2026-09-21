@@ -12,18 +12,20 @@ Shipped on `rewrite/v2` (and open focused PRs, unmerged):
 - On-device word suggestions and swipe-typing toggle
 - Sync **foundation** (in-memory transport only; no production hosts)
 
-Play/AAB path (this documentation slice):
+Play/AAB path:
 
 - Placeholder signing config, git-ignored secrets, `bundleRelease`
 - Throwaway signed-AAB smoke script and CI job
 - Listing / Data Safety / privacy drafts
+- Release R8 minify + resource shrinking, with keep rules for IME, Room, and persisted enum names. Debug stays unminified. Opt out with `-Pnullkey.releaseMinify=false`.
 
 ## Not in 1.2 listing
 
 - On-device OCR / image text in Vault
 - Privacy-first spelling/grammar assistance
 - Hosted sync, plugins, WebView settings packs
-- `targetSdk` 36 (required for new Play phone uploads after 31 August 2026)
+- A public HTTPS privacy-policy URL (draft is in the repo; Play will not accept the markdown file alone)
+- On-device confirmation of the minified release IME (CI checks the mapping and dex, not a release install)
 
 ## Open integration PRs (do not merge from this work)
 
