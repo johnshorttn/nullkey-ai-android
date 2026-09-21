@@ -18,6 +18,10 @@ object PortableVaultCrypto {
     private const val KEY_BITS = 256
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
     private const val KDF = "PBKDF2WithHmacSHA256"
+    private const val FORMAT_VERSION = 1
+    private const val SALT_BYTES = 16
+    private const val GCM_IV_BYTES = 12
+    private const val MIN_GCM_PAYLOAD_BYTES = 16
     private val random = SecureRandom()
 
     fun encrypt(plainText: String, password: CharArray): String {
@@ -28,7 +32,7 @@ object PortableVaultCrypto {
         val encrypted = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
         return JSONObject()
             .put("app", "NullKey AI")
-            .put("format", 1)
+            .put("format", FORMAT_VERSION)
             .put("encryption", "AES-256-GCM")
             .put("kdf", KDF)
             .put("iterations", ITERATIONS)
@@ -41,12 +45,17 @@ object PortableVaultCrypto {
     fun decrypt(document: String, password: CharArray): String {
         val obj = JSONObject(document)
         require(obj.optString("app") == "NullKey AI") { "Not a NullKey portable backup" }
+        require(obj.optInt("format", 0) == FORMAT_VERSION) { "Unsupported backup format" }
         require(obj.optString("encryption") == "AES-256-GCM") { "Unsupported backup encryption" }
+        require(obj.optString("kdf") == KDF) { "Unsupported backup KDF" }
         val iterations = obj.optInt("iterations", 0)
         require(iterations in 100_000..2_000_000) { "Invalid backup KDF cost" }
         val salt = Base64.decode(obj.getString("salt"), Base64.NO_WRAP)
         val iv = Base64.decode(obj.getString("iv"), Base64.NO_WRAP)
         val payload = Base64.decode(obj.getString("payload"), Base64.NO_WRAP)
+        require(salt.size == SALT_BYTES) { "Invalid backup salt" }
+        require(iv.size == GCM_IV_BYTES) { "Invalid backup IV" }
+        require(payload.size >= MIN_GCM_PAYLOAD_BYTES) { "Invalid backup payload" }
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, derive(password, salt, iterations), GCMParameterSpec(128, iv))
         return cipher.doFinal(payload).toString(Charsets.UTF_8)
