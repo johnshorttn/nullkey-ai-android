@@ -4,6 +4,9 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.ImageView
+import android.view.View
+import android.graphics.BitmapFactory
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -22,14 +25,31 @@ class ClipDetailActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_clip_detail)
         val db = NullKeyDatabase.get(this)
-        repository = ClipRepository(db.clipDao(), VaultAssetStore(this), db.tagDao())
+        val assetStore = VaultAssetStore(this)
+        repository = ClipRepository(db.clipDao(), assetStore, db.tagDao())
         clipId = intent.getLongExtra(EXTRA_CLIP_ID, 0L)
         if (clipId == 0L) { finish(); return }
 
         lifecycleScope.launch {
             val clip = db.clipDao().byId(clipId) ?: run { finish(); return@launch }
-            findViewById<TextView>(R.id.detail_content).text =
-                if (clip.protected) getString(R.string.protected_clip) else clip.content
+            val contentView = findViewById<TextView>(R.id.detail_content)
+            val imageView = findViewById<ImageView>(R.id.detail_image)
+            val assetStatus = findViewById<TextView>(R.id.detail_asset_status)
+            val asset = assetStore.resolve(clip.localAssetPath)
+            if (!clip.protected && clip.contentType == "IMAGE" && asset != null) {
+                val bitmap = runCatching { BitmapFactory.decodeFile(asset.absolutePath) }.getOrNull()
+                if (bitmap != null) {
+                    imageView.setImageBitmap(bitmap)
+                    imageView.visibility = View.VISIBLE
+                    contentView.visibility = View.GONE
+                }
+            }
+            if (clip.localAssetPath != null) {
+                assetStatus.visibility = View.VISIBLE
+                assetStatus.text = if (asset != null) getString(R.string.asset_saved_private)
+                    else getString(R.string.asset_unavailable)
+            }
+            contentView.text = if (clip.protected) getString(R.string.protected_clip) else clip.content
             findViewById<TextView>(R.id.detail_meta).text = buildString {
                 append(clip.contentType)
                 clip.mimeType?.let { append(" • ").append(it) }
