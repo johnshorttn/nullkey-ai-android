@@ -43,6 +43,9 @@ class TouchEngine(
     private var longPressTask: Cancellable? = null
     private var repeatTask: Cancellable? = null
     private val gesturePath = mutableListOf<PlacedKey>()
+    private var gestureDistancePx = 0f
+    private var lastX = 0f
+    private var lastY = 0f
 
     fun down(pointerId: Int, x: Float, y: Float) {
         if (activePointerId != null) return
@@ -54,11 +57,19 @@ class TouchEngine(
         }
         gesturePath.clear()
         gesturePath += key
+        gestureDistancePx = 0f
+        lastX = x
+        lastY = y
         press(key)
     }
 
     fun move(pointerId: Int, x: Float, y: Float) {
         if (activePointerId != pointerId) return
+        val dx = x - lastX
+        val dy = y - lastY
+        gestureDistancePx += kotlin.math.sqrt(dx * dx + dy * dy)
+        lastX = x
+        lastY = y
         val key = listener.hitTest(x, y)
         if (key?.id == pressed?.id) return
         listener.onRelease(pressed)
@@ -85,7 +96,8 @@ class TouchEngine(
         val wasRepeatable = current?.spec?.isRepeatable == true
         cancelTasks()
         listener.onRelease(current)
-        if (gesturePath.size >= 2 && gesturePath.all { it.spec.code.toChar().isLetter() }) {
+        val minGestureDistance = current?.let { kotlin.math.min(it.slot.width, it.slot.height) * 0.75f } ?: Float.MAX_VALUE
+        if (gesturePath.size >= 2 && gestureDistancePx >= minGestureDistance && gesturePath.all { it.spec.code.toChar().isLetter() }) {
             listener.onGesturePath(gesturePath.toList())
         } else if (current != null && !wasRepeatable && !consumed) {
             listener.onTap(current)
@@ -139,6 +151,7 @@ class TouchEngine(
         pressed = null
         longPressConsumed = false
         gesturePath.clear()
+        gestureDistancePx = 0f
     }
 }
 
