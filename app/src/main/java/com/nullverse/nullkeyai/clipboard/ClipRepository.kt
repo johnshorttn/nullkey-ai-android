@@ -8,6 +8,7 @@ import com.nullverse.nullkeyai.db.ClipSourceConfidence
 import com.nullverse.nullkeyai.db.ClipTagCrossRef
 import com.nullverse.nullkeyai.db.Tag
 import com.nullverse.nullkeyai.db.TagDao
+import com.nullverse.nullkeyai.security.VaultCrypto
 import kotlinx.coroutines.flow.Flow
 import java.util.concurrent.TimeUnit
 
@@ -29,7 +30,7 @@ data class ClipCaptureRequest(
     val sourceConfidence: ClipSourceConfidence = ClipSourceConfidence.UNKNOWN
 )
 
-class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAssetStore? = null, private val tagDao: TagDao? = null) {
+class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAssetStore? = null, private val tagDao: TagDao? = null, private val crypto: VaultCrypto? = null) {
 
     fun search(query: String, filesOnly: Boolean): Flow<List<Clip>> =
         dao.search(query.trim(), filesOnly)
@@ -93,7 +94,36 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
 
     suspend fun setNotes(id: Long, notes: String) = dao.setNotes(id, notes)
 
-    suspend fun setProtected(id: Long, isProtected: Boolean) = dao.setProtected(id, isProtected)
+    suspend fun setProtected(id: Long, isProtected: Boolean) {
+        val vaultCrypto = crypto ?: run { dao.setProtected(id, isProtected); return }
+        val clip = dao.byId(id) ?: return
+        if (clip.protected == isProtected) return
+        if (isProtected) {
+            dao.setProtectionPayload(
+                id,
+                vaultCrypto.encrypt(clip.content),
+                vaultCrypto.encrypt(clip.notes),
+                true
+            )
+        } else {
+            dao.setProtectionPayload(
+                id,
+                vaultCrypto.decrypt(clip.content),
+                vaultCrypto.decrypt(clip.notes),
+                false
+            )
+        }
+    }
+
+    suspend fun revealed(id: Long): Clip? {
+        val clip = dao.byId(id) ?: return null
+        if (!clip.protected) return clip
+        val vaultCrypto = crypto ?: return null
+        return clip.copy(
+            content = vaultCrypto.decrypt(clip.content),
+            notes = vaultCrypto.decrypt(clip.notes)
+        )
+    }
 
     suspend fun tagsForClip(id: Long): List<Tag> = tagDao?.forClip(id).orEmpty()
 
