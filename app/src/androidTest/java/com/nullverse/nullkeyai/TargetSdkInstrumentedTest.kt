@@ -25,8 +25,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Device-side regression for the targetSdk 36 bump. Runs on the API-34 CI
- * emulator; [android.content.pm.ApplicationInfo.targetSdkVersion] is still 36.
+ * Device-side regression for the targetSdk 36 bump. Runs on the API-34 and
+ * API-36 CI emulators; [android.content.pm.ApplicationInfo.targetSdkVersion]
+ * is 36 on both.
  */
 @RunWith(AndroidJUnit4::class)
 class TargetSdkInstrumentedTest {

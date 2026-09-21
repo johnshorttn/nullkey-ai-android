@@ -44,4 +44,10 @@ Current rewrite notes: [docs/RELEASE_NOTES.md](docs/RELEASE_NOTES.md).
 
 ## CI
 
-Pull requests run GitHub Actions **Android CI**: debug assemble, JVM unit tests, emulator instrumented tests (API 34), plus a throwaway-signed AAB smoke. The **Release (signed)** workflow builds a production AAB only when repository secrets are configured; it never reads keystores from git.
+Pull requests run GitHub Actions **Android CI**: debug assemble, JVM unit tests, emulator instrumented tests on **API 34** and **API 36** (`google_apis` x86_64, KVM), plus a throwaway-signed AAB smoke. The **Release (signed)** workflow builds a production AAB only when repository secrets are configured; it never reads keystores from git.
+
+Instrumented tests locally (boot a Google APIs emulator first; API 36 matches `compileSdk` / `targetSdk`):
+
+```bash
+./gradlew :app:connectedDebugAndroidTest
+```

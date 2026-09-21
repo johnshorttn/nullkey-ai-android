@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "rewrite/v2" ]
   pull_request:
   workflow_dispatch:
 
@@ -44,25 +44,32 @@ jobs:
           if-no-files-found: warn
 
   instrumented-tests:
-    name: Emulator instrumented tests (KVM)
+    name: Emulator instrumented tests API ${{ matrix.api-level }} (KVM)
     runs-on: ubuntu-latest
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       matrix:
-        # Contract tests assert applicationInfo.targetSdkVersion == 36 even on
-        # this API-34 image. A dedicated API-36 emulator is a follow-up (disk).
-        api-level: [ 34 ]
+        # API 34 is the previously green baseline. API 36 matches compileSdk /
+        # targetSdk 36 (system-images;android-36;google_apis;x86_64 on stable).
+        api-level: [ 34, 36 ]
     steps:
       - uses: actions/checkout@v5
 
-      # The API-34 emulator needs ~7.4 GB free for its userdata partition; remove
-      # large preinstalled toolchains we don't use so it can start.
+      # API-34 userdata needs ~7.4 GB free; API-36 google_apis x86_64 is
+      # ~1.9 GB zipped. Drop unused toolchains and preinstalled system images
+      # so sdkmanager can install only the matrix API image.
       - name: Free up disk space
         run: |
           echo "Before:"; df -h /
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
-            /opt/hostedtoolcache/CodeQL /usr/local/lib/android/sdk/ndk \
-            /usr/local/share/powershell /usr/share/swift || true
+            /opt/hostedtoolcache/CodeQL /opt/hostedtoolcache/go \
+            /opt/hostedtoolcache/Python /opt/hostedtoolcache/Ruby \
+            /usr/local/lib/android/sdk/ndk /usr/local/lib/android/sdk/cmake \
+            /usr/local/lib/android/sdk/system-images \
+            /usr/local/lib/android/sdk/extras \
+            /usr/local/share/powershell /usr/share/swift \
+            /usr/local/share/chromium || true
           sudo docker image prune -a -f || true
           echo "After:"; df -h /
 
@@ -82,7 +89,6 @@ jobs:
           sudo udevadm trigger --name-match=kvm
           ls -l /dev/kvm
 
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
@@ -98,10 +104,22 @@ jobs:
           api-level: ${{ matrix.api-level }}
           arch: x86_64
           target: google_apis
+          channel: stable
           force-avd-creation: false
+          emulator-boot-timeout: 900
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: ./gradlew :app:connectedDebugAndroidTest
+
+      - name: Upload instrumented test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instrumented-reports-api-${{ matrix.api-level }}
+          path: |
+            app/build/reports/androidTests/connected/
+            app/build/outputs/androidTest-results/connected/
+          if-no-files-found: ignore
 
   signed-aab-smoke:
     name: Signed AAB smoke (throwaway keystore)
