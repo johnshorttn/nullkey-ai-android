@@ -37,4 +37,12 @@
     <string name="clipboard_lab_running">Running clipboard capability test…</string>
     <string name="clipboard_lab_consent_title">Run Clipboard Capture Lab?</string>
     <string name="clipboard_lab_consent_message">NullKey will temporarily place a generated test value on the clipboard, observe whether Android delivers the change and allows it to be read, then restore the previous clipboard when possible. Your existing clipboard contents are not displayed, logged, or persisted; the current clip may be held temporarily in memory only so NullKey can restore it after testing.</string>
+    <string name="clip_details">Clip details</string>
+    <string name="notes">Notes</string>
+    <string name="pinned">Pinned</string>
+    <string name="protected_label">Protected</string>
+    <string name="protected_clip">Protected clip</string>
+    <string name="save_changes">Save changes</string>
+    <string name="move_to_trash">Move to Trash</string>
+    <string name="saved">Saved</string>
 </resources>
