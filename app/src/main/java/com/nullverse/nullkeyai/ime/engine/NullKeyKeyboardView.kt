@@ -180,7 +180,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         gesturePaint.strokeWidth = 6f * resources.displayMetrics.density
-        gesturePaint.color = theme.accentColor
+        gesturePaint.color = theme.gestureTrailColor
         gesturePaint.alpha = 150
         canvas.drawPath(path, gesturePaint)
     }
