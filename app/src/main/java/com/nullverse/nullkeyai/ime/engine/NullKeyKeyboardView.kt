@@ -49,7 +49,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     private var gesturePointerY = 0f
     private var gesturePointerActive = false
     private var accentPopup: PopupWindow? = null
-    private var popupSourceKeyId: String? = null
+    private var popupSourceKeyId: Int? = null
     private var popupSourceCharacters: String = ""
     private val gesturePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
