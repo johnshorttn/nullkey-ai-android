@@ -69,4 +69,15 @@ class WordSuggesterGestureTest {
         val results = suggester().suggestGesture("hello", 3)
         assertEquals("hello", results.first())
     }
+
+    @Test
+    fun extraKeysOnThePathStillResolveHello() {
+        val results = suggester().suggestGesture("hweirlo", 3)
+        assertEquals("hello", results.first())
+    }
+
+    @Test
+    fun unknownPathReturnsNoCandidates() {
+        assertTrue(suggester().suggestGesture("qzxv", 3).isEmpty())
+    }
 }
