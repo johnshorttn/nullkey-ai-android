@@ -215,7 +215,7 @@ class MainActivity : AppCompatActivity() {
         val button = findViewById<Button>(buttonId)
         fun refresh() {
             val action = if (left) ClipSwipePreferences.left(this) else ClipSwipePreferences.right(this)
-            button.text = getString(R.string.swipe_action_label, if (left) getString(R.string.swipe_left_default).substringBefore(" ") else getString(R.string.swipe_right_default).substringBefore(" "), action.name.lowercase().replaceFirstChar { it.uppercase() })
+            button.text = getString(\n                R.string.swipe_action_label,\n                getString(if (left) R.string.swipe_direction_left else R.string.swipe_direction_right),\n                getString(action.labelRes)\n            )
         }
         button.setOnClickListener {
             val actions = ClipSwipeAction.entries.toTypedArray()
