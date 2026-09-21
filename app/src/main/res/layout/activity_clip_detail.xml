@@ -10,6 +10,13 @@
         <TextView android:id="@+id/detail_meta" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:layout_marginTop="8dp"
             android:textColor="@color/slate"/>
+        <ImageView android:id="@+id/detail_image" android:layout_width="match_parent"
+            android:layout_height="280dp" android:layout_marginTop="16dp"
+            android:adjustViewBounds="true" android:contentDescription="@string/image_preview"
+            android:scaleType="centerInside" android:visibility="gone"/>
+        <TextView android:id="@+id/detail_asset_status" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="8dp"
+            android:textColor="@color/slate" android:visibility="gone"/>
         <TextView android:id="@+id/detail_content" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:layout_marginTop="16dp"
             android:textColor="@color/text_primary" android:textIsSelectable="true" android:textSize="17sp"/>
