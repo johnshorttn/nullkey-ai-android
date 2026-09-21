@@ -112,3 +112,21 @@ No `INTERNET`, `CAMERA`, `RECORD_AUDIO`, `READ_CONTACTS`, or location.
 ## Intentionally not claimed in this listing
 
 On-device OCR, spelling/grammar cloud or ML Kit, plugin `.jar` loading, WebView settings, hosted sync, and Play upload automation. See issue #17 remaining scope and [RELEASE_NOTES.md](RELEASE_NOTES.md).
+
+
+## Permanent staged release pipeline
+
+NullKey uses this release progression:
+
+**Development → Internal Testing → Beta → Production**
+
+- Development happens on `rewrite/v2` and must pass Android CI.
+- Internal Testing receives the first production-signed candidate.
+- Beta is a permanent opt-in channel. New feature releases should spend time in Beta before Production.
+- Production is never automatic. It requires John's explicit owner approval.
+- Prefer promoting the **same tested AAB** from Beta to Production instead of rebuilding it.
+- Critical stable hotfixes may use an expedited Internal → Production path after green CI and explicit owner approval.
+- `.github/workflows/play-staged-release.yml` builds the signed immutable candidate and enforces an explicit production approval phrase. Until Play Developer API credentials are intentionally configured, upload/promotion remains a controlled Play Console action.
+- Public privacy policy: https://johnshorttn.github.io/nullkey-ai-android/privacy.html
+- Support: https://johnshorttn.github.io/nullkey-ai-android/support.html
+- Beta information: https://johnshorttn.github.io/nullkey-ai-android/beta.html
