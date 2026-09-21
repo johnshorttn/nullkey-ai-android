@@ -79,4 +79,11 @@
     <string name="restore">Restore</string>
     <string name="restored">Restored to Vault</string>
     <string name="suggested_tags">Suggested tags</string>\n    <string name="add_suggested_tag">Add %1$s tag</string>\n    <string name="swipe_typing_enabled">Swipe typing</string>
+    <string name="swipe_left_default">Left swipe</string>
+    <string name="swipe_right_default">Right swipe</string>
+    <string name="swipe_action_label">%1$s swipe: %2$s</string>
+    <string name="swipe_left_title">Left swipe action</string>
+    <string name="swipe_right_title">Right swipe action</string>
+    <string name="tag_name_hint">Tag name</string>
+    <string name="add_tag_title">Add tag</string>
 </resources>
