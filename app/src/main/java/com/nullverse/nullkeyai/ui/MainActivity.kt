@@ -75,6 +75,7 @@ class MainActivity : AppCompatActivity() {
             val password = pendingBackupPassword
             pendingBackupPassword = null
             if (uri != null && password != null) writeSecureExport(uri, password)
+            else password?.fill('\u0000')
         }
 
     private val secureImport =
@@ -82,6 +83,7 @@ class MainActivity : AppCompatActivity() {
             val password = pendingRestorePassword
             pendingRestorePassword = null
             if (uri != null && password != null) readSecureImport(uri, password)
+            else password?.fill('\u0000')
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
