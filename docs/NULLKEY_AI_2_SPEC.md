@@ -592,3 +592,14 @@ A migration from the existing `nullkey.db` should preserve existing clips wherev
 ## 19. Acceptance Principle
 
 A feature is not considered complete merely because its UI exists. Each subsystem must expose real capability/state, degrade cleanly when Android or a remote client does not support an operation, preserve user data, and avoid claiming access that the platform has not actually granted.
+
+## 20. Play Store / signed AAB
+
+Release signing, AAB smoke, listing notes, and the privacy-policy draft live next to this spec:
+
+- [RELEASE_AAB.md](RELEASE_AAB.md) — keystore placeholders, env vars, CI, no secrets in git
+- [PLAY_STORE.md](PLAY_STORE.md) — listing copy, Data Safety, IME / FGS declarations
+- [PRIVACY.md](PRIVACY.md) — policy draft matching the shipping offline defaults
+- [RELEASE_NOTES.md](RELEASE_NOTES.md) — what 1.2 actually contains
+
+Do not treat a signed AAB as Play-submittable until `targetSdk` meets the current Console floor (API 36 for phone listings after 31 August 2026) and issue #17 remaining product scope is either shipped or explicitly deferred.
