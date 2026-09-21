@@ -70,9 +70,9 @@ class KeyboardController(
                     return true
                 }
                 host.onLongPress(key.spec.code, key.spec.popupCharacters)
-                // Letter long-press is informational until a popup UI exists;
-                // keep the upcoming release as a normal tap.
-                return false
+                // Popup-capable keys consume release so selecting an accent does
+                // not also commit the base character underneath the picker.
+                return key.spec.popupCharacters.isNotBlank()
             }
 
             override fun onRepeat(key: PlacedKey) {
