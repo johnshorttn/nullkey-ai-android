@@ -14,11 +14,13 @@ class KeyboardControllerTest {
     private class RecordingHost : KeyboardController.Host {
         val keys = mutableListOf<Int>()
         val longPresses = mutableListOf<Pair<Int, String>>()
+        val gestures = mutableListOf<String>()
         override fun requestRedraw() {}
         override fun onKey(code: Int) { keys += code }
         override fun onLongPress(code: Int, popupCharacters: String) {
             longPresses += code to popupCharacters
         }
+        override fun onGestureWord(path: String) { gestures += path }
     }
 
     @Before
@@ -111,6 +113,31 @@ class KeyboardControllerTest {
         controller.commitPopupCharacter('é')
         assertEquals(listOf('É'.code), host.keys)
         assertEquals(ShiftState.OFF, controller.modifiers.shift)
+    }
+
+    @Test
+    fun shiftedSwipeCapitalizesAndConsumesOneShotShift() {
+        tap("⇧")
+        val h = key("h")
+        val e = key("e")
+        controller.down(0, h.slot.centerX, h.slot.centerY)
+        controller.move(0, e.slot.centerX, e.slot.centerY)
+        controller.up(0, e.slot.centerX, e.slot.centerY)
+        assertEquals(listOf("He"), host.gestures)
+        assertEquals(ShiftState.OFF, controller.modifiers.shift)
+    }
+
+    @Test
+    fun capsLockRemainsActiveAfterSwipe() {
+        tap("⇧")
+        tap("⇧")
+        val h = key("h")
+        val e = key("e")
+        controller.down(0, h.slot.centerX, h.slot.centerY)
+        controller.move(0, e.slot.centerX, e.slot.centerY)
+        controller.up(0, e.slot.centerX, e.slot.centerY)
+        assertEquals(listOf("He"), host.gestures)
+        assertEquals(ShiftState.LOCKED, controller.modifiers.shift)
     }
 
     @Test
