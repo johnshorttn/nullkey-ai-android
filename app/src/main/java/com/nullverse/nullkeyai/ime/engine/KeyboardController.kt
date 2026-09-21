@@ -23,6 +23,8 @@ class KeyboardController(
 
     val modifiers = ModifierController()
 
+    var swipeTypingEnabled: Boolean = true
+
     var orientation: LayoutOrientation = LayoutOrientation.PORTRAIT
         private set
 
@@ -80,6 +82,10 @@ class KeyboardController(
             }
 
             override fun onGesturePath(keys: List<PlacedKey>) {
+                if (!swipeTypingEnabled) {
+                    keys.lastOrNull()?.let(::handleTap)
+                    return
+                }
                 val path = keys.mapNotNull { key ->
                     key.spec.code.toChar().takeIf { it.isLetter() }
                 }.joinToString(separator = "")
