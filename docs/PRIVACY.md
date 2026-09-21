@@ -1,7 +1,8 @@
 # Privacy policy (draft) — NullKey AI
 
 **Product:** NullKey AI for Android (`com.nullverse.nullkeyai`)  
-**Status:** Draft for Play Console. Publish this text at a public HTTPS URL before IME review.  
+**Status:** Longer draft. Do not paste this page into Play Console.  
+**Canonical Play URL:** https://johnshorttn.github.io/nullkey-ai-android/privacy.html  
 **Last updated:** 21 September 2026  
 **Applies to:** the `rewrite/v2` app as built from this repository.
 
@@ -59,7 +60,7 @@ Protected Vault payloads are encrypted with AES-GCM using a key in Android Keyst
 
 **Secure Backup / Restore** writes or reads an encrypted file you choose. You create the password. NullKey does not upload that file.
 
-Android backup (`allowBackup`) is currently enabled at the application flag. OS-level backup, if you use it, can include app data according to your device backup settings. Treat that as device backup, not a NullKey cloud.
+Android Auto Backup is off (`android:allowBackup="false"`). Backup rules also exclude the database, preferences, and vault files. Treat any file you export yourself as your copy, not a NullKey cloud.
 
 ## Permissions
 

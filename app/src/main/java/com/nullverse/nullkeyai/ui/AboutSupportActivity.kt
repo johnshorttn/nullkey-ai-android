@@ -8,6 +8,10 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.nullverse.nullkeyai.R
 
+/**
+ * Opens support destinations in an external browser via [Intent.ACTION_VIEW].
+ * That does not require the INTERNET permission.
+ */
 class AboutSupportActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +44,7 @@ class AboutSupportActivity : AppCompatActivity() {
     }
 
     companion object {
+        /** Play IME privacy URL. Pages serves docs/privacy.md from rewrite/v2. */
         const val PRIVACY_URL = "https://johnshorttn.github.io/nullkey-ai-android/privacy.html"
         const val SUPPORT_URL = "https://johnshorttn.github.io/nullkey-ai-android/support.html"
         const val BETA_URL = "https://johnshorttn.github.io/nullkey-ai-android/beta.html"

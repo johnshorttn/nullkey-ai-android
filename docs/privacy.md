@@ -1,6 +1,9 @@
 # NullKey AI Privacy Policy
 
+**Play listing URL:** https://johnshorttn.github.io/nullkey-ai-android/privacy.html  
 **Last updated: September 21, 2026**
+
+This page is the canonical public policy. The longer draft at [PRIVACY.md](PRIVACY.md) is not the Play URL.
 
 NullKey AI is an Android keyboard and clipboard/vault application designed around local, privacy-conscious operation.
 
@@ -18,7 +21,7 @@ Deleted clips may be retained in NullKey AI's Trash for up to 30 days so they ca
 
 ## OCR and language assistance
 
-On-device OCR and offline-first spelling/grammar assistance are designed to process content locally. If a future optional feature uses an external service, it must be separately disclosed and require appropriate user choice before content is transmitted.
+On-device OCR and spelling/grammar assistance are not in this build. If a later version adds them, and if any optional feature uses an external service, that version must be disclosed here and require an explicit user choice before content is transmitted.
 
 ## Backups and exports
 
@@ -30,7 +33,7 @@ Diagnostic information may include items such as the NullKey version/build, Andr
 
 ## Network access
 
-NullKey's privacy-sensitive core features are designed for local operation. Features requiring network access, if introduced, will be documented with their purpose and applicable user controls.
+This build does **not** include the `INTERNET` permission. Keyboard, clipboard, and Vault features run on the device. If a later version adds network access, this policy and the Play Data Safety form will be updated before that build is listed.
 
 ## Data sales and advertising
 
@@ -38,7 +41,7 @@ NullKey AI does not sell personal data. Core privacy and security protections ar
 
 ## Security
 
-Please do not disclose security vulnerabilities in a public issue. See the project's [security reporting instructions](../SECURITY.md).
+Please do not disclose security vulnerabilities in a public issue. See the project's [security reporting instructions](https://github.com/johnshorttn/nullkey-ai-android/blob/rewrite/v2/SECURITY.md).
 
 ## Changes
 

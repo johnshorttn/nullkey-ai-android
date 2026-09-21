@@ -27,7 +27,9 @@ The voice of your vault. The memory of your mind.
 **Category:** Productivity (alternate: Tools)  
 **Tags:** keyboard, clipboard, privacy, offline, vault  
 **Contact email:** set in Play Console (developer account).  
-**Privacy policy URL:** required for IME apps. Host [PRIVACY.md](PRIVACY.md) on HTTPS before review.
+**Privacy policy URL:** https://johnshorttn.github.io/nullkey-ai-android/privacy.html
+
+That HTTPS page is already live. Paste it into Play Console. Prefer it over the draft page [PRIVACY.md](PRIVACY.md) (`/PRIVACY` on the same site). Source: [privacy.md](privacy.md).
 
 ## Graphics checklist
 

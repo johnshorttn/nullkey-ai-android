@@ -104,8 +104,8 @@ It also checks that `-Pnullkey.releaseMinify=false` reports minify and resource 
 1. Use the **production** upload keystore, not the smoke keystore.
 2. In Play Console: **Release → Production / Testing → Create release → Upload AAB**.
 3. Enable **Play App Signing**. Keep the upload key; Google holds the app-signing key.
-4. Complete Data Safety, IME, and privacy-policy fields using [PLAY_STORE.md](PLAY_STORE.md) and [PRIVACY.md](PRIVACY.md).
-5. Publish the privacy policy at a **public HTTPS URL** (GitHub Pages or a site you control). Play will not accept a repo-only markdown file.
+4. Complete Data Safety, IME, and privacy-policy fields using [PLAY_STORE.md](PLAY_STORE.md).
+5. Privacy policy URL for Play Console: **https://johnshorttn.github.io/nullkey-ai-android/privacy.html** (source [privacy.md](privacy.md)). GitHub Pages already publishes `docs/` from `rewrite/v2`. Do not paste a repo-only markdown path.
 
 This repository does not call `fastlane supply`, Play Developer API, or `r0adkll/upload-google-play`.
 

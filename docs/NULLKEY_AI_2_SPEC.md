@@ -605,7 +605,7 @@ Release signing, AAB smoke, listing notes, and the privacy-policy draft live nex
 
 - [RELEASE_AAB.md](RELEASE_AAB.md) — keystore placeholders, env vars, CI, no secrets in git
 - [PLAY_STORE.md](PLAY_STORE.md) — listing copy, Data Safety, IME / FGS declarations
-- [PRIVACY.md](PRIVACY.md) — policy draft matching the shipping offline defaults
+- [privacy.md](privacy.md) — public policy at https://johnshorttn.github.io/nullkey-ai-android/privacy.html
 - [RELEASE_NOTES.md](RELEASE_NOTES.md) — what 1.2 actually contains
 
 Do not treat a signed AAB as Play-submittable until issue #17 remaining product scope is either shipped or explicitly deferred. `compileSdk` / `targetSdk` are **36**.
