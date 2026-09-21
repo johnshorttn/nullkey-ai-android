@@ -49,6 +49,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     private var gesturePointerY = 0f
     private var gesturePointerActive = false
     private var accentPopup: PopupWindow? = null
+    private var popupSourceKeyId: String? = null
     private val gesturePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -162,6 +163,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     override fun onDetachedFromWindow() {
         accentPopup?.dismiss()
         accentPopup = null
+        popupSourceKeyId = null
         controller.cancel()
         super.onDetachedFromWindow()
     }
@@ -169,6 +171,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     fun resetEngine() {
         accentPopup?.dismiss()
         accentPopup = null
+        popupSourceKeyId = null
         controller.swipeTypingEnabled = KeyboardEnginePreferences.swipeTypingEnabled(context)
         controller.reset()
     }
@@ -185,6 +188,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     private fun showCharacterPopup(characters: String) {
         accentPopup?.dismiss()
         accentPopup = null
+        popupSourceKeyId = controller.touch.pressed?.id
         val density = resources.displayMetrics.density
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -194,7 +198,13 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         val popup = PopupWindow(row, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true).apply {
             isOutsideTouchable = true
             elevation = 8f * density
-            setOnDismissListener { if (accentPopup === this) accentPopup = null }
+            setOnDismissListener {
+                if (accentPopup === this) {
+                    accentPopup = null
+                    popupSourceKeyId = null
+                    popupSourceKeyId = null
+                }
+            }
         }
         accentPopup = popup
         characters.forEach { character ->
