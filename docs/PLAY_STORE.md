@@ -1,6 +1,6 @@
 # Play Store listing notes (NullKey AI)
 
-Draft copy and Console checklist for issue #17. **Not an upload.** Values match the shipping `rewrite/v2` tree, not the full 2.0 spec. OCR, cloud AI, plugins, and hosted sync are **not** in this listing yet.
+Draft copy and Console checklist for issue #17. **Not an upload.** Values match the shipping `rewrite/v2` tree, not the full 2.0 spec. Cloud AI, plugins, and hosted sync are **not** in this listing yet. On-device Latin OCR and offline English spelling are in the build; refresh the store description before any upload.
 
 Package: `com.nullverse.nullkeyai`  
 Version in Gradle: **1.2** / versionCode **12**  
@@ -45,7 +45,7 @@ Use current dark Vault UI. Do not screenshot other people’s clipboard contents
 
 ## Data safety (Play form)
 
-Google’s “collected” means data sent off the device. This app has **no INTERNET permission** and no third-party SDKs that transmit user content.
+Google’s “collected” means data sent off the device. This app has **no INTERNET permission**. ML Kit Latin OCR is bundled in the APK; its Clearcut uploader is not packaged, and `INTERNET` is stripped from the merged manifest, so it cannot transmit images or text.
 
 | Question | Answer |
 | --- | --- |
@@ -58,8 +58,8 @@ Google’s “collected” means data sent off the device. This app has **no INT
 
 On-device (not reported as “collected” on Data Safety, but disclose in the privacy policy):
 
-- Vault clips, tags, notes, and optional image/file attachments
-- Keyboard suggestion frequencies in private SharedPreferences
+- Vault clips, tags, notes, optional image/file attachments, and text extracted from images you scan
+- Keyboard suggestion frequencies in private SharedPreferences, plus a bundled English spelling list (not user content)
 - Device-local Keystore keys for protected clips
 - Optional clipboard monitor notification state
 
@@ -90,7 +90,7 @@ If `INTERNET` is added later, this form must be redone before release.
 | AAB | `./gradlew :app:bundleRelease` | Required (not APK) |
 | Play App Signing | Upload key from `docs/RELEASE_AAB.md` | Required |
 | R8 | **On** for release (minify + resource shrink). Debug stays off. Opt out: `-Pnullkey.releaseMinify=false`. | Upload `mapping.txt` with the AAB. See [RELEASE_AAB.md](RELEASE_AAB.md). |
-| Native 16 KB | No `.so` files | N/A |
+| Native 16 KB | Bundled OCR ships `libmlkit_google_ocr_pipeline.so` (ELF LOAD align 16 KB / `0x4000`) | Confirm Play’s 16 KB check on the AAB before upload. |
 
 ## Permissions to declare in Console
 
@@ -113,7 +113,7 @@ No `INTERNET`, `CAMERA`, `RECORD_AUDIO`, `READ_CONTACTS`, or location.
 
 ## Intentionally not claimed in this listing
 
-On-device OCR, spelling/grammar cloud or ML Kit, plugin `.jar` loading, WebView settings, hosted sync, and Play upload automation. See issue #17 remaining scope and [RELEASE_NOTES.md](RELEASE_NOTES.md).
+Cloud OCR, unbundled ML Kit model download, full grammar parsing, plugin `.jar` loading, WebView settings, hosted sync, and Play upload automation. Latin on-device OCR and the bundled English word list are in this tree. See issue #17 remaining scope and [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 
 ## Permanent staged release pipeline

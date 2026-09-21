@@ -51,3 +51,8 @@
 # literals. Renaming constants would desync existing vaults and prefs.
 # ---------------------------------------------------------------------------
 -keep enum com.nullverse.nullkeyai.** { *; }
+
+# Bundled ML Kit Latin OCR. The AAR consumer rules keep proto fields and
+# native method names for libmlkit_google_ocr_pipeline.so. Clearcut
+# (transport-backend-cct) is excluded in Gradle; ignore optional refs.
+-dontwarn com.google.android.datatransport.cct.**

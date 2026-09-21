@@ -30,6 +30,7 @@ data class ClipListCopy(
     val captureImport: String,
     val captureRemote: String,
     val captureUnknown: String,
+    val badgeOcr: String = "Scanned text",
     val separator: String = " • ",
 ) {
     companion object {
@@ -53,6 +54,7 @@ data class ClipListCopy(
             captureImport = context.getString(R.string.capture_method_import),
             captureRemote = context.getString(R.string.capture_method_remote),
             captureUnknown = context.getString(R.string.capture_method_unknown),
+            badgeOcr = context.getString(R.string.clip_badge_ocr),
         )
     }
 
@@ -79,7 +81,11 @@ data class ClipListCopy(
 object ClipListPresentation {
     fun preview(clip: Clip, copy: ClipListCopy): String = when {
         clip.protected -> copy.protectedClip
-        clip.contentType == ClipContentType.IMAGE.name -> clip.notes.ifBlank { copy.imageFallback }
+        clip.contentType == ClipContentType.IMAGE.name ->
+            clip.notes.ifBlank {
+                clip.ocrText?.lineSequence()?.firstOrNull { it.isNotBlank() }?.trim()?.take(80)
+                    ?: copy.imageFallback
+            }
         clip.contentType == ClipContentType.FILE.name ->
             clip.notes.ifBlank { clip.mimeType ?: copy.fileFallback }
         else -> clip.content
@@ -91,6 +97,9 @@ object ClipListPresentation {
         if (clip.protected) parts += copy.badgeProtected
         if (clip.notes.isNotBlank() && clip.contentType == ClipContentType.TEXT.name) {
             parts += copy.badgeNote
+        }
+        if (!clip.protected && !clip.ocrText.isNullOrBlank()) {
+            parts += copy.badgeOcr
         }
         clip.sourceAppLabel?.takeIf { it.isNotBlank() }?.let { parts += it }
             ?: clip.sourcePackage?.takeIf { it.isNotBlank() }?.let { parts += it }

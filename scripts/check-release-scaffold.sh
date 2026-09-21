@@ -50,9 +50,15 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   [[ -z "$tracked_keys" ]] || fail "tracked keystore material: $tracked_keys"
 fi
 
-if grep -Eq 'android\.permission\.INTERNET' "$MANIFEST"; then
+# Library manifests (for example ML Kit telemetry) may inject INTERNET.
+# The app manifest must strip it and must not request it for real.
+if grep -E 'android\.permission\.INTERNET' "$MANIFEST" | grep -v 'tools:node="remove"' | grep -q .; then
   fail "app AndroidManifest requests INTERNET; update docs/privacy.md and Play Data Safety before adding network"
 fi
+grep -Fq 'android.permission.INTERNET" tools:node="remove"' "$MANIFEST" \
+  || fail "app AndroidManifest must strip library-injected INTERNET"
+grep -Fq 'android.permission.ACCESS_NETWORK_STATE" tools:node="remove"' "$MANIFEST" \
+  || fail "app AndroidManifest must strip library-injected ACCESS_NETWORK_STATE"
 
 PRIVACY_URL="https://johnshorttn.github.io/nullkey-ai-android/privacy.html"
 PRIVACY_DOC="$ROOT/docs/privacy.md"

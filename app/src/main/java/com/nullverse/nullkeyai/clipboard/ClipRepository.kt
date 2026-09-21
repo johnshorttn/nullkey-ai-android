@@ -98,6 +98,28 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
 
     suspend fun setNotes(id: Long, notes: String) { dao.setNotes(id, notes); markLocalMutation(id) }
 
+    /**
+     * Stores searchable image text. Protected rows are refused so OCR output
+     * is not written next to ciphertext in plaintext.
+     */
+    suspend fun setOcrText(id: Long, ocrText: String?) {
+        val clip = dao.byId(id) ?: return
+        if (clip.protected) return
+        val normalized = ocrText?.trim()?.ifBlank { null }
+        if (clip.ocrText == normalized) return
+        dao.update(clip.copy(ocrText = normalized))
+        markLocalMutation(id)
+    }
+
+    /** Replaces plain text content. No-op on protected rows. */
+    suspend fun setContent(id: Long, content: String) {
+        val clip = dao.byId(id) ?: return
+        if (clip.protected) return
+        if (clip.content == content) return
+        dao.update(clip.copy(content = content))
+        markLocalMutation(id)
+    }
+
     suspend fun setProtected(id: Long, isProtected: Boolean) {
         val vaultCrypto = crypto ?: throw IllegalStateException("Vault crypto unavailable; protection state cannot be changed safely")
         val clip = dao.byId(id) ?: return
@@ -117,6 +139,10 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
                 vaultCrypto.encrypt(clip.notes),
                 true
             )
+            // ocrText is a plaintext search column. Drop it when the clip is locked.
+            dao.byId(id)?.takeIf { it.ocrText != null }?.let { locked ->
+                dao.update(locked.copy(ocrText = null))
+            }
         } else {
             clip.localAssetPath?.let { path ->
                 assetStore?.resolve(path)?.let { file ->

@@ -194,4 +194,28 @@
     <string name="beta_program">Beta Program</string>
     <string name="support_development">Support Development</string>
     <string name="support_privacy_notice">Never include clipboard contents, passwords, typed text, or Vault data in a public report.</string>
+
+    <string name="scan_image_text">Scan image text</string>
+    <string name="extract_text">Extract text</string>
+    <string name="extract_text_working">Reading text on this device…</string>
+    <string name="extract_text_empty">No text found in this image.</string>
+    <string name="extract_text_unavailable">On-device text recognition is not available on this device. The image stays in your Vault. Nothing is sent off the device.</string>
+    <string name="extract_text_failed">Could not read text from this image.</string>
+    <string name="extract_text_missing_asset">This image file is not available in the Vault.</string>
+    <string name="extract_text_protected">Unlock this clip before reading text from it.</string>
+    <string name="extract_text_not_saved_protected">Text is not saved while this clip is protected.</string>
+    <string name="ocr_text_hint">Text found in this image</string>
+    <string name="save_ocr_as_clip">Save as text clip</string>
+    <string name="ocr_saved_clip">Saved a text clip from this image</string>
+    <string name="ocr_review_hint">Review the text, then save. It stays on this device.</string>
+    <string name="clip_badge_ocr">Scanned text</string>
+    <string name="writing_check">Check</string>
+    <string name="writing_check_a11y">Check spelling and grammar</string>
+    <string name="writing_check_button">Check writing</string>
+    <string name="writing_no_issues">No spelling or grammar suggestions.</string>
+    <string name="writing_skipped_password">Spelling check stays off for password fields.</string>
+    <string name="writing_delete_repeat">Delete repeat</string>
+    <string name="writing_applied">Suggestion applied.</string>
+    <string name="writing_nothing_to_check">Select text or type something to check.</string>
+    <string name="scan_not_image">Choose an image file.</string>
 </resources>

@@ -10,7 +10,7 @@ Offline-first clipboard keyboard with a private on-device vault.
 
 ## Privacy defaults
 
-- No `INTERNET` permission. Typing, suggestions, and Vault stay on-device.
+- No `INTERNET` permission. Typing, suggestions, Vault, on-device image text (bundled Latin OCR), and spelling checks stay on-device.
 - Optional clipboard monitor uses a special-use foreground service when the user starts it.
 - Protected clips use Android Keystore-backed AES-GCM. Encrypted backups are user-exported files.
 - Sync in this tree is a local/in-memory foundation. No production hosts or API keys.

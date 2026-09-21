@@ -27,6 +27,13 @@ class SampledBitmapDecoderTest {
     }
 
     @Test
+    fun sampleSizeForMaxEdge_shrinksTheLongSide() {
+        assertEquals(1, SampledBitmapDecoder.sampleSizeForMaxEdge(100, 80, 1600))
+        assertEquals(2, SampledBitmapDecoder.sampleSizeForMaxEdge(4000, 3000, 1600))
+        assertEquals(4, SampledBitmapDecoder.sampleSizeForMaxEdge(8000, 500, 1600))
+    }
+
+    @Test
     fun decodeFile_returnsSmallerBitmapThanSource() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val source = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888)
