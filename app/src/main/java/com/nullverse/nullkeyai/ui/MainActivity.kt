@@ -215,12 +215,12 @@ class MainActivity : AppCompatActivity() {
         val button = findViewById<Button>(buttonId)
         fun refresh() {
             val action = if (left) ClipSwipePreferences.left(this) else ClipSwipePreferences.right(this)
-            button.text = "${if (left) "Left" else "Right"} swipe: ${action.name.lowercase().replaceFirstChar { it.uppercase() }}"
+            button.text = getString(R.string.swipe_action_label, if (left) getString(R.string.swipe_left_default).substringBefore(" ") else getString(R.string.swipe_right_default).substringBefore(" "), action.name.lowercase().replaceFirstChar { it.uppercase() })
         }
         button.setOnClickListener {
             val actions = ClipSwipeAction.entries.toTypedArray()
             AlertDialog.Builder(this)
-                .setTitle(if (left) "Left swipe action" else "Right swipe action")
+                .setTitle(if (left) R.string.swipe_left_title else R.string.swipe_right_title)
                 .setItems(actions.map { it.name.lowercase().replaceFirstChar { ch -> ch.uppercase() } }.toTypedArray()) { _, which ->
                     if (left) ClipSwipePreferences.setLeft(this, actions[which])
                     else ClipSwipePreferences.setRight(this, actions[which])
@@ -233,11 +233,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSwipeTagDialog(clipId: Long) {
         val input = EditText(this).apply {
-            hint = "Tag name"
+            hint = getString(R.string.tag_name_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
         }
         AlertDialog.Builder(this)
-            .setTitle("Add tag")
+            .setTitle(R.string.add_tag_title)
             .setView(input)
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(android.R.string.ok) { _, _ ->
