@@ -147,6 +147,7 @@ class MainActivity : AppCompatActivity() {
         search.addTextChangedListener(SimpleWatcher { observeClips() })
         filesOnly.setOnCheckedChangeListener { _, _ -> observeClips() }
 
+        lifecycleScope.launch { repository.ensureDefaultTags() }
         requestNotifPermissionIfNeeded()
         observeClips()
     }
