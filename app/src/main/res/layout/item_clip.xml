@@ -3,24 +3,41 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?android:attr/selectableItemBackground"
-    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
     android:paddingHorizontal="12dp"
     android:paddingVertical="8dp">
 
-    <TextView
-        android:id="@+id/clip_preview"
-        android:layout_width="match_parent"
+    <LinearLayout
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:ellipsize="end"
-        android:maxLines="2"
-        android:textColor="@color/text_primary"
-        android:textSize="15sp" />
+        android:layout_weight="1"
+        android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/clip_meta"
-        android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/clip_preview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/clip_meta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/slate"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/clip_restore"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/slate"
-        android:textSize="11sp" />
+        android:layout_marginStart="8dp"
+        android:contentDescription="@string/restore_clip"
+        android:text="@string/restore_clip"
+        android:visibility="gone" />
 
 </LinearLayout>

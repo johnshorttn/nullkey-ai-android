@@ -48,9 +48,14 @@
     <string name="no_tags">No tags</string>
     <string name="add_tag">Add tag…</string>
     <string name="add">Add</string>
+    <string name="remove_tag">Remove tag %1$s</string>
+    <string name="add_suggested_tag">Add tag %1$s</string>
+    <string name="suggested_tags">Suggested tags</string>
     <string name="trash">Trash</string>
-    <string name="trash_help">Tap an item to restore it. Items are automatically purged after the retention period.</string>
+    <string name="trash_help">Tap Restore to return an item to the vault. Items are automatically purged after the retention period.</string>
     <string name="trash_empty">Trash is empty</string>
+    <string name="restore_clip">Restore</string>
+    <string name="restored">Restored to vault</string>
     <string name="image_preview">Vault image preview</string>
     <string name="asset_saved_private">Saved privately in NullKey Vault</string>
     <string name="asset_unavailable">Original asset is no longer readable</string>

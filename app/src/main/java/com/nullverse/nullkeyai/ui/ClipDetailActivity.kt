@@ -7,7 +7,6 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageView
 import android.view.View
-import android.graphics.BitmapFactory
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -45,8 +44,11 @@ class ClipDetailActivity : AppCompatActivity() {
             val imageView = findViewById<ImageView>(R.id.detail_image)
             val assetStatus = findViewById<TextView>(R.id.detail_asset_status)
             val asset = assetStore.resolve(clip.localAssetPath)
+            val (reqW, reqH) = SampledBitmapDecoder.previewBounds(resources)
             if (!clip.protected && clip.contentType == "IMAGE" && asset != null) {
-                val bitmap = runCatching { BitmapFactory.decodeFile(asset.absolutePath) }.getOrNull()
+                val bitmap = runCatching {
+                    SampledBitmapDecoder.decodeFile(asset.absolutePath, reqW, reqH)
+                }.getOrNull()
                 if (bitmap != null) {
                     imageView.setImageBitmap(bitmap)
                     imageView.visibility = View.VISIBLE
@@ -89,9 +91,7 @@ class ClipDetailActivity : AppCompatActivity() {
             )
             findViewById<CheckBox>(R.id.detail_pinned).isChecked = clip.pinned
             findViewById<CheckBox>(R.id.detail_protected).isChecked = clip.protected
-            findViewById<TextView>(R.id.detail_tags).text =
-                repository.tagsForClip(clipId).joinToString(" • ") { it.name }
-                    .ifBlank { getString(R.string.no_tags) }
+            refreshTags()
         }
 
         findViewById<Button>(R.id.detail_save).setOnClickListener {
@@ -107,15 +107,34 @@ class ClipDetailActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 val input = findViewById<EditText>(R.id.detail_new_tag)
                 repository.addTag(clipId, input.text.toString())
-                findViewById<TextView>(R.id.detail_tags).text =
-                    repository.tagsForClip(clipId).joinToString(" • ") { it.name }
-                        .ifBlank { getString(R.string.no_tags) }
                 input.text.clear()
+                refreshTags()
             }
         }
         findViewById<Button>(R.id.detail_trash).setOnClickListener {
             lifecycleScope.launch { repository.moveToTrash(clipId); finish() }
         }
+    }
+
+    private suspend fun refreshTags() {
+        TagChipUi.bind(
+            attachedGroup = findViewById(R.id.detail_tags),
+            emptyView = findViewById(R.id.detail_no_tags),
+            suggestedGroup = findViewById(R.id.detail_suggested_tags),
+            attached = repository.tagsForClip(clipId),
+            onRemove = { tag ->
+                lifecycleScope.launch {
+                    repository.removeTag(clipId, tag.id)
+                    refreshTags()
+                }
+            },
+            onAddSuggested = { name ->
+                lifecycleScope.launch {
+                    repository.addTag(clipId, name)
+                    refreshTags()
+                }
+            }
+        )
     }
 
     private fun authenticateAndReveal() {
@@ -140,11 +159,12 @@ class ClipDetailActivity : AppCompatActivity() {
                         findViewById<Button>(R.id.detail_unlock).visibility = View.GONE
                         val asset = assetStore.resolve(clip.localAssetPath)
                         if (clip.contentType == "IMAGE" && asset != null) {
+                            val (reqW, reqH) = SampledBitmapDecoder.previewBounds(resources)
                             val bitmap = runCatching {
                                 if (vaultCrypto.isEncryptedFile(asset)) {
                                     val bytes = vaultCrypto.decryptFile(asset)
-                                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                                } else BitmapFactory.decodeFile(asset.absolutePath)
+                                    SampledBitmapDecoder.decodeByteArray(bytes, reqW, reqH)
+                                } else SampledBitmapDecoder.decodeFile(asset.absolutePath, reqW, reqH)
                             }.getOrNull()
                             bitmap?.let {
                                 findViewById<ImageView>(R.id.detail_image).apply {

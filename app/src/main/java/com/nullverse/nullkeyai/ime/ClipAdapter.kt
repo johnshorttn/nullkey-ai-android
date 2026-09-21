@@ -1,7 +1,9 @@
 package com.nullverse.nullkeyai.ime
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
@@ -10,6 +12,7 @@ import com.nullverse.nullkeyai.db.Clip
 
 /** Renders captured clips inside the IME's clip vault and reports taps. */
 class ClipAdapter(
+    private val showRestore: Boolean = false,
     private val onClick: (Clip) -> Unit
 ) : RecyclerView.Adapter<ClipAdapter.ClipViewHolder>() {
 
@@ -42,6 +45,7 @@ class ClipAdapter(
     inner class ClipViewHolder(view: android.view.View) : RecyclerView.ViewHolder(view) {
         private val preview: TextView = view.findViewById(R.id.clip_preview)
         private val meta: TextView = view.findViewById(R.id.clip_meta)
+        private val restore: Button = view.findViewById(R.id.clip_restore)
 
         fun bind(clip: Clip) {
             preview.text = when {
@@ -58,6 +62,8 @@ class ClipAdapter(
                 ?: ""
             val note = if (clip.notes.isNotBlank() && clip.contentType == "TEXT") " • NOTE" else ""
             meta.text = "$kind$pin$lock$note$source"
+            restore.visibility = if (showRestore) View.VISIBLE else View.GONE
+            restore.setOnClickListener { onClick(clip) }
             itemView.setOnClickListener { onClick(clip) }
         }
     }

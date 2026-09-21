@@ -93,20 +93,36 @@ abstract class NullKeyDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE clips ADD COLUMN syncExcluded INTEGER NOT NULL DEFAULT 0")
                 // Existing rows get deterministic migration IDs without relying on local IDs after sync begins.
                 db.execSQL("UPDATE clips SET syncId = lower(hex(randomblob(16))) WHERE syncId = ''")
-                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_clips_syncId ON clips(syncId)")
+                // Unique index is not declared on the v4 entity; creating it here would
+                // fail Room's post-migration schema validation on upgrade.
+            }
+        }
+
+        val SEED_CALLBACK = object : RoomDatabase.Callback() {
+            override fun onOpen(db: SupportSQLiteDatabase) {
+                DefaultTags.seed(db)
             }
         }
 
         fun get(context: Context): NullKeyDatabase =
             INSTANCE ?: synchronized(this) {
-                INSTANCE ?: Room.databaseBuilder(
-                    context.applicationContext,
-                    NullKeyDatabase::class.java,
-                    "nullkey.db"
-                )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
-                    .build()
-                    .also { INSTANCE = it }
+                INSTANCE ?: builder(context).build().also { INSTANCE = it }
             }
+
+        fun builder(context: Context, name: String = "nullkey.db") =
+            Room.databaseBuilder(
+                context.applicationContext,
+                NullKeyDatabase::class.java,
+                name
+            )
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addCallback(SEED_CALLBACK)
+
+        internal fun resetInstanceForTests() {
+            synchronized(this) {
+                INSTANCE?.close()
+                INSTANCE = null
+            }
+        }
     }
 }

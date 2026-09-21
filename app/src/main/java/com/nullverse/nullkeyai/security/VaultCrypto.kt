@@ -15,7 +15,7 @@ import java.io.File
  * Keys are generated inside Android Keystore and are never exported.
  */
 class VaultCrypto {
-    private val keyStore = KeyStore.getInstance(KEYSTORE).apply { load(null) }
+    private val keyStore by lazy { KeyStore.getInstance(KEYSTORE).apply { load(null) } }
 
     private fun key(): SecretKey {
         (keyStore.getKey(ALIAS, null) as? SecretKey)?.let { return it }
