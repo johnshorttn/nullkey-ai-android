@@ -221,7 +221,7 @@ class MainActivity : AppCompatActivity() {
             val actions = ClipSwipeAction.entries.toTypedArray()
             AlertDialog.Builder(this)
                 .setTitle(if (left) R.string.swipe_left_title else R.string.swipe_right_title)
-                .setItems(actions.map { it.name.lowercase().replaceFirstChar { ch -> ch.uppercase() } }.toTypedArray()) { _, which ->
+                .setItems(actions.map { getString(it.labelRes) }.toTypedArray()) { _, which ->
                     if (left) ClipSwipePreferences.setLeft(this, actions[which])
                     else ClipSwipePreferences.setRight(this, actions[which])
                     refresh()
