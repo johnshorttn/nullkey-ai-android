@@ -5,6 +5,9 @@ import com.nullverse.nullkeyai.db.ClipDao
 import com.nullverse.nullkeyai.db.ClipCaptureMethod
 import com.nullverse.nullkeyai.db.ClipContentType
 import com.nullverse.nullkeyai.db.ClipSourceConfidence
+import com.nullverse.nullkeyai.db.ClipTagCrossRef
+import com.nullverse.nullkeyai.db.Tag
+import com.nullverse.nullkeyai.db.TagDao
 import kotlinx.coroutines.flow.Flow
 import java.util.concurrent.TimeUnit
 
@@ -26,7 +29,7 @@ data class ClipCaptureRequest(
     val sourceConfidence: ClipSourceConfidence = ClipSourceConfidence.UNKNOWN
 )
 
-class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAssetStore? = null) {
+class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAssetStore? = null, private val tagDao: TagDao? = null) {
 
     fun search(query: String, filesOnly: Boolean): Flow<List<Clip>> =
         dao.search(query.trim(), filesOnly)
@@ -91,6 +94,22 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
     suspend fun setNotes(id: Long, notes: String) = dao.setNotes(id, notes)
 
     suspend fun setProtected(id: Long, isProtected: Boolean) = dao.setProtected(id, isProtected)
+
+    suspend fun tagsForClip(id: Long): List<Tag> = tagDao?.forClip(id).orEmpty()
+
+    suspend fun addTag(id: Long, rawName: String) {
+        val tags = tagDao ?: return
+        val name = rawName.trim()
+        if (name.isBlank()) return
+        val existing = tags.findByName(name)
+        val tagId = existing?.id ?: tags.insert(Tag(name = name)).takeIf { it > 0 }
+            ?: tags.findByName(name)?.id ?: return
+        tags.attach(ClipTagCrossRef(id, tagId))
+    }
+
+    suspend fun removeTag(id: Long, tagId: Long) {
+        tagDao?.detach(id, tagId)
+    }
 
     /** Serialize all active clips to a portable JSON backup document. */
     suspend fun exportJson(): String = ClipBackup.toJson(dao.allActive())
