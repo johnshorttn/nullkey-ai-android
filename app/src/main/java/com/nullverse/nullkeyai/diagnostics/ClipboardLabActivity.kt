@@ -10,6 +10,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.ime.NullKeyImeService
+import com.nullverse.nullkeyai.ui.SystemBarInsets
 
 class ClipboardLabActivity : AppCompatActivity() {
     private lateinit var output: TextView
@@ -19,6 +20,7 @@ class ClipboardLabActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_clipboard_lab)
+        SystemBarInsets.applyToActivity(this)
         output = findViewById(R.id.lab_output)
         runButton = findViewById(R.id.btn_run_clipboard_lab)
         runButton.setOnClickListener { requestConsentAndRun() }

@@ -46,6 +46,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Contract tests assert applicationInfo.targetSdkVersion == 36 even on
+        # this API-34 image. A dedicated API-36 emulator is a follow-up (disk).
         api-level: [ 34 ]
     steps:
       - uses: actions/checkout@v5

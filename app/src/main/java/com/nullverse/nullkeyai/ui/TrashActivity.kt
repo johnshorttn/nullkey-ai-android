@@ -24,6 +24,7 @@ class TrashActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_trash)
+        SystemBarInsets.applyToActivity(this)
         val db = NullKeyDatabase.get(this)
         repository = ClipRepository(db.clipDao(), VaultAssetStore(this), db.tagDao(), deviceIdentity = DeviceIdentity.from(this))
         val empty = findViewById<TextView>(R.id.trash_empty)

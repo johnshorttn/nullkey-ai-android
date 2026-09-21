@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
+import com.nullverse.nullkeyai.ui.SystemBarInsets
 import com.nullverse.nullkeyai.db.NullKeyDatabase
 import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
 import com.nullverse.nullkeyai.ime.engine.KeyCodes
@@ -68,6 +69,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     override fun onCreateInputView(): View {
         val root = layoutInflater.inflate(R.layout.keyboard, null)
+        SystemBarInsets.pad(root)
 
         qwerty = Keyboard(this, R.xml.qwerty)
         symbols = Keyboard(this, R.xml.symbols)
