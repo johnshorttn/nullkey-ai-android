@@ -43,6 +43,16 @@
         <CheckBox android:id="@+id/detail_protected" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:text="@string/protected_label"
             android:textColor="@color/text_primary" android:buttonTint="@color/neon"/>
+        <LinearLayout android:id="@+id/detail_asset_actions"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:visibility="gone">
+            <Button android:id="@+id/detail_open_asset" android:layout_width="0dp"
+                android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="@string/open_asset"/>
+            <Button android:id="@+id/detail_share_asset" android:layout_width="0dp"
+                android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="@string/share_asset"/>
+        </LinearLayout>
         <Button android:id="@+id/detail_save" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:text="@string/save_changes"/>
         <Button android:id="@+id/detail_trash" android:layout_width="match_parent"
