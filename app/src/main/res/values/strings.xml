@@ -183,4 +183,15 @@
     <string name="key_enter">enter</string>
     <string name="key_letters">ABC</string>
     <string name="key_symbols">\?123</string>
+    <string name="about_support_title">About &amp; Support</string>
+    <string name="about_version_format">Version %1$s (%2$d)</string>
+    <string name="release_channel_stable">Release channel: Stable</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="help_support">Help &amp; Support</string>
+    <string name="report_bug">Report a Bug</string>
+    <string name="request_feature">Request a Feature</string>
+    <string name="security_reporting">Report a Security Issue</string>
+    <string name="beta_program">Beta Program</string>
+    <string name="support_development">Support Development</string>
+    <string name="support_privacy_notice">Never include clipboard contents, passwords, typed text, or Vault data in a public report.</string>
 </resources>
