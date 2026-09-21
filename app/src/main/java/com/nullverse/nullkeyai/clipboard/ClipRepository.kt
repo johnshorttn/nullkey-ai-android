@@ -155,10 +155,13 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
         val tagId = existing?.id ?: tags.insert(Tag(name = name)).takeIf { it > 0 }
             ?: tags.findByName(name)?.id ?: return
         tags.attach(ClipTagCrossRef(id, tagId))
+        markLocalMutation(id)
     }
 
     suspend fun removeTag(id: Long, tagId: Long) {
-        tagDao?.detach(id, tagId)
+        val tags = tagDao ?: return
+        tags.detach(id, tagId)
+        markLocalMutation(id)
     }
 
     suspend fun ensureDefaultTags() {
@@ -261,7 +264,7 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
         val deviceId = deviceIdentity?.current()
         var converted = 0
         for (clip in expired) {
-            assetStore?.delete(clip.localAssetPath)
+            val assetPath = clip.localAssetPath
             dao.update(
                 clip.copy(
                     content = "",
@@ -276,6 +279,7 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
                     updatedAt = now
                 )
             )
+            assetStore?.delete(assetPath)
             converted++
         }
         return converted
