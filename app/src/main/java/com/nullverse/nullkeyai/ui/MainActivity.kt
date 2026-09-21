@@ -25,6 +25,8 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
+import com.nullverse.nullkeyai.clipboard.ClipSwipeAction
+import com.nullverse.nullkeyai.clipboard.ClipSwipePreferences
 import com.nullverse.nullkeyai.clipboard.ClipCaptureRequest
 import com.nullverse.nullkeyai.clipboard.VaultAssetStore
 import com.nullverse.nullkeyai.clipboard.ClipboardMonitorService
@@ -118,9 +120,16 @@ class MainActivity : AppCompatActivity() {
                     return
                 }
                 lifecycleScope.launch {
-                    when (direction) {
-                        ItemTouchHelper.RIGHT -> repository.setPinned(clip.id, !clip.pinned)
-                        ItemTouchHelper.LEFT -> repository.moveToTrash(clip.id)
+                    val action = if (direction == ItemTouchHelper.RIGHT) {
+                        ClipSwipePreferences.right(this@MainActivity)
+                    } else {
+                        ClipSwipePreferences.left(this@MainActivity)
+                    }
+                    when (action) {
+                        ClipSwipeAction.PIN -> repository.setPinned(clip.id, !clip.pinned)
+                        ClipSwipeAction.PROTECT -> repository.setProtected(clip.id, !clip.protected)
+                        ClipSwipeAction.DELETE -> repository.moveToTrash(clip.id)
+                        ClipSwipeAction.TAG -> showSwipeTagDialog(clip.id)
                     }
                 }
             }
@@ -198,6 +207,23 @@ class MainActivity : AppCompatActivity() {
                 else android.view.View.GONE
             }
         }
+    }
+
+    private fun showSwipeTagDialog(clipId: Long) {
+        val input = EditText(this).apply {
+            hint = "Tag name"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Add tag")
+            .setView(input)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val tag = input.text.toString().trim()
+                if (tag.isNotEmpty()) lifecycleScope.launch { repository.addTag(clipId, tag) }
+            }
+            .setOnCancelListener { observeClips() }
+            .show()
     }
 
     private fun captureSystemClip() {
