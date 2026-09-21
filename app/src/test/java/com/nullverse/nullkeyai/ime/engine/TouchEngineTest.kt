@@ -132,6 +132,18 @@ class TouchEngineTest {
     }
 
     @Test
+    fun downOutsideKeyboardDoesNotCapturePointer() {
+        engine.down(1, -100f, -100f)
+        assertNull(engine.activePointerId)
+        assertNull(engine.pressed)
+
+        val q = key("q")
+        engine.down(2, q.slot.centerX, q.slot.centerY)
+        engine.up(2, q.slot.centerX, q.slot.centerY)
+        assertEquals(listOf("q"), recorder.taps)
+    }
+
+    @Test
     fun cancelDropsThePressWithoutATap() {
         val q = key("q")
         engine.down(1, q.slot.centerX, q.slot.centerY)
