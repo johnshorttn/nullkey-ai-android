@@ -51,4 +51,7 @@
     <string name="trash">Trash</string>
     <string name="trash_help">Tap an item to restore it. Items are automatically purged after the retention period.</string>
     <string name="trash_empty">Trash is empty</string>
+    <string name="image_preview">Vault image preview</string>
+    <string name="asset_saved_private">Saved privately in NullKey Vault</string>
+    <string name="asset_unavailable">Original asset is no longer readable</string>
 </resources>
