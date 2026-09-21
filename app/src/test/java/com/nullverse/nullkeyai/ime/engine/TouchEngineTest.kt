@@ -121,6 +121,19 @@ class TouchEngineTest {
     }
 
     @Test
+    fun tinyCrossKeyMovementDoesNotCancelLongPress() {
+        val q = key("q")
+        val w = key("w")
+        val startX = q.slot.right - 1f
+        val crossX = q.slot.right + 1f
+        engine.down(1, startX, q.slot.centerY)
+        engine.move(1, crossX, q.slot.centerY)
+        scheduler.advance(400)
+        assertEquals(listOf("w"), recorder.longPresses)
+        engine.cancel()
+    }
+
+    @Test
     fun swipeAcrossLettersCancelsLongPressOnVisitedKey() {
         val e = key("e")
         val r = key("r")
