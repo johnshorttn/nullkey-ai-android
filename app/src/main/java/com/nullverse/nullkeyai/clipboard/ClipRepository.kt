@@ -6,6 +6,7 @@ import com.nullverse.nullkeyai.db.ClipCaptureMethod
 import com.nullverse.nullkeyai.db.ClipContentType
 import com.nullverse.nullkeyai.db.ClipSourceConfidence
 import com.nullverse.nullkeyai.db.ClipTagCrossRef
+import com.nullverse.nullkeyai.db.DefaultTags
 import com.nullverse.nullkeyai.db.Tag
 import com.nullverse.nullkeyai.db.TagDao
 import com.nullverse.nullkeyai.security.VaultCrypto
@@ -166,7 +167,7 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
 
     suspend fun ensureDefaultTags() {
         val tags = tagDao ?: return
-        DEFAULT_TAGS.forEach { name ->
+        DefaultTags.NAMES.forEach { name ->
             if (tags.findByName(name) == null) tags.insert(Tag(name = name))
         }
     }
@@ -304,6 +305,5 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
 
     companion object {
         const val DEFAULT_RETENTION_DAYS = 30
-        val DEFAULT_TAGS = listOf("Personal", "Work", "Coding")
     }
 }

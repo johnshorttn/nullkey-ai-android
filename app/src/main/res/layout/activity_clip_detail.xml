@@ -28,12 +28,21 @@
             android:hint="@string/notes" android:minLines="3" android:gravity="top"
             android:inputType="textMultiLine" android:textColor="@color/text_primary"
             android:textColorHint="@color/slate"/>
-        <TextView android:id="@+id/detail_tags" android:layout_width="match_parent"
+        <TextView android:id="@+id/detail_no_tags" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:layout_marginTop="12dp"
             android:textColor="@color/violet" android:text="@string/no_tags"/>
-        <Button android:id="@+id/detail_remove_tag" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:text="@string/remove_tag"
-            android:visibility="gone"/>
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/detail_tags"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="@string/suggested_tags"
+            android:textColor="@color/slate" android:textSize="12sp"/>
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/detail_suggested_tags"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal">
             <EditText android:id="@+id/detail_new_tag" android:layout_width="0dp"

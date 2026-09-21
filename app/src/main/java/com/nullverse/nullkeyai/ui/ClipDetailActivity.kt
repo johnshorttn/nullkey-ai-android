@@ -7,10 +7,8 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageView
 import android.view.View
-import android.graphics.BitmapFactory
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.core.content.FileProvider
@@ -51,8 +49,11 @@ class ClipDetailActivity : AppCompatActivity() {
             val imageView = findViewById<ImageView>(R.id.detail_image)
             val assetStatus = findViewById<TextView>(R.id.detail_asset_status)
             val asset = assetStore.resolve(clip.localAssetPath)
+            val (previewWidth, previewHeight) = SampledBitmapDecoder.previewBounds(resources)
             if (!clip.protected && clip.contentType == "IMAGE" && asset != null) {
-                val bitmap = runCatching { BitmapFactory.decodeFile(asset.absolutePath) }.getOrNull()
+                val bitmap = runCatching {
+                    SampledBitmapDecoder.decodeFile(asset.absolutePath, previewWidth, previewHeight)
+                }.getOrNull()
                 if (bitmap != null) {
                     imageView.setImageBitmap(bitmap)
                     imageView.visibility = View.VISIBLE
@@ -132,36 +133,30 @@ class ClipDetailActivity : AppCompatActivity() {
                 input.text.clear()
             }
         }
-        findViewById<Button>(R.id.detail_remove_tag).setOnClickListener {
-            lifecycleScope.launch {
-                val tags = repository.tagsForClip(clipId)
-                if (tags.isEmpty()) {
-                    Toast.makeText(this@ClipDetailActivity, R.string.remove_tag_none, Toast.LENGTH_SHORT).show()
-                    return@launch
-                }
-                val names = tags.map { it.name }.toTypedArray()
-                AlertDialog.Builder(this@ClipDetailActivity)
-                    .setTitle(R.string.remove_tag_title)
-                    .setItems(names) { _, which ->
-                        lifecycleScope.launch {
-                            repository.removeTag(clipId, tags[which].id)
-                            refreshTags()
-                        }
-                    }
-                    .show()
-            }
-        }
         findViewById<Button>(R.id.detail_trash).setOnClickListener {
             lifecycleScope.launch { repository.moveToTrash(clipId); finish() }
         }
     }
 
     private suspend fun refreshTags() {
-        val tags = repository.tagsForClip(clipId)
-        findViewById<TextView>(R.id.detail_tags).text =
-            tags.joinToString(" • ") { it.name }.ifBlank { getString(R.string.no_tags) }
-        findViewById<Button>(R.id.detail_remove_tag).visibility =
-            if (tags.isEmpty()) View.GONE else View.VISIBLE
+        TagChipUi.bind(
+            attachedGroup = findViewById(R.id.detail_tags),
+            emptyView = findViewById(R.id.detail_no_tags),
+            suggestedGroup = findViewById(R.id.detail_suggested_tags),
+            attached = repository.tagsForClip(clipId),
+            onRemove = { tag ->
+                lifecycleScope.launch {
+                    repository.removeTag(clipId, tag.id)
+                    refreshTags()
+                }
+            },
+            onAddSuggested = { name ->
+                lifecycleScope.launch {
+                    repository.addTag(clipId, name)
+                    refreshTags()
+                }
+            }
+        )
     }
 
     private fun authenticateAndReveal() {
@@ -192,11 +187,12 @@ class ClipDetailActivity : AppCompatActivity() {
                         findViewById<Button>(R.id.detail_unlock).visibility = View.GONE
                         val asset = assetStore.resolve(clip.localAssetPath)
                         if (clip.contentType == "IMAGE" && asset != null) {
+                            val (previewWidth, previewHeight) = SampledBitmapDecoder.previewBounds(resources)
                             val bitmap = runCatching {
                                 if (vaultCrypto.isEncryptedFile(asset)) {
                                     val bytes = vaultCrypto.decryptFile(asset)
-                                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                                } else BitmapFactory.decodeFile(asset.absolutePath)
+                                    SampledBitmapDecoder.decodeByteArray(bytes, previewWidth, previewHeight)
+                                } else SampledBitmapDecoder.decodeFile(asset.absolutePath, previewWidth, previewHeight)
                             }.getOrNull()
                             bitmap?.let {
                                 findViewById<ImageView>(R.id.detail_image).apply {
