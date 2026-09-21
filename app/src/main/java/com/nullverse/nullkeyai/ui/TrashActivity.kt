@@ -2,6 +2,8 @@ package com.nullverse.nullkeyai.ui
 
 import android.os.Bundle
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -25,7 +27,17 @@ class TrashActivity : AppCompatActivity() {
         repository = ClipRepository(db.clipDao(), VaultAssetStore(this), db.tagDao())
         val empty = findViewById<TextView>(R.id.trash_empty)
         adapter = ClipAdapter { clip ->
-            lifecycleScope.launch { repository.restore(clip.id) }
+            AlertDialog.Builder(this)
+                .setTitle(R.string.restore_clip_title)
+                .setMessage(R.string.restore_clip_message)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.restore) { _, _ ->
+                    lifecycleScope.launch {
+                        repository.restore(clip.id)
+                        Toast.makeText(this@TrashActivity, R.string.restored, Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .show()
         }
         findViewById<RecyclerView>(R.id.trash_list).apply {
             layoutManager = LinearLayoutManager(this@TrashActivity)
