@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Clip::class, Tag::class, ClipTagCrossRef::class],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class NullKeyDatabase : RoomDatabase() {
@@ -97,6 +97,18 @@ abstract class NullKeyDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Collapse case-only duplicates before enforcing case-insensitive uniqueness.
+                db.execSQL("""UPDATE OR IGNORE clip_tags SET tagId = (
+                    SELECT MIN(t2.id) FROM tags t2 WHERE t2.name = (SELECT t1.name FROM tags t1 WHERE t1.id = clip_tags.tagId) COLLATE NOCASE
+                )""")
+                db.execSQL("DELETE FROM tags WHERE id NOT IN (SELECT MIN(id) FROM tags GROUP BY name COLLATE NOCASE)")
+                db.execSQL("DROP INDEX IF EXISTS index_tags_name")
+                db.execSQL("CREATE UNIQUE INDEX index_tags_name_nocase ON tags(name COLLATE NOCASE)")
+            }
+        }
+
         val SEED_CALLBACK = object : RoomDatabase.Callback() {
             override fun onOpen(db: SupportSQLiteDatabase) {
                 DefaultTags.seed(db)
@@ -117,7 +129,7 @@ abstract class NullKeyDatabase : RoomDatabase() {
 
         fun builder(context: Context, name: String = "nullkey.db") =
             Room.databaseBuilder(context.applicationContext, NullKeyDatabase::class.java, name)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .addCallback(SEED_CALLBACK)
     }
 }
