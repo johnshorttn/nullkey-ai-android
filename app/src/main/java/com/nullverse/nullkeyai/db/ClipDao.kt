@@ -69,8 +69,8 @@ interface ClipDao {
     @Query("UPDATE clips SET notes = :notes, updatedAt = :now WHERE id = :id")
     suspend fun setNotes(id: Long, notes: String, now: Long = System.currentTimeMillis())
 
-    @Query("UPDATE clips SET protected = :protected, updatedAt = :now WHERE id = :id")
-    suspend fun setProtected(id: Long, protected: Boolean, now: Long = System.currentTimeMillis())
+    @Query("UPDATE clips SET protected = :isProtected, updatedAt = :now WHERE id = :id")
+    suspend fun setProtected(id: Long, isProtected: Boolean, now: Long = System.currentTimeMillis())
 
     /** Permanently delete trashed clips older than [cutoff] (the 30-day retention). */
     @Query("DELETE FROM clips WHERE trashedAt IS NOT NULL AND trashedAt < :cutoff")
