@@ -50,6 +50,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     private var gesturePointerActive = false
     private var accentPopup: PopupWindow? = null
     private var popupSourceKeyId: String? = null
+    private var popupSourceCharacters: String = ""
     private val gesturePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -164,6 +165,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         accentPopup?.dismiss()
         accentPopup = null
         popupSourceKeyId = null
+        popupSourceCharacters = ""
         controller.cancel()
         super.onDetachedFromWindow()
     }
@@ -172,6 +174,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         accentPopup?.dismiss()
         accentPopup = null
         popupSourceKeyId = null
+        popupSourceCharacters = ""
         controller.swipeTypingEnabled = KeyboardEnginePreferences.swipeTypingEnabled(context)
         controller.reset()
     }
@@ -189,6 +192,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         accentPopup?.dismiss()
         accentPopup = null
         popupSourceKeyId = controller.touch.pressed?.id
+        popupSourceCharacters = characters
         val density = resources.displayMetrics.density
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -202,6 +206,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                 if (accentPopup === this) {
                     accentPopup = null
                     popupSourceKeyId = null
+                    popupSourceCharacters = ""
                     popupSourceKeyId = null
                 }
             }
@@ -252,7 +257,15 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         canvas.drawPath(path, gesturePaint)
     }
 
+    private fun dismissAccentPopup() {
+        accentPopup?.dismiss()
+        accentPopup = null
+        popupSourceKeyId = null
+        popupSourceCharacters = ""
+    }
+
     private fun applySize(width: Int, height: Int) {
+        dismissAccentPopup()
         val density = resources.displayMetrics.density
         val orientation = currentOrientation()
         theme = KeyboardTheme.from(context, orientation)
