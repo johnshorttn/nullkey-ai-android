@@ -78,6 +78,13 @@ object ClipBackup {
             val obj = array.optJSONObject(i) ?: continue
             val content = obj.optString("content", "")
             if (content.isBlank()) continue
+            val isProtected = obj.optBoolean("protected", false)
+            val protectionPayload = obj.optString("protectionPayload", "NONE")
+            if (isProtected && protectionPayload == "ANDROID_KEYSTORE_AES_GCM_V1") {
+                throw IllegalArgumentException(
+                    "Device-bound protected clips cannot be restored from plain JSON. Use Secure Backup (.nkbackup)."
+                )
+            }
             result.add(
                 Clip(
                     content = content,
@@ -88,7 +95,7 @@ object ClipBackup {
                     createdAt = obj.optLong("createdAt", System.currentTimeMillis()),
                     contentType = obj.optString("contentType", "TEXT"),
                     notes = obj.optString("notes", ""),
-                    protected = obj.optBoolean("protected", false),
+                    protected = isProtected,
                     localAssetPath = obj.optStringOrNull("localAssetPath"),
                     sourcePackage = obj.optStringOrNull("sourcePackage"),
                     sourceAppLabel = obj.optStringOrNull("sourceAppLabel"),
