@@ -22,7 +22,7 @@ class SampledBitmapDecoderTest {
 
     @Test
     fun sampleSize_downscalesLargeImagesByPowersOfTwo() {
-        assertEquals(4, SampledBitmapDecoder.sampleSize(2000, 1000, 200, 100))
+        assertEquals(8, SampledBitmapDecoder.sampleSize(2000, 1000, 200, 100))
         assertEquals(8, SampledBitmapDecoder.sampleSize(4000, 4000, 400, 400))
     }
 

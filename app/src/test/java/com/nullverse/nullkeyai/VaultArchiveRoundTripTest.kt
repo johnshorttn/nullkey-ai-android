@@ -99,11 +99,13 @@ class VaultArchiveRoundTripTest {
     }
 
     @Test
-    fun portableEnvelope_rejectsWrongPassword() = runBlocking {
-        repo.capture("secret-ish")
-        val document = repo.exportPortableEncrypted("right-password".toCharArray())
-        assertThrows(Exception::class.java) {
-            runBlocking { repo.importPortableEncrypted(document, "wrong-password".toCharArray()) }
+    fun portableEnvelope_rejectsWrongPassword() {
+        runBlocking {
+            repo.capture("secret-ish")
+            val document = repo.exportPortableEncrypted("right-password".toCharArray())
+            assertThrows(Exception::class.java) {
+                runBlocking { repo.importPortableEncrypted(document, "wrong-password".toCharArray()) }
+            }
         }
     }
 
