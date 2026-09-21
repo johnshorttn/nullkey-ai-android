@@ -46,7 +46,7 @@ interface ClipDao {
     )
     suspend fun searchOnce(query: String, filesOnly: Boolean): List<Clip>
 
-    @Query("SELECT * FROM clips WHERE trashedAt IS NOT NULL ORDER BY trashedAt DESC")
+    @Query("SELECT * FROM clips WHERE trashedAt IS NOT NULL AND syncDeletedAt IS NULL ORDER BY trashedAt DESC")
     fun trash(): Flow<List<Clip>>
 
     /** All active clips, oldest first, for export. */
@@ -75,11 +75,26 @@ interface ClipDao {
     @Query("UPDATE clips SET protected = :isProtected, updatedAt = :now WHERE id = :id")
     suspend fun setProtected(id: Long, isProtected: Boolean, now: Long = System.currentTimeMillis())
 
-    @Query("SELECT * FROM clips WHERE trashedAt IS NOT NULL AND trashedAt < :cutoff")
+    @Query("SELECT * FROM clips WHERE trashedAt IS NOT NULL AND syncDeletedAt IS NULL AND trashedAt < :cutoff")
     suspend fun expiredTrash(cutoff: Long): List<Clip>
 
     @Query("SELECT * FROM clips WHERE id = :id LIMIT 1")
     suspend fun byId(id: Long): Clip?
+
+    @Query("SELECT * FROM clips WHERE syncId = :syncId LIMIT 1")
+    suspend fun bySyncId(syncId: String): Clip?
+
+    @Query("SELECT * FROM clips")
+    suspend fun allRows(): List<Clip>
+
+    @Query("SELECT * FROM clips WHERE syncDeletedAt IS NOT NULL")
+    suspend fun syncTombstones(): List<Clip>
+
+    @Query("DELETE FROM clips WHERE syncId = :syncId")
+    suspend fun deleteBySyncId(syncId: String): Int
+
+    @Query("DELETE FROM clips WHERE syncDeletedAt IS NOT NULL AND syncDeletedAt < :cutoff")
+    suspend fun purgeExpiredTombstones(cutoff: Long): Int
 
     /** Permanently delete trashed clips older than [cutoff] (the 30-day retention). */
     @Query("DELETE FROM clips WHERE trashedAt IS NOT NULL AND trashedAt < :cutoff")
