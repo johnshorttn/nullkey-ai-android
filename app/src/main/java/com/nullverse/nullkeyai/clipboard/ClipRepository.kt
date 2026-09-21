@@ -96,7 +96,7 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
     suspend fun setNotes(id: Long, notes: String) = dao.setNotes(id, notes)
 
     suspend fun setProtected(id: Long, isProtected: Boolean) {
-        val vaultCrypto = crypto ?: run { dao.setProtected(id, isProtected); return }
+        val vaultCrypto = crypto ?: throw IllegalStateException("Vault crypto unavailable; protection state cannot be changed safely")
         val clip = dao.byId(id) ?: return
         if (clip.protected == isProtected) return
         if (isProtected) {
