@@ -22,6 +22,7 @@ import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.clipboard.VaultAssetStore
 import com.nullverse.nullkeyai.db.NullKeyDatabase
 import com.nullverse.nullkeyai.security.VaultCrypto
+import com.nullverse.nullkeyai.sync.DeviceIdentity
 import kotlinx.coroutines.launch
 
 class ClipDetailActivity : AppCompatActivity() {
@@ -38,7 +39,7 @@ class ClipDetailActivity : AppCompatActivity() {
         val db = NullKeyDatabase.get(this)
         assetStore = VaultAssetStore(this)
         vaultCrypto = VaultCrypto()
-        repository = ClipRepository(db.clipDao(), assetStore, db.tagDao(), vaultCrypto)
+        repository = ClipRepository(db.clipDao(), assetStore, db.tagDao(), vaultCrypto, DeviceIdentity.from(this))
         clipId = intent.getLongExtra(EXTRA_CLIP_ID, 0L)
         if (clipId == 0L) { finish(); return }
 
