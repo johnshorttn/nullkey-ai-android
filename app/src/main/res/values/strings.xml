@@ -48,4 +48,7 @@
     <string name="no_tags">No tags</string>
     <string name="add_tag">Add tag…</string>
     <string name="add">Add</string>
+    <string name="trash">Trash</string>
+    <string name="trash_help">Tap an item to restore it. Items are automatically purged after the retention period.</string>
+    <string name="trash_empty">Trash is empty</string>
 </resources>
