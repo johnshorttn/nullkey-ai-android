@@ -183,19 +183,39 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
         var inserted = 0
         for (entry in entries) {
             if (dao.countByContent(entry.clip.content) > 0) continue
-            val asset = entry.assetBytes?.let { store.importBytes(it, entry.clip.localAssetPath) }
-            val rowId = dao.insert(entry.clip.copy(
-                id = 0,
-                trashedAt = null,
-                protected = false,
-                localAssetPath = asset?.relativePath
-            ))
+            // Re-encrypt protected material before it is persisted on the destination device.
+            // This avoids a crash window where restored protected content could exist plaintext
+            // in Room or in the private asset store.
+            val assetBytes = entry.assetBytes?.let { bytes ->
+                if (entry.restoreProtected) vaultCrypto.encryptFileBytes(bytes) else bytes
+            }
+            val asset = assetBytes?.let { store.importBytes(it, entry.clip.localAssetPath) }
+            val restoredClip = if (entry.restoreProtected) {
+                entry.clip.copy(
+                    id = 0,
+                    trashedAt = null,
+                    protected = true,
+                    content = vaultCrypto.encrypt(entry.clip.content),
+                    notes = vaultCrypto.encrypt(entry.clip.notes),
+                    localAssetPath = asset?.relativePath
+                )
+            } else {
+                entry.clip.copy(
+                    id = 0,
+                    trashedAt = null,
+                    protected = false,
+                    localAssetPath = asset?.relativePath
+                )
+            }
+            val rowId = runCatching { dao.insert(restoredClip) }.getOrElse {
+                asset?.let { stored -> store.delete(stored.relativePath) }
+                throw it
+            }
             if (rowId <= 0) {
                 asset?.let { store.delete(it.relativePath) }
                 continue
             }
             entry.tags.forEach { addTag(rowId, it) }
-            if (entry.restoreProtected) setProtected(rowId, true)
             inserted++
         }
         return inserted
