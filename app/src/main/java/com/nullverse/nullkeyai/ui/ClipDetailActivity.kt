@@ -105,14 +105,20 @@ class ClipDetailActivity : AppCompatActivity() {
         findViewById<Button>(R.id.detail_save).setOnClickListener {
             lifecycleScope.launch {
                 val wantsProtected = findViewById<CheckBox>(R.id.detail_protected).isChecked
-                if (initiallyProtected && !protectedUnlocked) {
-                    repository.setPinned(clipId, findViewById<CheckBox>(R.id.detail_pinned).isChecked)
+                val pinned = findViewById<CheckBox>(R.id.detail_pinned).isChecked
+                val notes = findViewById<EditText>(R.id.detail_notes).text.toString()
+                if (initiallyProtected) {
+                    repository.setPinned(clipId, pinned)
+                    if (protectedUnlocked && !wantsProtected) {
+                        // Decrypt the row first; only then persist the revealed notes as plaintext.
+                        repository.setProtected(clipId, false)
+                        repository.setNotes(clipId, notes)
+                    }
+                    // If protection remains enabled, never write the revealed notes back to the DB.
                 } else {
-                    // Unprotect first so edits never overwrite encrypted notes with plaintext.
-                    if (initiallyProtected && !wantsProtected) repository.setProtected(clipId, false)
-                    repository.setNotes(clipId, findViewById<EditText>(R.id.detail_notes).text.toString())
-                    repository.setPinned(clipId, findViewById<CheckBox>(R.id.detail_pinned).isChecked)
-                    if (!initiallyProtected && wantsProtected) repository.setProtected(clipId, true)
+                    repository.setNotes(clipId, notes)
+                    repository.setPinned(clipId, pinned)
+                    if (wantsProtected) repository.setProtected(clipId, true)
                 }
                 Toast.makeText(this@ClipDetailActivity, R.string.saved, Toast.LENGTH_SHORT).show()
                 finish()
