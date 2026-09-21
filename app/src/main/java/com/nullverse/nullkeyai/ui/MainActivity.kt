@@ -27,6 +27,7 @@ import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.clipboard.ClipSwipeAction
 import com.nullverse.nullkeyai.clipboard.ClipSwipePreferences
+import com.nullverse.nullkeyai.clipboard.labelRes
 import com.nullverse.nullkeyai.clipboard.ClipCaptureRequest
 import com.nullverse.nullkeyai.clipboard.VaultAssetStore
 import com.nullverse.nullkeyai.clipboard.ClipboardMonitorService
@@ -215,7 +216,11 @@ class MainActivity : AppCompatActivity() {
         val button = findViewById<Button>(buttonId)
         fun refresh() {
             val action = if (left) ClipSwipePreferences.left(this) else ClipSwipePreferences.right(this)
-            button.text = getString(\n                R.string.swipe_action_label,\n                getString(if (left) R.string.swipe_direction_left else R.string.swipe_direction_right),\n                getString(action.labelRes)\n            )
+            button.text = getString(
+                R.string.swipe_action_label,
+                getString(if (left) R.string.swipe_direction_left else R.string.swipe_direction_right),
+                getString(action.labelRes)
+            )
         }
         button.setOnClickListener {
             val actions = ClipSwipeAction.entries.toTypedArray()
