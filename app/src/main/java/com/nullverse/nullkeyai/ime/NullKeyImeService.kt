@@ -1,5 +1,6 @@
 package com.nullverse.nullkeyai.ime
 
+import android.content.res.Configuration
 import android.inputmethodservice.InputMethodService
 import android.inputmethodservice.Keyboard
 import android.inputmethodservice.KeyboardView
@@ -16,6 +17,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.db.NullKeyDatabase
+import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
+import com.nullverse.nullkeyai.ime.engine.KeyCodes
+import com.nullverse.nullkeyai.ime.engine.NullKeyKeyboardView
+import com.nullverse.nullkeyai.sync.DeviceIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,6 +33,11 @@ import kotlinx.coroutines.withContext
  *  - a "clip vault" panel to search captured clips and tap one to paste it
  *    (with a "Files only" filter), and
  *  - a word-suggestion strip backed by an on-device [WordSuggester].
+ *
+ * The default renderer is the custom [NullKeyKeyboardView] engine (hit-testing,
+ * press/release, long-press, shift/caps, portrait/landscape layouts). The
+ * legacy [KeyboardView] remains wired as a fallback while the engine is
+ * developed; toggle it from the NullKey app.
  */
 class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionListener {
 
@@ -36,6 +46,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private lateinit var suggester: WordSuggester
 
     private lateinit var keyboardView: KeyboardView
+    private lateinit var keyboardEngineView: NullKeyKeyboardView
     private lateinit var qwerty: Keyboard
     private lateinit var symbols: Keyboard
     private lateinit var searchBox: EditText
@@ -47,10 +58,11 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private val currentWord = StringBuilder()
     private var caps = false
     private var symbolsMode = false
+    private var usingEngine = true
 
     override fun onCreate() {
         super.onCreate()
-        repository = ClipRepository(NullKeyDatabase.get(this).clipDao())
+        repository = ClipRepository(NullKeyDatabase.get(this).clipDao(), deviceIdentity = DeviceIdentity.from(this))
         suggester = WordSuggester.get(this)
     }
 
@@ -60,9 +72,14 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         qwerty = Keyboard(this, R.xml.qwerty)
         symbols = Keyboard(this, R.xml.symbols)
         keyboardView = root.findViewById(R.id.keyboard_view)
+        keyboardEngineView = root.findViewById(R.id.keyboard_engine_view)
         keyboardView.keyboard = qwerty
         keyboardView.setOnKeyboardActionListener(this)
         keyboardView.isPreviewEnabled = false
+        keyboardEngineView.listener = object : NullKeyKeyboardView.Listener {
+            override fun onKey(code: Int) = handleKey(code, alreadyCased = true)
+        }
+        applyRendererPreference()
 
         searchBox = root.findViewById(R.id.clip_search)
         filesOnly = root.findViewById(R.id.files_only)
@@ -95,9 +112,32 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        applyRendererPreference()
+        if (usingEngine) keyboardEngineView.resetEngine()
         currentWord.setLength(0)
         updateSuggestions()
         refreshClips()
+    }
+
+    override fun onEvaluateFullscreenMode(): Boolean = false
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (::keyboardEngineView.isInitialized) {
+            keyboardEngineView.requestLayout()
+        }
+    }
+
+    private fun applyRendererPreference() {
+        if (!::keyboardEngineView.isInitialized) return
+        usingEngine = KeyboardEnginePreferences.useCustomEngine(this)
+        keyboardEngineView.visibility = if (usingEngine) View.VISIBLE else View.GONE
+        keyboardView.visibility = if (usingEngine) View.GONE else View.VISIBLE
+        if (!usingEngine) {
+            keyboardView.keyboard = if (symbolsMode) symbols else qwerty
+            qwerty.isShifted = caps
+            keyboardView.invalidateAllKeys()
+        }
     }
 
     private fun refreshClips() {
@@ -141,34 +181,42 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     // region KeyboardView.OnKeyboardActionListener
     override fun onKey(primaryCode: Int, keyCodes: IntArray?) {
+        handleKey(primaryCode, alreadyCased = false)
+    }
+
+    private fun handleKey(primaryCode: Int, alreadyCased: Boolean) {
         val ic = currentInputConnection ?: return
         when (primaryCode) {
-            Keyboard.KEYCODE_DELETE -> {
+            KeyCodes.DELETE -> {
                 ic.deleteSurroundingText(1, 0)
                 if (currentWord.isNotEmpty()) currentWord.deleteCharAt(currentWord.length - 1)
                 updateSuggestions()
             }
-            Keyboard.KEYCODE_SHIFT -> {
+            KeyCodes.SHIFT -> {
+                if (alreadyCased) return
                 caps = !caps
                 if (!symbolsMode) {
                     qwerty.isShifted = caps
                     keyboardView.invalidateAllKeys()
                 }
             }
-            Keyboard.KEYCODE_MODE_CHANGE -> toggleSymbols()
-            Keyboard.KEYCODE_DONE -> {
+            KeyCodes.MODE_CHANGE -> {
+                if (alreadyCased) return
+                toggleSymbols()
+            }
+            KeyCodes.DONE -> {
                 flushWord()
                 ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
                 ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
             }
-            CODE_SPACE -> {
+            KeyCodes.SPACE -> {
                 ic.commitText(" ", 1)
                 flushWord()
             }
             else -> {
                 var code = primaryCode.toChar()
                 if (Character.isLetter(code)) {
-                    if (caps) code = Character.toUpperCase(code)
+                    if (!alreadyCased && caps) code = Character.toUpperCase(code)
                     ic.commitText(code.toString(), 1)
                     currentWord.append(code)
                     updateSuggestions()
@@ -200,9 +248,5 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     override fun onDestroy() {
         scope.cancel()
         super.onDestroy()
-    }
-
-    companion object {
-        private const val CODE_SPACE = 32
     }
 }
