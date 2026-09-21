@@ -61,6 +61,18 @@ class MainActivityInstrumentedTest {
     }
 
     @Test
+    fun swipeActionButtonsShowLocalizedDefaults() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onView(withId(R.id.btn_swipe_left_action))
+                .perform(scrollTo())
+                .check(matches(withText("Left swipe: Delete")))
+            onView(withId(R.id.btn_swipe_right_action))
+                .perform(scrollTo())
+                .check(matches(withText("Right swipe: Pin")))
+        }
+    }
+
+    @Test
     fun showsAppTitle() {
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withText("NullKey AI")).check(matches(isDisplayed()))

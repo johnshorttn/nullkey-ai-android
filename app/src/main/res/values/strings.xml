@@ -94,4 +94,7 @@
     <string name="swipe_action_protect">Protect</string>
     <string name="swipe_action_delete">Delete</string>
     <string name="swipe_action_tag">Tag</string>
+    <string name="swipe_action_failed">Could not complete swipe action</string>
+    <string name="swipe_delete_confirm_title">Move clip to Trash?</string>
+    <string name="swipe_delete_confirm_message">This clip will be moved to Trash. You can restore it later.</string>
 </resources>

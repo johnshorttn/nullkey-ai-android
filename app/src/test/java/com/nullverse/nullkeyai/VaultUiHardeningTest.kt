@@ -65,5 +65,6 @@ class VaultUiHardeningTest {
         assertTrue(root.findViewById<android.view.View>(R.id.btn_start_monitor) != null)
         assertTrue(root.findViewById<android.view.View>(R.id.swipe_typing_enabled) != null)
         assertTrue(root.findViewById<android.view.View>(R.id.btn_swipe_left_action) != null)
+        assertTrue(root.findViewById<android.view.View>(R.id.btn_swipe_right_action) != null)
     }
 }
