@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Clip::class, Tag::class, ClipTagCrossRef::class],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class NullKeyDatabase : RoomDatabase() {
@@ -58,6 +58,30 @@ abstract class NullKeyDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE clips ADD COLUMN contentType TEXT NOT NULL DEFAULT 'TEXT'")
+                db.execSQL("ALTER TABLE clips ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE clips ADD COLUMN protected INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE clips ADD COLUMN localAssetPath TEXT")
+                db.execSQL("ALTER TABLE clips ADD COLUMN sourcePackage TEXT")
+                db.execSQL("ALTER TABLE clips ADD COLUMN sourceAppLabel TEXT")
+                db.execSQL("ALTER TABLE clips ADD COLUMN sourceUri TEXT")
+                db.execSQL("ALTER TABLE clips ADD COLUMN captureMethod TEXT NOT NULL DEFAULT 'UNKNOWN'")
+                db.execSQL("ALTER TABLE clips ADD COLUMN sourceConfidence TEXT NOT NULL DEFAULT 'UNKNOWN'")
+                db.execSQL("ALTER TABLE clips ADD COLUMN ocrText TEXT")
+                db.execSQL("ALTER TABLE clips ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE clips SET updatedAt = createdAt WHERE updatedAt = 0")
+                db.execSQL("""UPDATE clips SET contentType =
+                    CASE
+                        WHEN mimeType LIKE 'image/%' THEN 'IMAGE'
+                        WHEN isFile = 1 THEN 'FILE'
+                        WHEN content LIKE 'http://%' OR content LIKE 'https://%' THEN 'URI'
+                        ELSE 'TEXT'
+                    END""")
+            }
+        }
+
         fun get(context: Context): NullKeyDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -65,7 +89,7 @@ abstract class NullKeyDatabase : RoomDatabase() {
                     NullKeyDatabase::class.java,
                     "nullkey.db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                     .also { INSTANCE = it }
             }
