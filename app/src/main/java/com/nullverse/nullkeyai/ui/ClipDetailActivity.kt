@@ -10,6 +10,7 @@ import android.view.View
 import android.graphics.BitmapFactory
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.core.content.FileProvider
@@ -97,9 +98,7 @@ class ClipDetailActivity : AppCompatActivity() {
                 isChecked = clip.protected
                 isEnabled = !clip.protected
             }
-            findViewById<TextView>(R.id.detail_tags).text =
-                repository.tagsForClip(clipId).joinToString(" • ") { it.name }
-                    .ifBlank { getString(R.string.no_tags) }
+            refreshTags()
         }
 
         findViewById<Button>(R.id.detail_save).setOnClickListener {
@@ -128,15 +127,40 @@ class ClipDetailActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 val input = findViewById<EditText>(R.id.detail_new_tag)
                 repository.addTag(clipId, input.text.toString())
-                findViewById<TextView>(R.id.detail_tags).text =
-                    repository.tagsForClip(clipId).joinToString(" • ") { it.name }
-                        .ifBlank { getString(R.string.no_tags) }
+                refreshTags()
                 input.text.clear()
+            }
+        }
+        findViewById<Button>(R.id.detail_remove_tag).setOnClickListener {
+            lifecycleScope.launch {
+                val tags = repository.tagsForClip(clipId)
+                if (tags.isEmpty()) {
+                    Toast.makeText(this@ClipDetailActivity, R.string.remove_tag_none, Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                val names = tags.map { it.name }.toTypedArray()
+                AlertDialog.Builder(this@ClipDetailActivity)
+                    .setTitle(R.string.remove_tag_title)
+                    .setItems(names) { _, which ->
+                        lifecycleScope.launch {
+                            repository.removeTag(clipId, tags[which].id)
+                            refreshTags()
+                        }
+                    }
+                    .show()
             }
         }
         findViewById<Button>(R.id.detail_trash).setOnClickListener {
             lifecycleScope.launch { repository.moveToTrash(clipId); finish() }
         }
+    }
+
+    private suspend fun refreshTags() {
+        val tags = repository.tagsForClip(clipId)
+        findViewById<TextView>(R.id.detail_tags).text =
+            tags.joinToString(" • ") { it.name }.ifBlank { getString(R.string.no_tags) }
+        findViewById<Button>(R.id.detail_remove_tag).visibility =
+            if (tags.isEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun authenticateAndReveal() {
