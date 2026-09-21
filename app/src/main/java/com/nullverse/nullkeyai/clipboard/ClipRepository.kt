@@ -168,18 +168,38 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
      */
     suspend fun exportPortableEncrypted(password: CharArray): String {
         val vaultCrypto = crypto ?: throw IllegalStateException("Vault crypto unavailable")
-        val portable = dao.allActive().map { clip ->
-            if (!clip.protected) clip else clip.copy(
-                content = vaultCrypto.decrypt(clip.content),
-                notes = vaultCrypto.decrypt(clip.notes),
-                protected = false
-            )
+        val store = assetStore ?: throw IllegalStateException("Vault asset store unavailable")
+        val clips = dao.allActive()
+        val archive = VaultArchive.build(clips, store, vaultCrypto) { id ->
+            tagDao?.forClip(id)?.map { it.name }.orEmpty()
         }
-        return PortableVaultCrypto.encrypt(ClipBackup.toJson(portable), password)
+        return PortableVaultCrypto.encrypt(archive, password)
     }
 
-    suspend fun importPortableEncrypted(document: String, password: CharArray): Int =
-        importJson(PortableVaultCrypto.decrypt(document, password))
+    suspend fun importPortableEncrypted(document: String, password: CharArray): Int {
+        val store = assetStore ?: throw IllegalStateException("Vault asset store unavailable")
+        val vaultCrypto = crypto ?: throw IllegalStateException("Vault crypto unavailable")
+        val entries = VaultArchive.parse(PortableVaultCrypto.decrypt(document, password))
+        var inserted = 0
+        for (entry in entries) {
+            if (dao.countByContent(entry.clip.content) > 0) continue
+            val asset = entry.assetBytes?.let { store.importBytes(it, entry.clip.localAssetPath) }
+            val rowId = dao.insert(entry.clip.copy(
+                id = 0,
+                trashedAt = null,
+                protected = false,
+                localAssetPath = asset?.relativePath
+            ))
+            if (rowId <= 0) {
+                asset?.let { store.delete(it.relativePath) }
+                continue
+            }
+            entry.tags.forEach { addTag(rowId, it) }
+            if (entry.restoreProtected) setProtected(rowId, true)
+            inserted++
+        }
+        return inserted
+    }
 
     /**
      * Import clips from a JSON backup. Blank clips and clips whose content already
