@@ -31,6 +31,7 @@ class TouchEngine(
         fun onLongPress(key: PlacedKey): Boolean
         fun onRepeat(key: PlacedKey)
         fun onGesturePath(keys: List<PlacedKey>) {}
+        fun onGestureProgress(keys: List<PlacedKey>) {}
     }
 
     var activePointerId: Int? = null
@@ -87,7 +88,10 @@ class TouchEngine(
             pressed = null
             longPressConsumed = false
         } else {
-            if (gesturePath.lastOrNull()?.id != key.id) gesturePath += key
+            if (gesturePath.lastOrNull()?.id != key.id) {
+                gesturePath += key
+                listener.onGestureProgress(gesturePath.toList())
+            }
             press(key)
             if (gestureStarted) {
                 longPressTask?.cancel()
@@ -166,6 +170,7 @@ class TouchEngine(
         gesturePath.clear()
         gestureDistancePx = 0f
         gestureStarted = false
+        listener.onGestureProgress(emptyList())
     }
 }
 
