@@ -158,6 +158,13 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
         tagDao?.detach(id, tagId)
     }
 
+    suspend fun ensureDefaultTags() {
+        val tags = tagDao ?: return
+        DEFAULT_TAGS.forEach { name ->
+            if (tags.findByName(name) == null) tags.insert(Tag(name = name))
+        }
+    }
+
     /** Serialize all active clips to JSON. Protected records remain device-key ciphertext. */
     suspend fun exportJson(): String = ClipBackup.toJson(dao.allActive())
 
@@ -255,5 +262,6 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
 
     companion object {
         const val DEFAULT_RETENTION_DAYS = 30
+        val DEFAULT_TAGS = listOf("Personal", "Work", "Coding")
     }
 }
