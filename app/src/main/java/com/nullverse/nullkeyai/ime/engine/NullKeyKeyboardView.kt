@@ -70,6 +70,10 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                 listener?.onKey(code)
             }
 
+            override fun onPressFeedback() {
+                KeyFeedback.play(this@NullKeyKeyboardView)
+            }
+
             override fun onGestureWord(path: String) {
                 listener?.onGestureWord(path)
             }
@@ -90,7 +94,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     )
 
     init {
-        controller.swipeTypingEnabled = KeyboardEnginePreferences.swipeTypingEnabled(context)
+        applyTypingSettings()
         isClickable = true
         isFocusable = false
         contentDescription = context.getString(com.nullverse.nullkeyai.R.string.ime_label)
@@ -100,7 +104,12 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         val width = resolveSize(suggestedMinimumWidth, widthMeasureSpec)
         val orientation = currentOrientation()
         val spec = DefaultKeyboardLayoutProvider().spec(controller.modifiers.layer, orientation)
-        val preferred = preferredKeyboardHeightPx(resources.displayMetrics.density, orientation, spec.rows.size)
+        val preferred = preferredKeyboardHeightPx(
+            density = resources.displayMetrics.density,
+            orientation = orientation,
+            rowCount = spec.rows.size,
+            heightScale = KeyboardEnginePreferences.heightScale(context),
+        )
         val heightMode = MeasureSpec.getMode(heightMeasureSpec)
         val heightSize = MeasureSpec.getSize(heightMeasureSpec)
         val height = when (heightMode) {
@@ -188,8 +197,15 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         accentPopup = null
         popupSourceKeyId = null
         popupSourceCharacters = ""
-        controller.swipeTypingEnabled = KeyboardEnginePreferences.swipeTypingEnabled(context)
+        applyTypingSettings()
         controller.reset()
+    }
+
+    fun reloadInputSettings() {
+        applyTypingSettings()
+        theme = KeyboardTheme.from(context, currentOrientation())
+        requestLayout()
+        invalidate()
     }
 
     fun setSwipeTypingEnabled(enabled: Boolean) {
@@ -282,6 +298,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         val density = resources.displayMetrics.density
         val orientation = currentOrientation()
         theme = KeyboardTheme.from(context, orientation)
+        applyTypingSettings()
         controller.resize(
             widthPx = width.toFloat(),
             heightPx = height.toFloat(),
@@ -289,6 +306,13 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             paddingHorizontalPx = keyboardPaddingHorizontalPx(density),
             paddingVerticalPx = keyboardPaddingVerticalPx(density),
             gapPx = keyboardGapPx(density, orientation),
+        )
+    }
+
+    private fun applyTypingSettings() {
+        controller.applyTypingSettings(
+            swipeTypingEnabled = KeyboardEnginePreferences.swipeTypingEnabled(context),
+            longPressMs = KeyboardEnginePreferences.longPressMs(context).toLong(),
         )
     }
 

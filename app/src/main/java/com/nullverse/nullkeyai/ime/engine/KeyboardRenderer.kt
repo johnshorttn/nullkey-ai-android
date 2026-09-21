@@ -24,20 +24,52 @@ data class KeyboardTheme(
     val strokeWidthPx: Float,
 ) {
     companion object {
-        fun from(context: Context, orientation: LayoutOrientation): KeyboardTheme {
+        fun from(
+            context: Context,
+            orientation: LayoutOrientation,
+            themeId: KeyboardThemeId = KeyboardEnginePreferences.resolvedThemeId(context),
+        ): KeyboardTheme {
             val density = context.resources.displayMetrics.density
             val scaled = context.resources.displayMetrics.scaledDensity
             val labelSp = if (orientation == LayoutOrientation.LANDSCAPE) 14f else 16f
+            val light = themeId == KeyboardThemeId.LIGHT
             return KeyboardTheme(
-                backgroundColor = ContextCompat.getColor(context, R.color.kb_background),
-                keyColor = ContextCompat.getColor(context, R.color.kb_key),
-                keyPressedColor = ContextCompat.getColor(context, R.color.kb_key_pressed),
-                modifierColor = ContextCompat.getColor(context, R.color.kb_key_modifier),
-                modifierActiveColor = ContextCompat.getColor(context, R.color.kb_key_modifier_active),
-                labelColor = ContextCompat.getColor(context, R.color.kb_label),
-                hintColor = ContextCompat.getColor(context, R.color.kb_label_hint),
-                pressedStrokeColor = ContextCompat.getColor(context, R.color.kb_key_stroke_pressed),
-                gestureTrailColor = ContextCompat.getColor(context, R.color.kb_key_stroke_pressed),
+                backgroundColor = ContextCompat.getColor(
+                    context,
+                    if (light) R.color.kb_light_background else R.color.kb_background,
+                ),
+                keyColor = ContextCompat.getColor(
+                    context,
+                    if (light) R.color.kb_light_key else R.color.kb_key,
+                ),
+                keyPressedColor = ContextCompat.getColor(
+                    context,
+                    if (light) R.color.kb_light_key_pressed else R.color.kb_key_pressed,
+                ),
+                modifierColor = ContextCompat.getColor(
+                    context,
+                    if (light) R.color.kb_light_key_modifier else R.color.kb_key_modifier,
+                ),
+                modifierActiveColor = ContextCompat.getColor(
+                    context,
+                    if (light) R.color.kb_light_key_modifier_active else R.color.kb_key_modifier_active,
+                ),
+                labelColor = ContextCompat.getColor(
+                    context,
+                    if (light) R.color.kb_light_label else R.color.kb_label,
+                ),
+                hintColor = ContextCompat.getColor(
+                    context,
+                    if (light) R.color.kb_light_label_hint else R.color.kb_label_hint,
+                ),
+                pressedStrokeColor = ContextCompat.getColor(
+                    context,
+                    if (light) R.color.kb_light_key_stroke_pressed else R.color.kb_key_stroke_pressed,
+                ),
+                gestureTrailColor = ContextCompat.getColor(
+                    context,
+                    if (light) R.color.kb_light_key_stroke_pressed else R.color.kb_key_stroke_pressed,
+                ),
                 cornerRadiusPx = 8f * density,
                 labelTextSizePx = labelSp * scaled,
                 hintTextSizePx = 10f * scaled,

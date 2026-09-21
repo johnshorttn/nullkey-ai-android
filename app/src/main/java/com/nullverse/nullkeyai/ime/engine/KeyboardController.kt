@@ -20,6 +20,7 @@ class KeyboardController(
         fun onPopupCharacter(code: Int) { onKey(code) }
         fun onGestureWord(path: String) {}
         fun onGestureProgress(keys: List<PlacedKey>) {}
+        fun onPressFeedback() {}
     }
 
     val modifiers = ModifierController()
@@ -55,6 +56,7 @@ class KeyboardController(
                 geometry.hitTest(x, y, slopPx)
 
             override fun onPress(key: PlacedKey) {
+                host.onPressFeedback()
                 host.requestRedraw()
             }
 
@@ -125,6 +127,11 @@ class KeyboardController(
         } else 0f)
         rebuildGeometry(widthPx, heightPx)
         host.requestRedraw()
+    }
+
+    fun applyTypingSettings(swipeTypingEnabled: Boolean, longPressMs: Long) {
+        this.swipeTypingEnabled = swipeTypingEnabled
+        touch.longPressMs = longPressMs.coerceAtLeast(1L)
     }
 
     fun down(pointerId: Int, x: Float, y: Float) = touch.down(pointerId, x, y)

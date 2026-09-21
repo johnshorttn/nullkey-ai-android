@@ -94,4 +94,17 @@
     <string name="swipe_action_protect">Protect</string>
     <string name="swipe_action_delete">Delete</string>
     <string name="swipe_action_tag">Tag</string>
+
+    <string name="keyboard_settings_title">Keyboard</string>
+    <string name="keyboard_theme_label">Theme: %1$s</string>
+    <string name="keyboard_theme_title">Keyboard theme</string>
+    <string name="keyboard_theme_dark_vault">Dark Vault</string>
+    <string name="keyboard_theme_light">Light</string>
+    <string name="keyboard_theme_system">System</string>
+    <string name="keyboard_height_label">Keyboard height: %1$d%%</string>
+    <string name="keyboard_height">Keyboard height</string>
+    <string name="haptics_enabled">Key vibration</string>
+    <string name="key_sound_enabled">Key sound</string>
+    <string name="long_press_label">Long-press: %1$d ms</string>
+    <string name="long_press_duration">Long-press duration</string>
 </resources>

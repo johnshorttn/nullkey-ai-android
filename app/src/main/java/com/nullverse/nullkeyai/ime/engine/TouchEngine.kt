@@ -18,7 +18,7 @@ interface TaskScheduler {
  */
 class TouchEngine(
     private val scheduler: TaskScheduler,
-    private val longPressMs: Long = KeyboardEngineDefaults.LONG_PRESS_MS,
+    var longPressMs: Long = KeyboardEngineDefaults.LONG_PRESS_MS,
     private val repeatStartMs: Long = KeyboardEngineDefaults.REPEAT_START_MS,
     private val repeatIntervalMs: Long = KeyboardEngineDefaults.REPEAT_INTERVAL_MS,
     private val listener: Listener,

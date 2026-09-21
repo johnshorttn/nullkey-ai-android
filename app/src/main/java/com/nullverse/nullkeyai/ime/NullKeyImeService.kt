@@ -18,6 +18,7 @@ import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.db.NullKeyDatabase
 import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
+import com.nullverse.nullkeyai.ime.engine.KeyFeedback
 import com.nullverse.nullkeyai.ime.engine.KeyCodes
 import com.nullverse.nullkeyai.ime.engine.NullKeyKeyboardView
 import com.nullverse.nullkeyai.sync.DeviceIdentity
@@ -244,7 +245,9 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         keyboardView.invalidateAllKeys()
     }
 
-    override fun onPress(primaryCode: Int) {}
+    override fun onPress(primaryCode: Int) {
+        if (::keyboardView.isInitialized) KeyFeedback.play(keyboardView)
+    }
     override fun onRelease(primaryCode: Int) {}
     override fun onText(text: CharSequence?) {
         if (text != null) currentInputConnection?.commitText(text, 1)

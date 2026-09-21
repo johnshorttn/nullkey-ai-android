@@ -11,6 +11,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import android.text.InputType
@@ -40,6 +41,8 @@ import com.nullverse.nullkeyai.security.VaultCrypto
 import com.nullverse.nullkeyai.sync.DeviceIdentity
 import com.nullverse.nullkeyai.ime.ClipAdapter
 import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
+import com.nullverse.nullkeyai.ime.engine.KeyboardInputSettings
+import com.nullverse.nullkeyai.ime.engine.KeyboardThemeId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
@@ -155,6 +158,7 @@ class MainActivity : AppCompatActivity() {
                 KeyboardEnginePreferences.setSwipeTypingEnabled(this@MainActivity, checked)
             }
         }
+        bindKeyboardInputSettings()
         bindSwipeActionButton(R.id.btn_swipe_left_action, true)
         bindSwipeActionButton(R.id.btn_swipe_right_action, false)
         findViewById<Button>(R.id.btn_start_monitor).setOnClickListener {
@@ -210,6 +214,79 @@ class MainActivity : AppCompatActivity() {
                 else android.view.View.GONE
             }
         }
+    }
+
+    private fun bindKeyboardInputSettings() {
+        val themeButton = findViewById<Button>(R.id.btn_keyboard_theme)
+        fun refreshTheme() {
+            val themeId = KeyboardEnginePreferences.themeId(this)
+            themeButton.text = getString(R.string.keyboard_theme_label, getString(themeId.labelRes))
+        }
+        themeButton.setOnClickListener {
+            val themes = KeyboardThemeId.entries.toTypedArray()
+            AlertDialog.Builder(this)
+                .setTitle(R.string.keyboard_theme_title)
+                .setItems(themes.map { getString(it.labelRes) }.toTypedArray()) { _, which ->
+                    KeyboardEnginePreferences.setThemeId(this, themes[which])
+                    refreshTheme()
+                }
+                .show()
+        }
+        refreshTheme()
+
+        val heightLabel = findViewById<TextView>(R.id.keyboard_height_label)
+        val heightSeek = findViewById<SeekBar>(R.id.keyboard_height_seek)
+        heightSeek.max = KeyboardInputSettings.HEIGHT_PROGRESS_MAX
+        fun refreshHeight(scale: Float) {
+            heightLabel.text = getString(
+                R.string.keyboard_height_label,
+                KeyboardInputSettings.heightPercent(scale),
+            )
+        }
+        val heightScale = KeyboardEnginePreferences.heightScale(this)
+        heightSeek.progress = KeyboardInputSettings.heightScaleToProgress(heightScale)
+        refreshHeight(heightScale)
+        heightSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val next = KeyboardInputSettings.progressToHeightScale(progress)
+                if (fromUser) KeyboardEnginePreferences.setHeightScale(this@MainActivity, next)
+                refreshHeight(next)
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        findViewById<CheckBox>(R.id.haptics_enabled).apply {
+            isChecked = KeyboardEnginePreferences.hapticsEnabled(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                KeyboardEnginePreferences.setHapticsEnabled(this@MainActivity, checked)
+            }
+        }
+        findViewById<CheckBox>(R.id.key_sound_enabled).apply {
+            isChecked = KeyboardEnginePreferences.soundEnabled(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                KeyboardEnginePreferences.setSoundEnabled(this@MainActivity, checked)
+            }
+        }
+
+        val longPressLabel = findViewById<TextView>(R.id.long_press_label)
+        val longPressSeek = findViewById<SeekBar>(R.id.long_press_seek)
+        longPressSeek.max = KeyboardInputSettings.LONG_PRESS_PROGRESS_MAX
+        fun refreshLongPress(ms: Int) {
+            longPressLabel.text = getString(R.string.long_press_label, ms)
+        }
+        val longPressMs = KeyboardEnginePreferences.longPressMs(this)
+        longPressSeek.progress = KeyboardInputSettings.longPressMsToProgress(longPressMs)
+        refreshLongPress(longPressMs)
+        longPressSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val next = KeyboardInputSettings.progressToLongPressMs(progress)
+                if (fromUser) KeyboardEnginePreferences.setLongPressMs(this@MainActivity, next)
+                refreshLongPress(next)
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
     }
 
     private fun bindSwipeActionButton(buttonId: Int, left: Boolean) {

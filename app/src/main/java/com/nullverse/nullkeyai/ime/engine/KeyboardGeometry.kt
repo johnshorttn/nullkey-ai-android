@@ -79,13 +79,15 @@ fun preferredKeyboardHeightPx(
     density: Float,
     orientation: LayoutOrientation,
     rowCount: Int,
+    heightScale: Float = KeyboardInputSettings.HEIGHT_SCALE_DEFAULT,
 ): Int {
     val keyHeightDp = when (orientation) {
         LayoutOrientation.PORTRAIT -> KeyboardEngineDefaults.PORTRAIT_KEY_HEIGHT_DP
         LayoutOrientation.LANDSCAPE -> KeyboardEngineDefaults.LANDSCAPE_KEY_HEIGHT_DP
     }
     val paddingDp = KeyboardEngineDefaults.VERTICAL_PADDING_DP
-    return ((rowCount * keyHeightDp + paddingDp) * density).toInt().coerceAtLeast(1)
+    val scale = KeyboardInputSettings.clampHeightScale(heightScale)
+    return ((rowCount * keyHeightDp + paddingDp) * density * scale).toInt().coerceAtLeast(1)
 }
 
 fun keyboardGapPx(density: Float, orientation: LayoutOrientation): Float {
