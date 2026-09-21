@@ -8,7 +8,10 @@ import android.graphics.Path
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.MotionEvent
-import android.widget.PopupMenu
+import android.widget.PopupWindow
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.view.Gravity
 import android.view.View
 import androidx.annotation.VisibleForTesting
 
@@ -170,15 +173,39 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         controller.geometry.placedKeys.first { it.spec.label.equals(label, ignoreCase = true) }
 
     private fun showCharacterPopup(characters: String) {
-        val popup = PopupMenu(context, this)
-        characters.forEachIndexed { index, character ->
-            popup.menu.add(0, character.code, index, character.toString())
+        val density = resources.displayMetrics.density
+        val row = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding((6 * density).toInt(), (4 * density).toInt(), (6 * density).toInt(), (4 * density).toInt())
+            setBackgroundColor(theme.keyColor)
         }
-        popup.setOnMenuItemClickListener { item ->
-            controller.commitPopupCharacter(item.itemId.toChar())
-            true
+        val popup = PopupWindow(row, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true).apply {
+            isOutsideTouchable = true
+            elevation = 8f * density
         }
-        popup.show()
+        characters.forEach { character ->
+            row.addView(TextView(context).apply {
+                text = character.toString()
+                textSize = 22f
+                gravity = Gravity.CENTER
+                setTextColor(theme.labelColor)
+                minWidth = (42 * density).toInt()
+                minHeight = (44 * density).toInt()
+                setOnClickListener {
+                    controller.commitPopupCharacter(character)
+                    popup.dismiss()
+                }
+            })
+        }
+        val key = controller.touch.pressed
+        if (key == null) {
+            popup.showAtLocation(this, Gravity.CENTER, 0, 0)
+            return
+        }
+        row.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
+        val x = (key.slot.centerX - row.measuredWidth / 2f).toInt().coerceAtLeast(0)
+        val y = (key.slot.top - row.measuredHeight - 8f * density).toInt().coerceAtLeast(0)
+        popup.showAtLocation(this, Gravity.TOP or Gravity.START, x, y)
     }
 
     private fun drawGestureTrail(canvas: Canvas) {
