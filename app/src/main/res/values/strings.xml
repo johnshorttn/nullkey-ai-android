@@ -78,4 +78,4 @@
     <string name="restore_clip_message">This item will be moved back to your Vault.</string>
     <string name="restore">Restore</string>
     <string name="restored">Restored to Vault</string>
-</resources>
+    <string name="suggested_tags">Suggested tags</string>\n</resources>
