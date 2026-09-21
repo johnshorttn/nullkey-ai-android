@@ -52,6 +52,7 @@ grep -q 'shrinkResourcesRelease=false' <<<"$OFF_STATUS" || {
   echo "$OFF_STATUS" >&2
   exit 1
 }
+grep -E '^(minifyRelease|shrinkResourcesRelease)=' <<<"$OFF_STATUS"
 
 echo "bundleRelease + assembleRelease with throwaway signing (R8 on)..."
 env -u NULLKEY_RELEASE_MINIFY ./gradlew --no-daemon --console=plain :app:printReleaseSigningStatus :app:bundleRelease :app:assembleRelease | tee "$TMP/release-build.log"

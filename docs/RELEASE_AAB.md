@@ -92,7 +92,7 @@ The workflow decodes the keystore into the runner temp dir, sets `KEYSTORE_FILE`
 
 This generates a 1-day PKCS12 in `$TMPDIR`, builds a signed AAB and release APK with R8 on, verifies the jar signature, and runs `scripts/check-r8-mapping.sh`. That check requires:
 
-- `mapping.txt` renames ordinary app classes (`WordSuggester`, `VaultArchive`, `GestureWordRanker`)
+- `mapping.txt` renames ordinary app classes (for example `WordSuggester`). Kotlin objects such as `VaultArchive` and `GestureWordRanker` may be inlined instead; their original names must not remain in the release dex
 - seeds/dex still contain the IME service, clipboard monitor, activities, keyboard view, and Room `NullKeyDatabase_Impl`
 - persisted enum names (`DARK_VAULT`, `INFERRED`, `TOMBSTONE`, and the rest of the vault/prefs/JSON set) are not renamed
 - the release APK does not request `INTERNET` and still targets API 36

@@ -69,11 +69,21 @@ enum_constants = {
     "LOCAL", "PENDING", "SYNCED", "CONFLICT", "TOMBSTONE",
     "LETTERS", "SYMBOLS", "PORTRAIT", "LANDSCAPE", "OFF", "ON", "LOCKED",
 }
-# Used by release code, so R8 should rename them rather than keep the source name.
+# Live release types. R8 may rename them or inline the Kotlin object away.
+# Either way the original descriptor must not remain as a kept class name.
 obfuscation_samples = [
     "com.nullverse.nullkeyai.ime.WordSuggester",
     "com.nullverse.nullkeyai.clipboard.VaultArchive",
     "com.nullverse.nullkeyai.ime.GestureWordRanker",
+]
+# seeds.txt lists kept enum constants by their source names.
+kept_enum_fields = [
+    "com.nullverse.nullkeyai.db.ClipContentType: com.nullverse.nullkeyai.db.ClipContentType TEXT",
+    "com.nullverse.nullkeyai.db.ClipSourceConfidence: com.nullverse.nullkeyai.db.ClipSourceConfidence INFERRED",
+    "com.nullverse.nullkeyai.db.ClipCaptureMethod: com.nullverse.nullkeyai.db.ClipCaptureMethod OCR",
+    "com.nullverse.nullkeyai.clipboard.ClipSwipeAction: com.nullverse.nullkeyai.clipboard.ClipSwipeAction PIN",
+    "com.nullverse.nullkeyai.ime.engine.KeyboardThemeId: com.nullverse.nullkeyai.ime.engine.KeyboardThemeId DARK_VAULT",
+    "com.nullverse.nullkeyai.sync.SyncRecordState: com.nullverse.nullkeyai.sync.SyncRecordState TOMBSTONE",
 ]
 
 renamed_app = []
@@ -114,14 +124,20 @@ for name in enums:
     if mapped is not None and mapped != name:
         raise SystemExit(f"FAIL: persisted enum class renamed: {name} -> {mapped}")
 
+for needle in kept_enum_fields:
+    if needle not in seeds:
+        raise SystemExit(f"FAIL: seeds.txt did not keep persisted enum field: {needle}")
+
 renamed_samples = []
+removed_samples = []
 for name in obfuscation_samples:
     mapped = class_map.get(name)
-    if mapped is None:
-        raise SystemExit(f"FAIL: expected {name} in mapping.txt (renamed or removed unexpectedly)")
     if mapped == name:
         raise SystemExit(f"FAIL: {name} kept its source name; R8 obfuscation looks off")
-    renamed_samples.append(f"{name} -> {mapped}")
+    if mapped is not None and not mapped.startswith("R8$$REMOVED"):
+        renamed_samples.append(f"{name} -> {mapped}")
+    else:
+        removed_samples.append(name)
 
 with zipfile.ZipFile(apk_path) as zf:
     dex = b"".join(zf.read(n) for n in zf.namelist() if n.endswith(".dex"))
@@ -133,12 +149,21 @@ missing_dex = [name for name in entry_points if descriptor(name) not in dex]
 if missing_dex:
     raise SystemExit("FAIL: release dex missing entry points: " + ", ".join(missing_dex))
 
-for literal in ("DARK_VAULT", "INFERRED", "TOMBSTONE"):
+for literal in ("DARK_VAULT", "INFERRED"):
     if literal.encode() not in dex:
         raise SystemExit(f"FAIL: release dex missing persisted enum name {literal}")
 
+for name in obfuscation_samples:
+    if descriptor(name) in dex:
+        raise SystemExit(f"FAIL: release dex still contains original descriptor for {name}")
+
+if not renamed_samples:
+    raise SystemExit("FAIL: none of the sample app classes were renamed")
+
 print(f"renamed_app_classes={len(renamed_app)}")
 print("obfuscated=" + "; ".join(renamed_samples))
+if removed_samples:
+    print("shrunk=" + ", ".join(removed_samples))
 PY
 
 # Release APK must stay offline. aapt is in the SDK build-tools AGP just used.
