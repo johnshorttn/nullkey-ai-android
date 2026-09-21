@@ -74,12 +74,23 @@
             android:textSize="15sp" />
     </LinearLayout>
 
-    <android.inputmethodservice.KeyboardView
-        android:id="@+id/keyboard_view"
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/kb_background"
-        android:keyBackground="@color/kb_key"
-        android:keyTextColor="@color/neon" />
+        android:layout_height="wrap_content">
+
+        <com.nullverse.nullkeyai.ime.engine.NullKeyKeyboardView
+            android:id="@+id/keyboard_engine_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <android.inputmethodservice.KeyboardView
+            android:id="@+id/keyboard_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/kb_background"
+            android:keyBackground="@color/kb_key"
+            android:keyTextColor="@color/neon"
+            android:visibility="gone" />
+    </FrameLayout>
 
 </LinearLayout>
