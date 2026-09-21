@@ -7,7 +7,6 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageView
 import android.view.View
-import android.graphics.BitmapFactory
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -51,8 +50,11 @@ class ClipDetailActivity : AppCompatActivity() {
             val imageView = findViewById<ImageView>(R.id.detail_image)
             val assetStatus = findViewById<TextView>(R.id.detail_asset_status)
             val asset = assetStore.resolve(clip.localAssetPath)
+            val (previewWidth, previewHeight) = SampledBitmapDecoder.previewBounds(resources)
             if (!clip.protected && clip.contentType == "IMAGE" && asset != null) {
-                val bitmap = runCatching { BitmapFactory.decodeFile(asset.absolutePath) }.getOrNull()
+                val bitmap = runCatching {
+                    SampledBitmapDecoder.decodeFile(asset.absolutePath, previewWidth, previewHeight)
+                }.getOrNull()
                 if (bitmap != null) {
                     imageView.setImageBitmap(bitmap)
                     imageView.visibility = View.VISIBLE
@@ -195,8 +197,8 @@ class ClipDetailActivity : AppCompatActivity() {
                             val bitmap = runCatching {
                                 if (vaultCrypto.isEncryptedFile(asset)) {
                                     val bytes = vaultCrypto.decryptFile(asset)
-                                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                                } else BitmapFactory.decodeFile(asset.absolutePath)
+                                    SampledBitmapDecoder.decodeByteArray(bytes, previewWidth, previewHeight)
+                                } else SampledBitmapDecoder.decodeFile(asset.absolutePath, previewWidth, previewHeight)
                             }.getOrNull()
                             bitmap?.let {
                                 findViewById<ImageView>(R.id.detail_image).apply {
