@@ -2,6 +2,9 @@ package com.nullverse.nullkeyai.clipboard
 
 import com.nullverse.nullkeyai.db.Clip
 import com.nullverse.nullkeyai.db.ClipDao
+import com.nullverse.nullkeyai.db.ClipCaptureMethod
+import com.nullverse.nullkeyai.db.ClipContentType
+import com.nullverse.nullkeyai.db.ClipSourceConfidence
 import kotlinx.coroutines.flow.Flow
 import java.util.concurrent.TimeUnit
 
@@ -9,6 +12,20 @@ import java.util.concurrent.TimeUnit
  * Application-facing API over [ClipDao]. Owns the capture de-duplication and the
  * 30-day Trash retention rules so they can be unit-tested without Android.
  */
+data class ClipCaptureRequest(
+    val content: String,
+    val contentType: ClipContentType = ClipContentType.TEXT,
+    val isFile: Boolean = false,
+    val mimeType: String? = null,
+    val legacyTag: String? = null,
+    val localAssetPath: String? = null,
+    val sourcePackage: String? = null,
+    val sourceAppLabel: String? = null,
+    val sourceUri: String? = null,
+    val captureMethod: ClipCaptureMethod = ClipCaptureMethod.UNKNOWN,
+    val sourceConfidence: ClipSourceConfidence = ClipSourceConfidence.UNKNOWN
+)
+
 class ClipRepository(private val dao: ClipDao) {
 
     fun search(query: String, filesOnly: Boolean): Flow<List<Clip>> =
@@ -37,6 +54,31 @@ class ClipRepository(private val dao: ClipDao) {
         }
         return dao.insert(
             Clip(content = content, isFile = isFile, mimeType = mimeType, tag = tag)
+        )
+    }
+
+    suspend fun capture(request: ClipCaptureRequest): Long? {
+        if (request.content.isBlank() && request.localAssetPath.isNullOrBlank()) return null
+        val latest = dao.latestActive()
+        if (latest != null &&
+            latest.content == request.content &&
+            latest.contentType == request.contentType.name &&
+            latest.localAssetPath == request.localAssetPath
+        ) return null
+        return dao.insert(
+            Clip(
+                content = request.content,
+                isFile = request.isFile,
+                mimeType = request.mimeType,
+                tag = request.legacyTag,
+                contentType = request.contentType.name,
+                localAssetPath = request.localAssetPath,
+                sourcePackage = request.sourcePackage,
+                sourceAppLabel = request.sourceAppLabel,
+                sourceUri = request.sourceUri,
+                captureMethod = request.captureMethod.name,
+                sourceConfidence = request.sourceConfidence.name
+            )
         )
     }
 
