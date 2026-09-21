@@ -10,7 +10,7 @@ Shipped on `rewrite/v2` (and open focused PRs, unmerged):
 - Vault: search, files filter, pin/protect/tag/trash, encrypted backup/restore
 - Optional clipboard monitor and consent-gated Capture Lab
 - On-device word suggestions and swipe-typing toggle
-- On-device Latin OCR for Vault images (bundled ML Kit model; no network permission) and offline English spelling/grammar hints
+- On-device Latin OCR for Vault images (bundled ML Kit model; no `INTERNET` or `ACCESS_NETWORK_STATE`) and offline English spelling (bundled dictionary and edit distance, not a full grammar checker)
 - Sync **foundation** (in-memory transport only; no production hosts)
 
 Play/AAB path:
