@@ -10,6 +10,8 @@ import com.nullverse.nullkeyai.db.Tag
 import com.nullverse.nullkeyai.db.TagDao
 import com.nullverse.nullkeyai.security.VaultCrypto
 import com.nullverse.nullkeyai.security.PortableVaultCrypto
+import com.nullverse.nullkeyai.sync.DeviceIdentity
+import com.nullverse.nullkeyai.sync.TombstonePolicy
 import kotlinx.coroutines.flow.Flow
 import java.util.concurrent.TimeUnit
 
@@ -31,7 +33,7 @@ data class ClipCaptureRequest(
     val sourceConfidence: ClipSourceConfidence = ClipSourceConfidence.UNKNOWN
 )
 
-class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAssetStore? = null, private val tagDao: TagDao? = null, private val crypto: VaultCrypto? = null) {
+class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAssetStore? = null, private val tagDao: TagDao? = null, private val crypto: VaultCrypto? = null, private val deviceIdentity: DeviceIdentity? = null) {
 
     fun search(query: String, filesOnly: Boolean): Flow<List<Clip>> =
         dao.search(query.trim(), filesOnly)
@@ -58,7 +60,7 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
             return null
         }
         return dao.insert(
-            Clip(content = content, isFile = isFile, mimeType = mimeType, tag = tag)
+            newClip(content = content, isFile = isFile, mimeType = mimeType, tag = tag)
         )
     }
 
@@ -71,7 +73,7 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
             latest.localAssetPath == request.localAssetPath
         ) return null
         return dao.insert(
-            Clip(
+            newClip(
                 content = request.content,
                 isFile = request.isFile,
                 mimeType = request.mimeType,
@@ -87,13 +89,13 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
         )
     }
 
-    suspend fun moveToTrash(id: Long) = dao.moveToTrash(id)
+    suspend fun moveToTrash(id: Long) { dao.moveToTrash(id); markLocalMutation(id) }
 
-    suspend fun restore(id: Long) = dao.restore(id)
+    suspend fun restore(id: Long) { dao.restore(id); markLocalMutation(id) }
 
-    suspend fun setPinned(id: Long, pinned: Boolean) = dao.setPinned(id, pinned)
+    suspend fun setPinned(id: Long, pinned: Boolean) { dao.setPinned(id, pinned); markLocalMutation(id) }
 
-    suspend fun setNotes(id: Long, notes: String) = dao.setNotes(id, notes)
+    suspend fun setNotes(id: Long, notes: String) { dao.setNotes(id, notes); markLocalMutation(id) }
 
     suspend fun setProtected(id: Long, isProtected: Boolean) {
         val vaultCrypto = crypto ?: throw IllegalStateException("Vault crypto unavailable; protection state cannot be changed safely")
@@ -130,6 +132,7 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
                 false
             )
         }
+        markLocalMutation(id)
     }
 
     suspend fun revealed(id: Long): Clip? {
@@ -258,6 +261,18 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
         val deleted = dao.purgeExpired(cutoff)
         if (deleted > 0) expired.forEach { assetStore?.delete(it.localAssetPath) }
         return deleted
+    }
+
+    private fun newClip(content: String, isFile: Boolean = false, mimeType: String? = null, tag: String? = null, contentType: String = ClipContentType.TEXT.name, localAssetPath: String? = null, sourcePackage: String? = null, sourceAppLabel: String? = null, sourceUri: String? = null, captureMethod: String = ClipCaptureMethod.UNKNOWN.name, sourceConfidence: String = ClipSourceConfidence.UNKNOWN.name): Clip {
+        val deviceId = deviceIdentity?.current()
+        return Clip(content = content, isFile = isFile, mimeType = mimeType, tag = tag, contentType = contentType, localAssetPath = localAssetPath, sourcePackage = sourcePackage, sourceAppLabel = sourceAppLabel, sourceUri = sourceUri, captureMethod = captureMethod, sourceConfidence = sourceConfidence, originDeviceId = deviceId, modifiedByDeviceId = deviceId)
+    }
+
+    private suspend fun markLocalMutation(id: Long) {
+        val clip = dao.byId(id) ?: return
+        if (clip.syncDeletedAt != null) return
+        val deviceId = deviceIdentity?.current()
+        dao.update(clip.copy(revision = clip.revision + 1, modifiedByDeviceId = deviceId ?: clip.modifiedByDeviceId, originDeviceId = clip.originDeviceId ?: deviceId, syncState = "PENDING", updatedAt = maxOf(clip.updatedAt, System.currentTimeMillis())))
     }
 
     companion object {
