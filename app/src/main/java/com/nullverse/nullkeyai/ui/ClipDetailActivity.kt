@@ -28,6 +28,8 @@ class ClipDetailActivity : AppCompatActivity() {
     private var clipId: Long = 0L
     private lateinit var assetStore: VaultAssetStore
     private lateinit var vaultCrypto: VaultCrypto
+    private var initiallyProtected = false
+    private var protectedUnlocked = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,6 +43,8 @@ class ClipDetailActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             val clip = db.clipDao().byId(clipId) ?: run { finish(); return@launch }
+            initiallyProtected = clip.protected
+            protectedUnlocked = !clip.protected
             val contentView = findViewById<TextView>(R.id.detail_content)
             val imageView = findViewById<ImageView>(R.id.detail_image)
             val assetStatus = findViewById<TextView>(R.id.detail_asset_status)
@@ -84,11 +88,15 @@ class ClipDetailActivity : AppCompatActivity() {
                     ?: clip.sourcePackage?.let { append(" • ").append(it) }
                 append(" • ").append(clip.captureMethod)
             }
-            findViewById<EditText>(R.id.detail_notes).setText(
-                if (clip.protected) "" else clip.notes
-            )
+            findViewById<EditText>(R.id.detail_notes).apply {
+                setText(if (clip.protected) "" else clip.notes)
+                isEnabled = !clip.protected
+            }
             findViewById<CheckBox>(R.id.detail_pinned).isChecked = clip.pinned
-            findViewById<CheckBox>(R.id.detail_protected).isChecked = clip.protected
+            findViewById<CheckBox>(R.id.detail_protected).apply {
+                isChecked = clip.protected
+                isEnabled = !clip.protected
+            }
             findViewById<TextView>(R.id.detail_tags).text =
                 repository.tagsForClip(clipId).joinToString(" • ") { it.name }
                     .ifBlank { getString(R.string.no_tags) }
@@ -96,9 +104,16 @@ class ClipDetailActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.detail_save).setOnClickListener {
             lifecycleScope.launch {
-                repository.setNotes(clipId, findViewById<EditText>(R.id.detail_notes).text.toString())
-                repository.setPinned(clipId, findViewById<CheckBox>(R.id.detail_pinned).isChecked)
-                repository.setProtected(clipId, findViewById<CheckBox>(R.id.detail_protected).isChecked)
+                val wantsProtected = findViewById<CheckBox>(R.id.detail_protected).isChecked
+                if (initiallyProtected && !protectedUnlocked) {
+                    repository.setPinned(clipId, findViewById<CheckBox>(R.id.detail_pinned).isChecked)
+                } else {
+                    // Unprotect first so edits never overwrite encrypted notes with plaintext.
+                    if (initiallyProtected && !wantsProtected) repository.setProtected(clipId, false)
+                    repository.setNotes(clipId, findViewById<EditText>(R.id.detail_notes).text.toString())
+                    repository.setPinned(clipId, findViewById<CheckBox>(R.id.detail_pinned).isChecked)
+                    if (!initiallyProtected && wantsProtected) repository.setProtected(clipId, true)
+                }
                 Toast.makeText(this@ClipDetailActivity, R.string.saved, Toast.LENGTH_SHORT).show()
                 finish()
             }
@@ -136,7 +151,13 @@ class ClipDetailActivity : AppCompatActivity() {
                             text = clip.content
                             visibility = View.VISIBLE
                         }
-                        findViewById<EditText>(R.id.detail_notes).setText(clip.notes)
+                        findViewById<EditText>(R.id.detail_notes).apply {
+                            setText(clip.notes)
+                            // Protected notes remain read-only until the user explicitly unprotects.
+                            isEnabled = false
+                        }
+                        protectedUnlocked = true
+                        findViewById<CheckBox>(R.id.detail_protected).isEnabled = true
                         findViewById<Button>(R.id.detail_unlock).visibility = View.GONE
                         val asset = assetStore.resolve(clip.localAssetPath)
                         if (clip.contentType == "IMAGE" && asset != null) {
