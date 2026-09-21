@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/background">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="20dp">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/clip_details" android:textColor="@color/neon"
+            android:textSize="24sp" android:textStyle="bold"/>
+        <TextView android:id="@+id/detail_meta" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="8dp"
+            android:textColor="@color/slate"/>
+        <TextView android:id="@+id/detail_content" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="16dp"
+            android:textColor="@color/text_primary" android:textIsSelectable="true" android:textSize="17sp"/>
+        <EditText android:id="@+id/detail_notes" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="18dp"
+            android:hint="@string/notes" android:minLines="3" android:gravity="top"
+            android:inputType="textMultiLine" android:textColor="@color/text_primary"
+            android:textColorHint="@color/slate"/>
+        <CheckBox android:id="@+id/detail_pinned" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="@string/pinned"
+            android:textColor="@color/text_primary" android:buttonTint="@color/neon"/>
+        <CheckBox android:id="@+id/detail_protected" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="@string/protected_label"
+            android:textColor="@color/text_primary" android:buttonTint="@color/neon"/>
+        <Button android:id="@+id/detail_save" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="@string/save_changes"/>
+        <Button android:id="@+id/detail_trash" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="@string/move_to_trash"/>
+    </LinearLayout>
+</ScrollView>
