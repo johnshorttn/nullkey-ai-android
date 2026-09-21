@@ -85,13 +85,8 @@ class ClipDetailActivity : AppCompatActivity() {
                 unlock.visibility = View.VISIBLE
                 unlock.setOnClickListener { authenticateAndReveal() }
             }
-            findViewById<TextView>(R.id.detail_meta).text = buildString {
-                append(clip.contentType)
-                clip.mimeType?.let { append(" • ").append(it) }
-                clip.sourceAppLabel?.let { append(" • ").append(it) }
-                    ?: clip.sourcePackage?.let { append(" • ").append(it) }
-                append(" • ").append(clip.captureMethod)
-            }
+            findViewById<TextView>(R.id.detail_meta).text =
+                ClipListPresentation.detailMeta(clip, ClipListCopy.from(this@ClipDetailActivity))
             findViewById<EditText>(R.id.detail_notes).apply {
                 setText(if (clip.protected) "" else clip.notes)
                 isEnabled = !clip.protected
@@ -109,21 +104,27 @@ class ClipDetailActivity : AppCompatActivity() {
                 val wantsProtected = findViewById<CheckBox>(R.id.detail_protected).isChecked
                 val pinned = findViewById<CheckBox>(R.id.detail_pinned).isChecked
                 val notes = findViewById<EditText>(R.id.detail_notes).text.toString()
-                if (initiallyProtected) {
-                    repository.setPinned(clipId, pinned)
-                    if (protectedUnlocked && !wantsProtected) {
-                        // Decrypt the row first; only then persist the revealed notes as plaintext.
-                        repository.setProtected(clipId, false)
+                val saved = runCatching {
+                    if (initiallyProtected) {
+                        repository.setPinned(clipId, pinned)
+                        if (protectedUnlocked && !wantsProtected) {
+                            // Decrypt the row first; only then persist the revealed notes as plaintext.
+                            repository.setProtected(clipId, false)
+                            repository.setNotes(clipId, notes)
+                        }
+                        // If protection remains enabled, never write the revealed notes back to the DB.
+                    } else {
                         repository.setNotes(clipId, notes)
+                        repository.setPinned(clipId, pinned)
+                        if (wantsProtected) repository.setProtected(clipId, true)
                     }
-                    // If protection remains enabled, never write the revealed notes back to the DB.
+                }.isSuccess
+                if (saved) {
+                    Toast.makeText(this@ClipDetailActivity, R.string.saved, Toast.LENGTH_SHORT).show()
+                    finish()
                 } else {
-                    repository.setNotes(clipId, notes)
-                    repository.setPinned(clipId, pinned)
-                    if (wantsProtected) repository.setProtected(clipId, true)
+                    Toast.makeText(this@ClipDetailActivity, R.string.action_failed, Toast.LENGTH_LONG).show()
                 }
-                Toast.makeText(this@ClipDetailActivity, R.string.saved, Toast.LENGTH_SHORT).show()
-                finish()
             }
         }
         findViewById<Button>(R.id.detail_add_tag).setOnClickListener {

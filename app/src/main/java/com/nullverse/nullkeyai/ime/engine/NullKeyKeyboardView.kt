@@ -146,7 +146,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        renderer.draw(canvas, theme, controller)
+        renderer.draw(canvas, theme, controller, context)
         drawGestureTrail(canvas)
     }
 

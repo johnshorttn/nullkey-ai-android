@@ -48,5 +48,6 @@ class ClipSwipePreferencesTest {
         assertEquals("Pin", context.getString(ClipSwipeAction.PIN.labelRes))
         assertEquals("Protect", context.getString(ClipSwipeAction.PROTECT.labelRes))
         assertEquals("Tag", context.getString(ClipSwipeAction.TAG.labelRes))
+        assertEquals("Add Work tag", context.getString(R.string.add_suggested_tag, "Work"))
     }
 }

@@ -45,6 +45,7 @@ class MainActivityInstrumentedTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.btn_enable)).check(matches(isDisplayed()))
             onView(withId(R.id.btn_switch)).check(matches(isDisplayed()))
+            onView(withId(R.id.ime_status)).check(matches(isDisplayed()))
             onView(withId(R.id.swipe_typing_enabled)).perform(scrollTo()).check(matches(isDisplayed()))
             onView(withId(R.id.search)).perform(scrollTo()).check(matches(isDisplayed()))
             onView(withId(R.id.files_only)).perform(scrollTo()).check(matches(isDisplayed()))
@@ -59,9 +60,9 @@ class MainActivityInstrumentedTest {
         val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
         KeyboardEnginePreferences.setSwipeTypingEnabled(context, true)
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withId(R.id.swipe_typing_enabled)).check(matches(isChecked()))
-            onView(withId(R.id.swipe_typing_enabled)).perform(click())
-            onView(withId(R.id.swipe_typing_enabled)).check(matches(isNotChecked()))
+            onView(withId(R.id.swipe_typing_enabled)).perform(scrollTo()).check(matches(isChecked()))
+            onView(withId(R.id.swipe_typing_enabled)).perform(scrollTo(), click())
+            onView(withId(R.id.swipe_typing_enabled)).perform(scrollTo()).check(matches(isNotChecked()))
             org.junit.Assert.assertFalse(KeyboardEnginePreferences.swipeTypingEnabled(context))
         }
         KeyboardEnginePreferences.setSwipeTypingEnabled(context, true)
@@ -129,9 +130,10 @@ class MainActivityInstrumentedTest {
     }
 
     @Test
-    fun showsAppTitle() {
+    fun showsLocalizedTitleAndTagline() {
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withText("NullKey AI")).check(matches(isDisplayed()))
+            onView(withText(R.string.app_name)).check(matches(isDisplayed()))
+            onView(withId(R.id.tagline)).check(matches(withText(R.string.tagline)))
         }
     }
 }

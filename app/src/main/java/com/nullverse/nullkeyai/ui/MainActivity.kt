@@ -34,6 +34,7 @@ import com.nullverse.nullkeyai.clipboard.ClipSwipePresentation
 import com.nullverse.nullkeyai.clipboard.ClipSwipePreferences
 import com.nullverse.nullkeyai.clipboard.labelRes
 import com.nullverse.nullkeyai.clipboard.ClipCaptureRequest
+import com.nullverse.nullkeyai.clipboard.DeviceBoundProtectedImportException
 import com.nullverse.nullkeyai.clipboard.VaultAssetStore
 import com.nullverse.nullkeyai.clipboard.ClipboardMonitorService
 import com.nullverse.nullkeyai.db.Clip
@@ -66,6 +67,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var search: EditText
     private lateinit var filesOnly: CheckBox
     private lateinit var empty: TextView
+    private lateinit var imeStatus: TextView
     private var observeJob: Job? = null
     private var pendingBackupPassword: CharArray? = null
     private var pendingRestorePassword: CharArray? = null
@@ -109,6 +111,12 @@ class MainActivity : AppCompatActivity() {
         search = findViewById(R.id.search)
         filesOnly = findViewById(R.id.files_only)
         empty = findViewById(R.id.empty)
+        imeStatus = findViewById(R.id.ime_status)
+
+        savedInstanceState?.let { state ->
+            search.setText(state.getString(STATE_SEARCH).orEmpty())
+            filesOnly.isChecked = state.getBoolean(STATE_FILES_ONLY, false)
+        }
 
         val list = findViewById<RecyclerView>(R.id.clips)
         adapter = ClipAdapter { clip ->
@@ -188,8 +196,12 @@ class MainActivity : AppCompatActivity() {
         bindSwipeActionButton(R.id.btn_swipe_left_action, true)
         bindSwipeActionButton(R.id.btn_swipe_right_action, false)
         findViewById<Button>(R.id.btn_start_monitor).setOnClickListener {
-            ClipboardMonitorService.start(this)
-            Toast.makeText(this, R.string.monitor_started, Toast.LENGTH_SHORT).show()
+            val started = runCatching { ClipboardMonitorService.start(this) }.isSuccess
+            Toast.makeText(
+                this,
+                if (started) R.string.monitor_started else R.string.monitor_start_failed,
+                Toast.LENGTH_SHORT
+            ).show()
         }
         findViewById<Button>(R.id.btn_stop_monitor).setOnClickListener {
             ClipboardMonitorService.stop(this)
@@ -226,13 +238,37 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch { repository.ensureDefaultTags() }
         requestNotifPermissionIfNeeded()
+        refreshImeStatus()
         observeClips()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::imeStatus.isInitialized) refreshImeStatus()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (::search.isInitialized) {
+            outState.putString(STATE_SEARCH, search.text?.toString().orEmpty())
+            outState.putBoolean(STATE_FILES_ONLY, filesOnly.isChecked)
+        }
+    }
+
+    private fun refreshImeStatus() {
+        imeStatus.setText(
+            ImeSetupStatus.messageRes(
+                enabled = ImeSetupStatus.isEnabled(this),
+                selected = ImeSetupStatus.isSelected(this),
+            )
+        )
     }
 
     private fun observeClips() {
         observeJob?.cancel()
         val query = search.text?.toString().orEmpty()
         val onlyFiles = filesOnly.isChecked
+        empty.setText(VaultEmptyCopy.messageRes(query, onlyFiles))
         observeJob = lifecycleScope.launch {
             repository.search(query, onlyFiles).collectLatest { clips ->
                 adapter.submit(clips)
@@ -387,32 +423,47 @@ class MainActivity : AppCompatActivity() {
         }
         val item = clip.getItemAt(0)
         lifecycleScope.launch {
-            if (item.uri != null) {
-                val mimeType = clip.description?.getMimeType(0)
-                val uri = item.uri!!
-                val assetPath = withContext(Dispatchers.IO) {
-                    runCatching { VaultAssetStore(this@MainActivity).importUri(uri, mimeType).relativePath }
-                        .getOrNull()
+            val captured = runCatching {
+                if (item.uri != null) {
+                    val mimeType = clip.description?.getMimeType(0)
+                    val uri = item.uri!!
+                    val assetPath = withContext(Dispatchers.IO) {
+                        runCatching { VaultAssetStore(this@MainActivity).importUri(uri, mimeType).relativePath }
+                            .getOrNull()
+                    }
+                    if (assetPath == null) {
+                        Toast.makeText(this@MainActivity, R.string.capture_asset_failed, Toast.LENGTH_LONG).show()
+                    }
+                    repository.capture(
+                        ClipCaptureRequest(
+                            content = uri.toString(),
+                            contentType = if (mimeType?.startsWith("image/") == true) ClipContentType.IMAGE else ClipContentType.FILE,
+                            isFile = true,
+                            mimeType = mimeType,
+                            localAssetPath = assetPath,
+                            sourceUri = uri.toString(),
+                            captureMethod = ClipCaptureMethod.MANUAL,
+                            sourceConfidence = ClipSourceConfidence.UNKNOWN
+                        )
+                    )
+                } else {
+                    val text = item.text?.toString().orEmpty()
+                    if (text.isBlank()) {
+                        Toast.makeText(this@MainActivity, R.string.nothing_to_capture, Toast.LENGTH_SHORT).show()
+                        return@runCatching null
+                    }
+                    repository.capture(
+                        ClipCaptureRequest(
+                            content = text,
+                            captureMethod = ClipCaptureMethod.MANUAL
+                        )
+                    )
                 }
-                repository.capture(
-                    ClipCaptureRequest(
-                        content = uri.toString(),
-                        contentType = if (mimeType?.startsWith("image/") == true) ClipContentType.IMAGE else ClipContentType.FILE,
-                        isFile = true,
-                        mimeType = mimeType,
-                        localAssetPath = assetPath,
-                        sourceUri = uri.toString(),
-                        captureMethod = ClipCaptureMethod.MANUAL,
-                        sourceConfidence = ClipSourceConfidence.UNKNOWN
-                    )
-                )
-            } else {
-                repository.capture(
-                    ClipCaptureRequest(
-                        content = item.text?.toString().orEmpty(),
-                        captureMethod = ClipCaptureMethod.MANUAL
-                    )
-                )
+            }.onFailure {
+                Toast.makeText(this@MainActivity, R.string.capture_failed, Toast.LENGTH_LONG).show()
+            }.getOrNull()
+            if (captured != null) {
+                Toast.makeText(this@MainActivity, R.string.capture_ok, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -446,6 +497,8 @@ class MainActivity : AppCompatActivity() {
                     getString(R.string.import_ok, count),
                     Toast.LENGTH_SHORT
                 ).show()
+            } catch (e: DeviceBoundProtectedImportException) {
+                Toast.makeText(this@MainActivity, R.string.import_protected_requires_secure, Toast.LENGTH_LONG).show()
             } catch (e: IllegalArgumentException) {
                 Toast.makeText(this@MainActivity, R.string.import_invalid, Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
@@ -535,5 +588,10 @@ class MainActivity : AppCompatActivity() {
         ) {
             notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+    }
+
+    companion object {
+        private const val STATE_SEARCH = "search_query"
+        private const val STATE_FILES_ONLY = "files_only"
     }
 }

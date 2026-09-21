@@ -21,12 +21,20 @@
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/tagline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:text="@string/vault_subtitle"
+            android:layout_marginBottom="8dp"
+            android:text="@string/tagline"
             android:textColor="@color/violet"
             android:textStyle="italic" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/vault_subtitle"
+            android:textColor="@color/text_primary" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -56,6 +64,15 @@
                 android:layout_weight="1"
                 android:text="@string/switch_keyboard" />
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/ime_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/ime_status_disabled"
+            android:textColor="@color/slate"
+            android:textSize="13sp" />
 
         <CheckBox
             android:id="@+id/use_custom_keyboard_engine"

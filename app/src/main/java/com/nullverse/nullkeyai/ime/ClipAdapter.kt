@@ -7,6 +7,8 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.db.Clip
+import com.nullverse.nullkeyai.ui.ClipListCopy
+import com.nullverse.nullkeyai.ui.ClipListPresentation
 
 /** Renders captured clips inside the IME's clip vault and reports taps. */
 class ClipAdapter(
@@ -46,23 +48,13 @@ class ClipAdapter(
         private val meta: TextView = view.findViewById(R.id.clip_meta)
 
         fun bind(clip: Clip) {
-            preview.text = when {
-                clip.protected -> "Protected clip"
-                clip.contentType == "IMAGE" -> clip.notes.ifBlank { "Image" }
-                clip.contentType == "FILE" -> clip.notes.ifBlank { clip.mimeType ?: "File" }
-                else -> clip.content
-            }
-            val kind = clip.contentType
-            val pin = if (clip.pinned) " • PIN" else ""
-            val lock = if (clip.protected) " • PROTECTED" else ""
-            val source = clip.sourceAppLabel?.let { " • $it" }
-                ?: clip.sourcePackage?.let { " • $it" }
-                ?: ""
-            val note = if (clip.notes.isNotBlank() && clip.contentType == "TEXT") " • NOTE" else ""
-            meta.text = "$kind$pin$lock$note$source"
+            val copy = ClipListCopy.from(itemView.context)
+            val previewText = ClipListPresentation.preview(clip, copy)
+            preview.text = previewText
+            meta.text = ClipListPresentation.meta(clip, copy)
             itemView.contentDescription = itemView.context.getString(
                 R.string.paste_clip,
-                preview.text,
+                previewText,
             )
             itemView.setOnClickListener { onClick(clip) }
         }

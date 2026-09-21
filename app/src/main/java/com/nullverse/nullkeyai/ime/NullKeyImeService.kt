@@ -12,6 +12,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.nullverse.nullkeyai.R
@@ -23,10 +24,13 @@ import com.nullverse.nullkeyai.ime.engine.KeyFeedback
 import com.nullverse.nullkeyai.ime.engine.KeyCodes
 import com.nullverse.nullkeyai.ime.engine.NullKeyKeyboardView
 import com.nullverse.nullkeyai.sync.DeviceIdentity
+import com.nullverse.nullkeyai.ui.VaultEmptyCopy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -54,8 +58,10 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private lateinit var searchBox: EditText
     private lateinit var filesOnly: CheckBox
     private lateinit var clipsList: RecyclerView
+    private lateinit var clipsEmpty: TextView
     private lateinit var adapter: ClipAdapter
     private lateinit var suggestionViews: List<TextView>
+    private var refreshClipsJob: Job? = null
 
     private val currentWord = StringBuilder()
     private var caps = false
@@ -89,9 +95,16 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         searchBox = root.findViewById(R.id.clip_search)
         filesOnly = root.findViewById(R.id.files_only)
         clipsList = root.findViewById(R.id.clips_list)
+        clipsEmpty = root.findViewById(R.id.clips_empty)
 
         adapter = ClipAdapter { clip ->
-            currentInputConnection?.commitText(clip.content, 1)
+            when (val decision = ClipPastePolicy.decide(clip)) {
+                is ClipPastePolicy.Decision.Commit ->
+                    currentInputConnection?.commitText(decision.text, 1)
+                ClipPastePolicy.Decision.BlockProtected ->
+                    Toast.makeText(this, R.string.ime_protected_clip_blocked, Toast.LENGTH_SHORT).show()
+                ClipPastePolicy.Decision.SkipEmpty -> Unit
+            }
         }
         clipsList.layoutManager = LinearLayoutManager(this)
         clipsList.adapter = adapter
@@ -115,14 +128,23 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         return root
     }
 
+    override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
+        super.onStartInput(attribute, restarting)
+        if (!restarting) resetComposition()
+    }
+
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         applyRendererPreference()
         if (usingEngine) keyboardEngineView.resetEngine()
-        currentWord.setLength(0)
-        pendingSwipeCommit = null
-        updateSuggestions()
+        if (!restarting) resetComposition()
+        else updateSuggestions()
         refreshClips()
+    }
+
+    override fun onFinishInput() {
+        resetComposition()
+        super.onFinishInput()
     }
 
     override fun onEvaluateFullscreenMode(): Boolean = false
@@ -130,6 +152,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         if (::keyboardEngineView.isInitialized) {
+            keyboardEngineView.resetEngine()
             keyboardEngineView.requestLayout()
         }
     }
@@ -147,14 +170,27 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     private fun refreshClips() {
+        if (!::searchBox.isInitialized) return
         val query = searchBox.text?.toString().orEmpty()
         val onlyFiles = filesOnly.isChecked
-        scope.launch {
-            val results = withContext(Dispatchers.IO) {
-                repository.searchOnce(query, onlyFiles)
-            }
+        refreshClipsJob?.cancel()
+        refreshClipsJob = scope.launch {
+            val results = runCatching {
+                withContext(Dispatchers.IO) {
+                    repository.searchOnce(query, onlyFiles)
+                }
+            }.getOrDefault(emptyList())
+            if (!isActive) return@launch
             adapter.submit(results)
+            clipsEmpty.setText(VaultEmptyCopy.messageRes(query, onlyFiles))
+            clipsEmpty.visibility = if (results.isEmpty()) View.VISIBLE else View.GONE
         }
+    }
+
+    private fun resetComposition() {
+        currentWord.setLength(0)
+        pendingSwipeCommit = null
+        if (::suggestionViews.isInitialized) updateSuggestions()
     }
 
     // region suggestions
@@ -295,11 +331,13 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     // endregion
 
     override fun onFinishInputView(finishingInput: Boolean) {
+        refreshClipsJob?.cancel()
         if (::keyboardEngineView.isInitialized) keyboardEngineView.resetEngine()
         super.onFinishInputView(finishingInput)
     }
 
     override fun onDestroy() {
+        refreshClipsJob?.cancel()
         if (::keyboardEngineView.isInitialized) keyboardEngineView.resetEngine()
         scope.cancel()
         super.onDestroy()
