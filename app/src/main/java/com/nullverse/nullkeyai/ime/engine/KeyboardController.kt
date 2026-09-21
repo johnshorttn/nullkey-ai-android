@@ -18,6 +18,7 @@ class KeyboardController(
         fun onKey(code: Int)
         fun onLongPress(code: Int, popupCharacters: String)
         fun onPopupCharacter(code: Int) { onKey(code) }
+        fun onGestureWord(path: String) {}
     }
 
     val modifiers = ModifierController()
@@ -76,6 +77,13 @@ class KeyboardController(
 
             override fun onRepeat(key: PlacedKey) {
                 host.onKey(key.spec.code)
+            }
+
+            override fun onGesturePath(keys: List<PlacedKey>) {
+                val path = keys.mapNotNull { key ->
+                    key.spec.code.toChar().takeIf { it.isLetter() }
+                }.joinToString(separator = "")
+                if (path.length >= 2) host.onGestureWord(path)
             }
         },
     )
