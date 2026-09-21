@@ -34,6 +34,7 @@ class ClipDetailActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_clip_detail)
+        SystemBarInsets.applyToActivity(this)
         val db = NullKeyDatabase.get(this)
         assetStore = VaultAssetStore(this)
         vaultCrypto = VaultCrypto()

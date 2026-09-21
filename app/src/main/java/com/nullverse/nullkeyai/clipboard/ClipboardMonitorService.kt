@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -51,7 +52,16 @@ class ClipboardMonitorService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, buildNotification())
+        val notification = buildNotification()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
         return START_STICKY
     }
 
@@ -161,5 +171,13 @@ class ClipboardMonitorService : Service() {
         fun stop(context: Context) {
             context.stopService(Intent(context, ClipboardMonitorService::class.java))
         }
+
+        /** API 34+ requires an explicit specialUse type matching the manifest. */
+        fun foregroundServiceType(sdkInt: Int = Build.VERSION.SDK_INT): Int =
+            if (sdkInt >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            } else {
+                0
+            }
     }
 }

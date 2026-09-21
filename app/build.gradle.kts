@@ -24,7 +24,7 @@ val releaseStoreFile: String? = releaseSigningValue("storeFile", "KEYSTORE_FILE"
 
 android {
     namespace = "com.nullverse.nullkeyai"
-    compileSdk = 34
+    compileSdk = 36
 
     ksp {
         arg("room.schemaLocation", "$projectDir/schemas")
@@ -33,7 +33,7 @@ android {
     defaultConfig {
         applicationId = "com.nullverse.nullkeyai"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 12
         versionName = "1.2"
 

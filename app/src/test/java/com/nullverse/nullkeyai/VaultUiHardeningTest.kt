@@ -50,4 +50,20 @@ class VaultUiHardeningTest {
         (suggestedGroup.getChildAt(0) as Chip).performClick()
         assertTrue(added == "Personal" || added == "Coding")
     }
+
+    @Test
+    fun vaultHomeLayoutIsScrollableSoInsetsDoNotHideSetupControls() {
+        val context = android.view.ContextThemeWrapper(
+            RuntimeEnvironment.getApplication(),
+            R.style.Theme_NullKey
+        )
+        val root = android.view.LayoutInflater.from(context)
+            .inflate(R.layout.activity_main, null)
+        assertTrue(root is android.widget.ScrollView)
+        assertEquals(R.id.main_scroll, root.id)
+        assertTrue(root.findViewById<android.view.View>(R.id.search) != null)
+        assertTrue(root.findViewById<android.view.View>(R.id.btn_start_monitor) != null)
+        assertTrue(root.findViewById<android.view.View>(R.id.swipe_typing_enabled) != null)
+        assertTrue(root.findViewById<android.view.View>(R.id.btn_swipe_left_action) != null)
+    }
 }
