@@ -43,7 +43,8 @@ class ClipboardMonitorService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        repository = ClipRepository(NullKeyDatabase.get(this).clipDao())
+        assetStore = VaultAssetStore(this)
+        repository = ClipRepository(NullKeyDatabase.get(this).clipDao(), assetStore)
         clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         assetStore = VaultAssetStore(this)
         clipboard.addPrimaryClipChangedListener(listener)
