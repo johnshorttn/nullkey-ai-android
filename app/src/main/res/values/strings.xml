@@ -70,4 +70,7 @@
     <string name="secure_export_ok">Encrypted backup created</string>
     <string name="secure_restore_ok">Restored %1$d clips from encrypted backup</string>
     <string name="secure_backup_failed">Encrypted backup operation failed</string>
+    <string name="remove_tag">Remove tag</string>
+    <string name="remove_tag_title">Remove tag</string>
+    <string name="remove_tag_none">No tags to remove</string>
 </resources>
