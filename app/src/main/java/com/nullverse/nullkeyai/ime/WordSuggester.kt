@@ -27,12 +27,44 @@ class WordSuggester private constructor(
             .toList()
     }
 
+    /** Resolve a swipe-key path to the closest known word using ordered key matches. */
+    fun suggestGesture(path: String, max: Int = 3): List<String> {
+        val p = path.trim().lowercase().filter { it.isLetter() }
+        if (p.length < 2) return emptyList()
+        return counts.asSequence()
+            .mapNotNull { (word, frequency) ->
+                val score = gestureScore(p, word) ?: return@mapNotNull null
+                Triple(word, score, frequency)
+            }
+            .sortedWith(compareBy<Triple<String, Int, Int>> { it.second }
+                .thenByDescending { it.third }
+                .thenBy { it.first.length })
+            .map { it.first }
+            .take(max)
+            .toList()
+    }
+
     /** Record that [word] was used, increasing its future suggestion priority. */
     fun learn(word: String) {
         val w = word.trim().lowercase()
         if (w.length < MIN_LEARN_LENGTH || !w.all { it.isLetter() }) return
         counts[w] = (counts[w] ?: 0) + 1
         persist()
+    }
+
+    private fun gestureScore(path: String, word: String): Int? {
+        if (word.isEmpty() || path.first() != word.first() || path.last() != word.last()) return null
+        var pathIndex = 0
+        var skipped = 0
+        for (letter in word) {
+            while (pathIndex < path.length && path[pathIndex] != letter) {
+                pathIndex++
+                skipped++
+            }
+            if (pathIndex >= path.length) return null
+            pathIndex++
+        }
+        return skipped + kotlin.math.abs(path.length - word.length)
     }
 
     private fun persist() {
