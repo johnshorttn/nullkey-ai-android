@@ -258,9 +258,27 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
     ): Int {
         val cutoff = now - TimeUnit.DAYS.toMillis(retentionDays.toLong())
         val expired = dao.expiredTrash(cutoff)
-        val deleted = dao.purgeExpired(cutoff)
-        if (deleted > 0) expired.forEach { assetStore?.delete(it.localAssetPath) }
-        return deleted
+        val deviceId = deviceIdentity?.current()
+        var converted = 0
+        for (clip in expired) {
+            assetStore?.delete(clip.localAssetPath)
+            dao.update(
+                clip.copy(
+                    content = "",
+                    notes = "",
+                    ocrText = null,
+                    localAssetPath = null,
+                    revision = clip.revision + 1,
+                    modifiedByDeviceId = deviceId ?: clip.modifiedByDeviceId,
+                    originDeviceId = clip.originDeviceId ?: deviceId,
+                    syncDeletedAt = clip.trashedAt ?: now,
+                    syncState = "TOMBSTONE",
+                    updatedAt = now
+                )
+            )
+            converted++
+        }
+        return converted
     }
 
     private fun newClip(content: String, isFile: Boolean = false, mimeType: String? = null, tag: String? = null, contentType: String = ClipContentType.TEXT.name, localAssetPath: String? = null, sourcePackage: String? = null, sourceAppLabel: String? = null, sourceUri: String? = null, captureMethod: String = ClipCaptureMethod.UNKNOWN.name, sourceConfidence: String = ClipSourceConfidence.UNKNOWN.name): Clip {
