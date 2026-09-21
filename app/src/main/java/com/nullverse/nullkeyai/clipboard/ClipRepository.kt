@@ -281,6 +281,11 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
         return converted
     }
 
+    suspend fun purgeExpiredTombstones(
+        retentionDays: Int = TombstonePolicy.DEFAULT_RETENTION_DAYS,
+        now: Long = System.currentTimeMillis()
+    ): Int = dao.purgeExpiredTombstones(TombstonePolicy.cutoffMillis(now, retentionDays))
+
     private fun newClip(content: String, isFile: Boolean = false, mimeType: String? = null, tag: String? = null, contentType: String = ClipContentType.TEXT.name, localAssetPath: String? = null, sourcePackage: String? = null, sourceAppLabel: String? = null, sourceUri: String? = null, captureMethod: String = ClipCaptureMethod.UNKNOWN.name, sourceConfidence: String = ClipSourceConfidence.UNKNOWN.name): Clip {
         val deviceId = deviceIdentity?.current()
         return Clip(content = content, isFile = isFile, mimeType = mimeType, tag = tag, contentType = contentType, localAssetPath = localAssetPath, sourcePackage = sourcePackage, sourceAppLabel = sourceAppLabel, sourceUri = sourceUri, captureMethod = captureMethod, sourceConfidence = sourceConfidence, originDeviceId = deviceId, modifiedByDeviceId = deviceId)
