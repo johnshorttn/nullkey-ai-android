@@ -54,4 +54,7 @@
     <string name="image_preview">Vault image preview</string>
     <string name="asset_saved_private">Saved privately in NullKey Vault</string>
     <string name="asset_unavailable">Original asset is no longer readable</string>
+    <string name="open_asset">Open</string>
+    <string name="share_asset">Share</string>
+    <string name="no_app_for_asset">No compatible app is installed</string>
 </resources>
