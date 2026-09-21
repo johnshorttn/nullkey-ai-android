@@ -46,6 +46,7 @@ class TouchEngine(
     private var gestureDistancePx = 0f
     private var lastX = 0f
     private var lastY = 0f
+    private var gestureStarted = false
 
     fun down(pointerId: Int, x: Float, y: Float) {
         if (activePointerId != null) return
@@ -58,6 +59,7 @@ class TouchEngine(
         gesturePath.clear()
         gesturePath += key
         gestureDistancePx = 0f
+        gestureStarted = false
         lastX = x
         lastY = y
         press(key)
@@ -72,6 +74,13 @@ class TouchEngine(
         lastY = y
         val key = listener.hitTest(x, y)
         if (key?.id == pressed?.id) return
+        if (key != null && key.spec.code.toChar().isLetter() && gesturePath.firstOrNull()?.spec?.code?.toChar()?.isLetter() == true) {
+            gestureStarted = true
+            // Once a swipe crosses into another letter, long-press must not fire
+            // on keys visited while the finger is still moving.
+            longPressTask?.cancel()
+            longPressTask = null
+        }
         listener.onRelease(pressed)
         if (key == null) {
             cancelTasks()
@@ -80,6 +89,10 @@ class TouchEngine(
         } else {
             if (gesturePath.lastOrNull()?.id != key.id) gesturePath += key
             press(key)
+            if (gestureStarted) {
+                longPressTask?.cancel()
+                longPressTask = null
+            }
         }
     }
 
@@ -152,6 +165,7 @@ class TouchEngine(
         longPressConsumed = false
         gesturePath.clear()
         gestureDistancePx = 0f
+        gestureStarted = false
     }
 }
 
