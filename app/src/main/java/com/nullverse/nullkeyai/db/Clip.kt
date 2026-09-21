@@ -2,13 +2,14 @@ package com.nullverse.nullkeyai.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.Index
 import java.util.UUID
 
 enum class ClipContentType { TEXT, IMAGE, FILE, URI, RICH }
 enum class ClipCaptureMethod { CLIPBOARD, IME, SHARE, MANUAL, OCR, IMPORT, REMOTE, UNKNOWN }
 enum class ClipSourceConfidence { CONFIRMED, INFERRED, UNKNOWN }
 
-@Entity(tableName = "clips")
+@Entity(tableName = "clips", indices = [Index(value = ["syncId"], unique = true)])
 data class Clip(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val content: String,
