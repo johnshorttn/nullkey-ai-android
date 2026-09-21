@@ -2,6 +2,7 @@ package com.nullverse.nullkeyai.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 enum class ClipContentType { TEXT, IMAGE, FILE, URI, RICH }
 enum class ClipCaptureMethod { CLIPBOARD, IME, SHARE, MANUAL, OCR, IMPORT, REMOTE, UNKNOWN }
@@ -30,5 +31,14 @@ data class Clip(
     val captureMethod: String = ClipCaptureMethod.UNKNOWN.name,
     val sourceConfidence: String = ClipSourceConfidence.UNKNOWN.name,
     val ocrText: String? = null,
-    val updatedAt: Long = createdAt
+    val updatedAt: Long = createdAt,
+
+    // Stable sync identity. Local Room id is never used as the cross-device identity.
+    val syncId: String = UUID.randomUUID().toString(),
+    val revision: Long = 1,
+    val originDeviceId: String? = null,
+    val modifiedByDeviceId: String? = null,
+    val syncDeletedAt: Long? = null,
+    val syncState: String = "LOCAL",
+    val syncExcluded: Boolean = false
 )
