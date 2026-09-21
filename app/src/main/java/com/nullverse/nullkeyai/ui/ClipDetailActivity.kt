@@ -142,9 +142,8 @@ class ClipDetailActivity : AppCompatActivity() {
                         if (clip.contentType == "IMAGE" && asset != null) {
                             val bitmap = runCatching {
                                 if (vaultCrypto.isEncryptedFile(asset)) {
-                                    BitmapFactory.decodeByteArray(
-                                        vaultCrypto.decryptFile(asset), 0, vaultCrypto.decryptFile(asset).size
-                                    )
+                                    val bytes = vaultCrypto.decryptFile(asset)
+                                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                                 } else BitmapFactory.decodeFile(asset.absolutePath)
                             }.getOrNull()
                             bitmap?.let {
