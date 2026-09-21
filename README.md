@@ -15,7 +15,9 @@ Offline-first clipboard keyboard with a private on-device vault.
 - Protected clips use Android Keystore-backed AES-GCM. Encrypted backups are user-exported files.
 - Sync in this tree is a local/in-memory foundation. No production hosts or API keys.
 
-See [docs/PRIVACY.md](docs/PRIVACY.md).
+Public privacy policy (Play IME listing): **https://johnshorttn.github.io/nullkey-ai-android/privacy.html**
+
+Source: [docs/privacy.md](docs/privacy.md). GitHub Pages already publishes the `docs/` folder from `rewrite/v2`. The URL is HTTPS today; the page text updates when `docs/privacy.md` merges to that branch. If Pages is turned off later: repository **Settings → Pages → Deploy from a branch → `rewrite/v2` → `/docs`**.
 
 ## Build
 

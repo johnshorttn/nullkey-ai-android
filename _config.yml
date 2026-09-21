@@ -1,3 +1,6 @@
+# GitHub Pages does not read this file. The live site is docs/ on rewrite/v2.
+# Config that Pages uses: docs/_config.yml
+# Privacy URL: https://johnshorttn.github.io/nullkey-ai-android/privacy.html
 title: NullKey AI
 description: The voice of your vault. The memory of your mind.
 theme: minima

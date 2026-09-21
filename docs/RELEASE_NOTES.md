@@ -16,7 +16,7 @@ Play/AAB path:
 
 - Placeholder signing config, git-ignored secrets, `bundleRelease`
 - Throwaway signed-AAB smoke script and CI job
-- Listing / Data Safety / privacy drafts
+- Listing / Data Safety notes, and a public privacy policy at https://johnshorttn.github.io/nullkey-ai-android/privacy.html
 - Release R8 minify + resource shrinking, with keep rules for IME, Room, and persisted enum names. Debug stays unminified. Opt out with `-Pnullkey.releaseMinify=false`.
 
 ## Not in 1.2 listing
@@ -24,8 +24,8 @@ Play/AAB path:
 - On-device OCR / image text in Vault
 - Privacy-first spelling/grammar assistance
 - Hosted sync, plugins, WebView settings packs
-- A public HTTPS privacy-policy URL (draft is in the repo; Play will not accept the markdown file alone)
 - On-device confirmation of the minified release IME (CI checks the mapping and dex, not a release install)
+- Promoting `rewrite/v2` to `main` (issue #16)
 
 ## Open integration PRs (do not merge from this work)
 

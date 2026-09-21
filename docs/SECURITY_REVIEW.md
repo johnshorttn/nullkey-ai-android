@@ -75,4 +75,4 @@ Compile restore (literal `\n` in vault-swipe Kotlin/XML) is included so this bra
 
 ## Recommended next milestone for #17
 
-Do **not** claim 100%. D1 (release R8) is enabled on this tree with the residual device pass noted above. The next #17 milestone is a **public HTTPS privacy-policy URL** (host [PRIVACY.md](PRIVACY.md)). OCR/spelling stay deferred unless they can ship with no `INTERNET` permission. Promoting `rewrite/v2` to `main` (#16) waits on that product decision.
+Do **not** claim 100%. D1 (release R8) is enabled on this tree with the residual device pass noted above. The public privacy policy URL is **https://johnshorttn.github.io/nullkey-ai-android/privacy.html** (Pages publishes [privacy.md](privacy.md) from `rewrite/v2` `/docs`). OCR/spelling stay deferred unless they can ship with no `INTERNET` permission. Promoting `rewrite/v2` to `main` (#16) stays on hold.

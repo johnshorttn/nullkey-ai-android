@@ -1,0 +1,13 @@
+# GitHub Pages site for this repo.
+# Settings: branch rewrite/v2, folder /docs (already enabled).
+# Public privacy URL:
+# https://johnshorttn.github.io/nullkey-ai-android/privacy.html
+title: NullKey AI
+description: The voice of your vault. The memory of your mind.
+theme: minima
+exclude:
+  - NULLKEY_AI_2_SPEC.md
+  - PLAY_STORE.md
+  - RELEASE_AAB.md
+  - RELEASE_NOTES.md
+  - SECURITY_REVIEW.md
