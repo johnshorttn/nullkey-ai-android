@@ -11,7 +11,7 @@ NullKey AI — **The voice of your vault. The memory of your mind.**
 
 ## Privacy first
 
-NullKey handles unusually sensitive information. **Never post clipboard contents, passwords, authentication tokens, typed text, vault contents, private documents, or personal information in a public GitHub issue.**
+NullKey handles unusually sensitive information. Image-text recognition and English spelling help run on the device and offline in the current build (Latin-script OCR only; spelling is a bundled dictionary and edit distance, not a full grammar checker). **Never post clipboard contents, passwords, authentication tokens, typed text, text scanned from images, vault contents, private documents, or personal information in a public GitHub issue.**
 
 Diagnostic reports should be sanitized and should normally contain only technical metadata such as:
 

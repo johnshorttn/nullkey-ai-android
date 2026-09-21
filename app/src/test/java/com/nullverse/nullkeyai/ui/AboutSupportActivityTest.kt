@@ -48,10 +48,22 @@ class AboutSupportActivityTest {
         val policy = File(repoRoot(), "docs/privacy.md").readText()
         assertTrue(policy.contains(url))
         assertTrue(policy.contains("does **not** include the `INTERNET` permission"))
+        assertTrue(policy.contains("does **not** include the `ACCESS_NETWORK_STATE` permission"))
+        assertTrue(policy.contains("run on the device and offline"))
+        assertTrue(policy.contains("writing systems outside Latin script are not recognized"))
+        assertTrue(policy.contains("using edit distance"))
+        assertTrue(policy.contains("not a full grammar checker"))
+        assertTrue(policy.contains("does not upload keystrokes, clipboard contents, Vault items, or OCR text"))
+        assertTrue(policy.contains("does not include network AI, a camera permission, or cloud sync"))
         assertTrue(policy.contains("Clipboard"))
         assertTrue(policy.contains("Vault"))
         assertFalse(policy.contains("allowBackup=\"true\""))
         assertFalse(policy.contains("allowBackup is currently enabled"))
+        assertEquals(
+            "Never include clipboard contents, passwords, typed text, Vault data, or text scanned from images in a public report. OCR and spelling stay on this device.",
+            ApplicationProvider.getApplicationContext<android.content.Context>()
+                .getString(R.string.support_privacy_notice)
+        )
 
         val requested = ApplicationProvider.getApplicationContext<android.content.Context>()
             .packageManager
@@ -63,6 +75,8 @@ class AboutSupportActivityTest {
             ?.toList()
             .orEmpty()
         assertFalse(requested.contains(android.Manifest.permission.INTERNET))
+        assertFalse(requested.contains(android.Manifest.permission.ACCESS_NETWORK_STATE))
+        assertFalse(requested.contains(android.Manifest.permission.CAMERA))
     }
 
     private fun repoRoot(): File {
