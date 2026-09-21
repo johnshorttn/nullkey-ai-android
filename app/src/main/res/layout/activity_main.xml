@@ -150,14 +150,14 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Left swipe" />
+            android:text="@string/swipe_left_default" />
 
         <Button
             android:id="@+id/btn_swipe_right_action"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Right swipe" />
+            android:text="@string/swipe_right_default" />
     </LinearLayout>
 
     <LinearLayout
