@@ -30,6 +30,7 @@ class TouchEngine(
         fun onTap(key: PlacedKey)
         fun onLongPress(key: PlacedKey): Boolean
         fun onRepeat(key: PlacedKey)
+        fun onGesturePath(keys: List<PlacedKey>) {}
     }
 
     var activePointerId: Int? = null
@@ -41,6 +42,7 @@ class TouchEngine(
     private var longPressConsumed: Boolean = false
     private var longPressTask: Cancellable? = null
     private var repeatTask: Cancellable? = null
+    private val gesturePath = mutableListOf<PlacedKey>()
 
     fun down(pointerId: Int, x: Float, y: Float) {
         if (activePointerId != null) return
@@ -50,6 +52,8 @@ class TouchEngine(
             activePointerId = null
             return
         }
+        gesturePath.clear()
+        gesturePath += key
         press(key)
     }
 
@@ -63,6 +67,7 @@ class TouchEngine(
             pressed = null
             longPressConsumed = false
         } else {
+            if (gesturePath.lastOrNull()?.id != key.id) gesturePath += key
             press(key)
         }
     }
@@ -80,7 +85,9 @@ class TouchEngine(
         val wasRepeatable = current?.spec?.isRepeatable == true
         cancelTasks()
         listener.onRelease(current)
-        if (current != null && !wasRepeatable && !consumed) {
+        if (gesturePath.size >= 2 && gesturePath.all { it.spec.code.toChar().isLetter() }) {
+            listener.onGesturePath(gesturePath.toList())
+        } else if (current != null && !wasRepeatable && !consumed) {
             listener.onTap(current)
         }
         resetPointer()
@@ -131,6 +138,7 @@ class TouchEngine(
         activePointerId = null
         pressed = null
         longPressConsumed = false
+        gesturePath.clear()
     }
 }
 
