@@ -166,6 +166,19 @@ class KeyboardControllerTest {
     }
 
     @Test
+    fun longPressThenSwipeDoesNotCommitGestureWord() {
+        val e = key("e")
+        val r = key("r")
+        controller.down(0, e.slot.centerX, e.slot.centerY)
+        scheduler.advance(400)
+        controller.move(0, r.slot.centerX, r.slot.centerY)
+        controller.up(0, r.slot.centerX, r.slot.centerY)
+        assertEquals(1, host.longPresses.size)
+        assertTrue(host.gestures.isEmpty())
+        assertTrue(host.keys.isEmpty())
+    }
+
+    @Test
     fun landscapeResizeUsesNumberRow() {
         controller.resize(
             widthPx = 1600f,

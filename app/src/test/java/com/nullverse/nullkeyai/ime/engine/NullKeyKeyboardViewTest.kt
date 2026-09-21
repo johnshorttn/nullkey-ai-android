@@ -73,6 +73,37 @@ class NullKeyKeyboardViewTest {
         tap(view, a.slot.centerX, a.slot.centerY)
         assertEquals(listOf('A'.code), codes)
     }
+
+    private fun swipe(view: View, start: PlacedKey, end: PlacedKey) {
+        val downTime = SystemClock.uptimeMillis()
+        view.dispatchTouchEvent(
+            MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, start.slot.centerX, start.slot.centerY, 0)
+        )
+        view.dispatchTouchEvent(
+            MotionEvent.obtain(downTime, downTime + 16, MotionEvent.ACTION_MOVE, end.slot.centerX, end.slot.centerY, 0)
+        )
+        view.dispatchTouchEvent(
+            MotionEvent.obtain(downTime, downTime + 32, MotionEvent.ACTION_UP, end.slot.centerX, end.slot.centerY, 0)
+        )
+    }
+
+    @Test
+    fun swipeAcrossLetterKeysEmitsGesturePath() {
+        val view = layoutView()
+        val paths = mutableListOf<String>()
+        val codes = mutableListOf<Int>()
+        view.listener = object : NullKeyKeyboardView.Listener {
+            override fun onKey(code: Int) {
+                codes += code
+            }
+            override fun onGestureWord(path: String) {
+                paths += path
+            }
+        }
+        swipe(view, view.keyWithLabel("h"), view.keyWithLabel("e"))
+        assertEquals(listOf("he"), paths)
+        assertTrue(codes.isEmpty())
+    }
 }
 
 @RunWith(RobolectricTestRunner::class)

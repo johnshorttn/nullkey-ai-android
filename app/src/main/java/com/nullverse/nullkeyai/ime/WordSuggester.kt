@@ -27,22 +27,9 @@ class WordSuggester private constructor(
             .toList()
     }
 
-    /** Resolve a swipe-key path to the closest known word using ordered key matches. */
-    fun suggestGesture(path: String, max: Int = 3): List<String> {
-        val p = path.trim().lowercase().filter { it.isLetter() }
-        if (p.length < 2) return emptyList()
-        return counts.asSequence()
-            .mapNotNull { (word, frequency) ->
-                val score = gestureScore(p, word) ?: return@mapNotNull null
-                Triple(word, score, frequency)
-            }
-            .sortedWith(compareBy<Triple<String, Int, Int>> { it.second }
-                .thenByDescending { it.third }
-                .thenBy { it.first.length })
-            .map { it.first }
-            .take(max)
-            .toList()
-    }
+    /** Resolve a swipe-key path to the closest known words using ordered key matches. */
+    fun suggestGesture(path: String, max: Int = 3): List<String> =
+        GestureWordRanker.rank(path, counts, max)
 
     /** Record that [word] was used, increasing its future suggestion priority. */
     fun learn(word: String) {
@@ -50,31 +37,6 @@ class WordSuggester private constructor(
         if (w.length < MIN_LEARN_LENGTH || !w.all { it.isLetter() }) return
         counts[w] = (counts[w] ?: 0) + 1
         persist()
-    }
-
-    private fun gestureScore(path: String, word: String): Int? {
-        val gesture = collapseRepeats(path)
-        val target = collapseRepeats(word)
-        if (target.isEmpty() || gesture.first() != target.first() || gesture.last() != target.last()) return null
-        var pathIndex = 0
-        var skipped = 0
-        for (letter in target) {
-            while (pathIndex < gesture.length && gesture[pathIndex] != letter) {
-                pathIndex++
-                skipped++
-            }
-            if (pathIndex >= gesture.length) return null
-            pathIndex++
-        }
-        // Repeated letters often appear as one visited key in a real swipe (hello -> helo).
-        // Score against normalized shapes so those words remain valid candidates.
-        return skipped + kotlin.math.abs(gesture.length - target.length)
-    }
-
-    private fun collapseRepeats(value: String): String = buildString(value.length) {
-        value.forEach { character ->
-            if (isEmpty() || last() != character) append(character)
-        }
     }
 
     private fun persist() {
@@ -103,7 +65,10 @@ class WordSuggester private constructor(
             "look", "only", "come", "its", "over", "think", "also", "back",
             "after", "use", "two", "how", "our", "work", "first", "well",
             "way", "even", "new", "want", "because", "any", "these", "give",
-            "day", "most", "clipboard", "keyboard", "nullkey", "hello", "thanks"
+            "day", "most", "clipboard", "keyboard", "nullkey", "hello", "thanks",
+            "to", "of", "in", "on", "is", "it", "be", "as", "at", "or", "an",
+            "we", "do", "if", "so", "up", "no", "yes", "go", "me", "my",
+            "please", "help", "here", "need", "great"
         )
 
         fun get(context: Context): WordSuggester {

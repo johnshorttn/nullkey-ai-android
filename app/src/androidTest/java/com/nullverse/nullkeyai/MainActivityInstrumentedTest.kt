@@ -42,6 +42,7 @@ class MainActivityInstrumentedTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.btn_enable)).check(matches(isDisplayed()))
             onView(withId(R.id.btn_switch)).check(matches(isDisplayed()))
+            onView(withId(R.id.swipe_typing_enabled)).perform(scrollTo()).check(matches(isDisplayed()))
             onView(withId(R.id.search)).perform(scrollTo()).check(matches(isDisplayed()))
             onView(withId(R.id.files_only)).perform(scrollTo()).check(matches(isDisplayed()))
         }
