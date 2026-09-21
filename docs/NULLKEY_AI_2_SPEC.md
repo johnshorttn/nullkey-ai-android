@@ -592,3 +592,9 @@ A migration from the existing `nullkey.db` should preserve existing clips wherev
 ## 19. Acceptance Principle
 
 A feature is not considered complete merely because its UI exists. Each subsystem must expose real capability/state, degrade cleanly when Android or a remote client does not support an operation, preserve user data, and avoid claiming access that the platform has not actually granted.
+
+## 20. Platform target and security review
+
+NullKey 2.0 compiles and targets **API 36** (Android 16) with `minSdk` 24. Play phone listings after 31 August 2026 require this target.
+
+On-device privacy/security findings and the small fixes that shipped with the bump live in [`docs/SECURITY_REVIEW.md`](SECURITY_REVIEW.md). Offline defaults remain: no `INTERNET` permission, no production sync host, Vault Auto Backup disabled.
