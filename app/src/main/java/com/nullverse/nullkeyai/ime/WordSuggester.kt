@@ -53,18 +53,28 @@ class WordSuggester private constructor(
     }
 
     private fun gestureScore(path: String, word: String): Int? {
-        if (word.isEmpty() || path.first() != word.first() || path.last() != word.last()) return null
+        val gesture = collapseRepeats(path)
+        val target = collapseRepeats(word)
+        if (target.isEmpty() || gesture.first() != target.first() || gesture.last() != target.last()) return null
         var pathIndex = 0
         var skipped = 0
-        for (letter in word) {
-            while (pathIndex < path.length && path[pathIndex] != letter) {
+        for (letter in target) {
+            while (pathIndex < gesture.length && gesture[pathIndex] != letter) {
                 pathIndex++
                 skipped++
             }
-            if (pathIndex >= path.length) return null
+            if (pathIndex >= gesture.length) return null
             pathIndex++
         }
-        return skipped + kotlin.math.abs(path.length - word.length)
+        // Repeated letters often appear as one visited key in a real swipe (hello -> helo).
+        // Score against normalized shapes so those words remain valid candidates.
+        return skipped + kotlin.math.abs(gesture.length - target.length)
+    }
+
+    private fun collapseRepeats(value: String): String = buildString(value.length) {
+        value.forEach { character ->
+            if (isEmpty() || last() != character) append(character)
+        }
     }
 
     private fun persist() {
