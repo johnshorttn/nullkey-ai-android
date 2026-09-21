@@ -57,6 +57,25 @@ class VaultAssetStore(private val context: Context) {
         return candidate.takeIf { it.isFile }
     }
 
+    fun importBytes(bytes: ByteArray, preferredName: String? = null): StoredAsset {
+        require(bytes.size.toLong() <= DEFAULT_MAX_BYTES) { "Vault asset exceeds size limit" }
+        val extension = preferredName?.substringAfterLast('.', "")?.takeIf {
+            it.matches(Regex("[A-Za-z0-9]{1,10}"))
+        }
+        val name = UUID.randomUUID().toString() + if (extension.isNullOrBlank()) "" else ".$extension"
+        val target = File(root, name)
+        val temp = File(root, "$name.part")
+        try {
+            temp.writeBytes(bytes)
+            if (!temp.renameTo(target)) throw IOException("Unable to finalize restored Vault asset")
+            return StoredAsset("vault/assets/$name", target.length())
+        } catch (t: Throwable) {
+            temp.delete()
+            target.delete()
+            throw t
+        }
+    }
+
     fun replaceAtomically(file: File, bytes: ByteArray, suffix: String = ".part") {
         val allowedRoot = root.canonicalFile
         val target = file.canonicalFile
