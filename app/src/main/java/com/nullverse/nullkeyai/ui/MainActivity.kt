@@ -21,8 +21,13 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
+import com.nullverse.nullkeyai.clipboard.ClipCaptureRequest
+import com.nullverse.nullkeyai.clipboard.VaultAssetStore
 import com.nullverse.nullkeyai.clipboard.ClipboardMonitorService
 import com.nullverse.nullkeyai.db.NullKeyDatabase
+import com.nullverse.nullkeyai.db.ClipCaptureMethod
+import com.nullverse.nullkeyai.db.ClipContentType
+import com.nullverse.nullkeyai.db.ClipSourceConfidence
 import com.nullverse.nullkeyai.diagnostics.ClipboardLabActivity
 import com.nullverse.nullkeyai.ime.ClipAdapter
 import kotlinx.coroutines.Dispatchers
@@ -61,7 +66,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        repository = ClipRepository(NullKeyDatabase.get(this).clipDao())
+        repository = ClipRepository(NullKeyDatabase.get(this).clipDao(), VaultAssetStore(this))
 
         search = findViewById(R.id.search)
         filesOnly = findViewById(R.id.files_only)
@@ -131,12 +136,31 @@ class MainActivity : AppCompatActivity() {
         val item = clip.getItemAt(0)
         lifecycleScope.launch {
             if (item.uri != null) {
+                val mimeType = clip.description?.getMimeType(0)
+                val uri = item.uri!!
+                val assetPath = withContext(Dispatchers.IO) {
+                    runCatching { VaultAssetStore(this@MainActivity).importUri(uri, mimeType).relativePath }
+                        .getOrNull()
+                }
                 repository.capture(
-                    item.uri.toString(), isFile = true,
-                    mimeType = clip.description?.getMimeType(0)
+                    ClipCaptureRequest(
+                        content = uri.toString(),
+                        contentType = if (mimeType?.startsWith("image/") == true) ClipContentType.IMAGE else ClipContentType.FILE,
+                        isFile = true,
+                        mimeType = mimeType,
+                        localAssetPath = assetPath,
+                        sourceUri = uri.toString(),
+                        captureMethod = ClipCaptureMethod.MANUAL,
+                        sourceConfidence = ClipSourceConfidence.UNKNOWN
+                    )
                 )
             } else {
-                repository.capture(item.text?.toString().orEmpty())
+                repository.capture(
+                    ClipCaptureRequest(
+                        content = item.text?.toString().orEmpty(),
+                        captureMethod = ClipCaptureMethod.MANUAL
+                    )
+                )
             }
         }
     }
