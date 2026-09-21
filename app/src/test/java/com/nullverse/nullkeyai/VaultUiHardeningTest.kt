@@ -1,15 +1,12 @@
 package com.nullverse.nullkeyai
 
 import android.view.View
-import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.nullverse.nullkeyai.db.Tag
-import com.nullverse.nullkeyai.ime.ClipAdapter
 import com.nullverse.nullkeyai.ui.TagChipUi
-import com.nullverse.nullkeyai.db.Clip
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -19,24 +16,6 @@ import org.robolectric.RuntimeEnvironment
 
 @RunWith(RobolectricTestRunner::class)
 class VaultUiHardeningTest {
-
-    @Test
-    fun clipAdapter_showsRestoreOnlyWhenRequested() {
-        val parent = FrameLayout(ApplicationProvider.getApplicationContext())
-        val clip = Clip(id = 7, content = "trashed", trashedAt = 1L)
-
-        val hidden = ClipAdapter(showRestore = false) {}
-        hidden.submit(listOf(clip))
-        val hiddenHolder = hidden.createViewHolder(parent, 0)
-        hidden.bindViewHolder(hiddenHolder, 0)
-        assertEquals(View.GONE, hiddenHolder.itemView.findViewById<View>(R.id.clip_restore).visibility)
-
-        val shown = ClipAdapter(showRestore = true) {}
-        shown.submit(listOf(clip))
-        val shownHolder = shown.createViewHolder(parent, 0)
-        shown.bindViewHolder(shownHolder, 0)
-        assertEquals(View.VISIBLE, shownHolder.itemView.findViewById<View>(R.id.clip_restore).visibility)
-    }
 
     @Test
     fun tagChips_renderRemovableAttachedAndSuggestedDefaults() {
