@@ -2,6 +2,8 @@
     <string name="app_name">NullKey AI</string>
     <string name="ime_label">NullKey AI Keyboard</string>
     <string name="tagline">The voice of your vault. The memory of your mind.</string>
+    <string name="vault_title">Vault</string>
+    <string name="vault_subtitle">Search, capture, protect, and manage your clipboard memory.</string>
 
     <string name="enable_keyboard">Enable keyboard</string>
     <string name="switch_keyboard">Switch keyboard</string>
