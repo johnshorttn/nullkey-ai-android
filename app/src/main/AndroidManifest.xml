@@ -17,6 +17,11 @@
         android:theme="@style/Theme.NullKey">
 
         <activity
+            android:name=".ui.AboutSupportActivity"
+            android:exported="false"
+            android:label="@string/about_support_title" />
+
+        <activity
             android:name=".ui.TrashActivity"
             android:exported="false"
             android:label="@string/trash" />
