@@ -22,7 +22,7 @@ class ClipDetailActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_clip_detail)
         val db = NullKeyDatabase.get(this)
-        repository = ClipRepository(db.clipDao(), VaultAssetStore(this))
+        repository = ClipRepository(db.clipDao(), VaultAssetStore(this), db.tagDao())
         clipId = intent.getLongExtra(EXTRA_CLIP_ID, 0L)
         if (clipId == 0L) { finish(); return }
 
@@ -40,6 +40,9 @@ class ClipDetailActivity : AppCompatActivity() {
             findViewById<EditText>(R.id.detail_notes).setText(clip.notes)
             findViewById<CheckBox>(R.id.detail_pinned).isChecked = clip.pinned
             findViewById<CheckBox>(R.id.detail_protected).isChecked = clip.protected
+            findViewById<TextView>(R.id.detail_tags).text =
+                repository.tagsForClip(clipId).joinToString(" • ") { it.name }
+                    .ifBlank { getString(R.string.no_tags) }
         }
 
         findViewById<Button>(R.id.detail_save).setOnClickListener {
@@ -49,6 +52,16 @@ class ClipDetailActivity : AppCompatActivity() {
                 repository.setProtected(clipId, findViewById<CheckBox>(R.id.detail_protected).isChecked)
                 Toast.makeText(this@ClipDetailActivity, R.string.saved, Toast.LENGTH_SHORT).show()
                 finish()
+            }
+        }
+        findViewById<Button>(R.id.detail_add_tag).setOnClickListener {
+            lifecycleScope.launch {
+                val input = findViewById<EditText>(R.id.detail_new_tag)
+                repository.addTag(clipId, input.text.toString())
+                findViewById<TextView>(R.id.detail_tags).text =
+                    repository.tagsForClip(clipId).joinToString(" • ") { it.name }
+                        .ifBlank { getString(R.string.no_tags) }
+                input.text.clear()
             }
         }
         findViewById<Button>(R.id.detail_trash).setOnClickListener {
