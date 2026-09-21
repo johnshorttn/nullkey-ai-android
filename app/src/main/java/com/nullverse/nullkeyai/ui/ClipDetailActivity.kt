@@ -27,13 +27,15 @@ class ClipDetailActivity : AppCompatActivity() {
     private lateinit var repository: ClipRepository
     private var clipId: Long = 0L
     private lateinit var assetStore: VaultAssetStore
+    private lateinit var vaultCrypto: VaultCrypto
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_clip_detail)
         val db = NullKeyDatabase.get(this)
         assetStore = VaultAssetStore(this)
-        repository = ClipRepository(db.clipDao(), assetStore, db.tagDao(), VaultCrypto())
+        vaultCrypto = VaultCrypto()
+        repository = ClipRepository(db.clipDao(), assetStore, db.tagDao(), vaultCrypto)
         clipId = intent.getLongExtra(EXTRA_CLIP_ID, 0L)
         if (clipId == 0L) { finish(); return }
 
@@ -138,7 +140,14 @@ class ClipDetailActivity : AppCompatActivity() {
                         findViewById<Button>(R.id.detail_unlock).visibility = View.GONE
                         val asset = assetStore.resolve(clip.localAssetPath)
                         if (clip.contentType == "IMAGE" && asset != null) {
-                            runCatching { BitmapFactory.decodeFile(asset.absolutePath) }.getOrNull()?.let {
+                            val bitmap = runCatching {
+                                if (vaultCrypto.isEncryptedFile(asset)) {
+                                    BitmapFactory.decodeByteArray(
+                                        vaultCrypto.decryptFile(asset), 0, vaultCrypto.decryptFile(asset).size
+                                    )
+                                } else BitmapFactory.decodeFile(asset.absolutePath)
+                            }.getOrNull()
+                            bitmap?.let {
                                 findViewById<ImageView>(R.id.detail_image).apply {
                                     setImageBitmap(it)
                                     visibility = View.VISIBLE
