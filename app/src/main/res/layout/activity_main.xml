@@ -60,6 +60,15 @@
         android:text="@string/use_custom_keyboard_engine"
         android:textColor="@color/text_primary" />
 
+    <CheckBox
+        android:id="@+id/swipe_typing_enabled"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:buttonTint="@color/neon"
+        android:checked="true"
+        android:text="@string/swipe_typing_enabled"
+        android:textColor="@color/text_primary" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
