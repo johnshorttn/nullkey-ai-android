@@ -50,7 +50,7 @@ Compile restore (literal `\n` in vault-swipe Kotlin/XML) is included so this bra
 | D4 | P3 | IME `refreshClips()` runs a Room query on every search keystroke (no debounce). | Optional later; vault search is local. |
 | D5 | P3 | Clipboard FGS is sticky and user-started. API 15+ `specialUse` is the correct type; Play may still ask for a justification at Console time. | Keep subtype string; document in Play form (PR #23). |
 | D6 | P3 | `POST_NOTIFICATIONS` denial still allows Start monitor; the FGS notification may be hidden and the service can be killed. | Optional: disable Start monitor until granted. Not changed here to avoid UX scope creep. |
-| D7 | — | Instrumented CI stays on **API 34** emulator. `targetSdk` 36 is asserted via `applicationInfo` on that image. | Optional API-36 emulator job if disk allows. |
+| D7 | — | Instrumented CI runs **API 34** and **API 36** `google_apis` x86_64 emulators. `targetSdk` 36 is also asserted via `applicationInfo` on the API-34 image. | Keep both; API 34 is the prior green baseline. |
 | D8 | — | Incognito/no-learn, TalkBack virtual views, theme height, and Play/AAB docs live in open PRs #18–#23, not this tree. | Merge/land wave; do not regress those control sets. |
 
 ## targetSdk / compileSdk 36 notes
