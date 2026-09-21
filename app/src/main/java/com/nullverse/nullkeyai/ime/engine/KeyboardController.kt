@@ -19,6 +19,7 @@ class KeyboardController(
         fun onLongPress(code: Int, popupCharacters: String)
         fun onPopupCharacter(code: Int) { onKey(code) }
         fun onGestureWord(path: String) {}
+        fun onGestureProgress(keys: List<PlacedKey>) {}
     }
 
     val modifiers = ModifierController()
@@ -79,6 +80,11 @@ class KeyboardController(
 
             override fun onRepeat(key: PlacedKey) {
                 host.onKey(key.spec.code)
+            }
+
+            override fun onGestureProgress(keys: List<PlacedKey>) {
+                host.onGestureProgress(keys)
+                host.requestRedraw()
             }
 
             override fun onGesturePath(keys: List<PlacedKey>) {
