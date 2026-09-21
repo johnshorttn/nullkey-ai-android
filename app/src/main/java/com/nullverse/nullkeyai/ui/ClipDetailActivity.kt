@@ -187,6 +187,7 @@ class ClipDetailActivity : AppCompatActivity() {
                         findViewById<Button>(R.id.detail_unlock).visibility = View.GONE
                         val asset = assetStore.resolve(clip.localAssetPath)
                         if (clip.contentType == "IMAGE" && asset != null) {
+                            val (previewWidth, previewHeight) = SampledBitmapDecoder.previewBounds(resources)
                             val bitmap = runCatching {
                                 if (vaultCrypto.isEncryptedFile(asset)) {
                                     val bytes = vaultCrypto.decryptFile(asset)
