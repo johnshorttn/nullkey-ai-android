@@ -81,9 +81,7 @@ object ClipBackup {
             val isProtected = obj.optBoolean("protected", false)
             val protectionPayload = obj.optString("protectionPayload", "NONE")
             if (isProtected && protectionPayload == "ANDROID_KEYSTORE_AES_GCM_V1") {
-                throw IllegalArgumentException(
-                    "Device-bound protected clips cannot be restored from plain JSON. Use Secure Backup (.nkbackup)."
-                )
+                throw DeviceBoundProtectedImportException()
             }
             result.add(
                 Clip(

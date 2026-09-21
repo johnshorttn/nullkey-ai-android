@@ -68,6 +68,7 @@ class KeyboardRenderer {
         canvas: Canvas,
         theme: KeyboardTheme,
         controller: KeyboardController,
+        context: Context? = null,
     ) {
         canvas.drawColor(theme.backgroundColor)
         strokePaint.strokeWidth = theme.strokeWidthPx
@@ -90,7 +91,12 @@ class KeyboardRenderer {
                 strokePaint.color = theme.pressedStrokeColor
                 canvas.drawRoundRect(rect, theme.cornerRadiusPx, theme.cornerRadiusPx, strokePaint)
             }
-            val label = controller.labelFor(key)
+            val engineLabel = controller.labelFor(key)
+            val label = if (context != null) {
+                LocalizedKeyLabels.resolve(context, key.spec, engineLabel)
+            } else {
+                engineLabel
+            }
             labelPaint.color = theme.labelColor
             val textY = key.visual.centerY - (labelPaint.descent() + labelPaint.ascent()) / 2f
             canvas.drawText(label, key.visual.centerX, textY, labelPaint)

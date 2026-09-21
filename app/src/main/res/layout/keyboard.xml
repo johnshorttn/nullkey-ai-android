@@ -33,11 +33,27 @@
             android:textColor="@color/neon" />
     </LinearLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/clips_list"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="96dp"
-        android:background="@color/kb_background" />
+        android:background="@color/kb_background">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/clips_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <TextView
+            android:id="@+id/clips_empty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:padding="8dp"
+            android:text="@string/no_clips"
+            android:textColor="@color/slate"
+            android:textSize="12sp"
+            android:visibility="gone" />
+    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/suggestion_strip"

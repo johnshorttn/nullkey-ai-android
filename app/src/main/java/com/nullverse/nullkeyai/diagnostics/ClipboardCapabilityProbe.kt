@@ -52,7 +52,7 @@ class ClipboardCapabilityProbe(private val context: Context) {
                         readable = true,
                         latency = SystemClock.elapsedRealtime() - started,
                         restored = restore(original),
-                        note = "Foreground generated-token probe"
+                        note = context.getString(com.nullverse.nullkeyai.R.string.clipboard_lab_note_ok)
                     )
                 )
             }
@@ -78,7 +78,7 @@ class ClipboardCapabilityProbe(private val context: Context) {
                         readable = text == token,
                         latency = null,
                         restored = restore(original),
-                        note = "No matching change callback within 1500 ms"
+                        note = context.getString(com.nullverse.nullkeyai.R.string.clipboard_lab_note_timeout)
                     )
                 )
             }
