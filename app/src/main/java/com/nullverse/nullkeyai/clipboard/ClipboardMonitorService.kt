@@ -46,7 +46,6 @@ class ClipboardMonitorService : Service() {
         assetStore = VaultAssetStore(this)
         repository = ClipRepository(NullKeyDatabase.get(this).clipDao(), assetStore)
         clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        assetStore = VaultAssetStore(this)
         clipboard.addPrimaryClipChangedListener(listener)
     }
 
@@ -67,7 +66,7 @@ class ClipboardMonitorService : Service() {
                     val mimeType = clip.description?.getMimeType(0)
                     try {
                         val asset = assetStore.importUri(uri, mimeType)
-                        repository.capture(
+                        val inserted = repository.capture(
                             ClipCaptureRequest(
                                 content = uri.toString(),
                                 contentType = if (mimeType?.startsWith("image/") == true) ClipContentType.IMAGE else ClipContentType.FILE,
@@ -79,6 +78,7 @@ class ClipboardMonitorService : Service() {
                                 sourceConfidence = ClipSourceConfidence.UNKNOWN
                             )
                         )
+                        if (inserted == null) assetStore.delete(asset.relativePath)
                     } catch (_: Exception) {
                         // URI permission may be temporary or unavailable. Keep metadata,
                         // but never pretend the asset was persisted successfully.
