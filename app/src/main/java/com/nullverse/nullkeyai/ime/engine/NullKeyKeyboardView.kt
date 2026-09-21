@@ -24,6 +24,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     interface Listener {
         fun onKey(code: Int)
         fun onLongPress(code: Int, popupCharacters: String) {}
+        fun onGestureWord(path: String) {}
     }
 
     var listener: Listener? = null
@@ -50,6 +51,10 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
             override fun onKey(code: Int) {
                 listener?.onKey(code)
+            }
+
+            override fun onGestureWord(path: String) {
+                listener?.onGestureWord(path)
             }
 
             override fun onLongPress(code: Int, popupCharacters: String) {
