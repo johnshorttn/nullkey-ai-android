@@ -45,7 +45,11 @@ class TouchEngine(
     fun down(pointerId: Int, x: Float, y: Float) {
         if (activePointerId != null) return
         activePointerId = pointerId
-        val key = listener.hitTest(x, y) ?: return
+        val key = listener.hitTest(x, y)
+        if (key == null) {
+            activePointerId = null
+            return
+        }
         press(key)
     }
 
