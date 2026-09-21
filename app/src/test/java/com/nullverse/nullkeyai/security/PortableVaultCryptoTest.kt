@@ -39,6 +39,32 @@ class PortableVaultCryptoTest {
     }
 
     @Test
+    fun rejectsUnsupportedEnvelopeMetadata() {
+        val password = "backup-password".toCharArray()
+        val encrypted = PortableVaultCrypto.encrypt("secret", password)
+
+        val wrongFormat = JSONObject(encrypted).put("format", 999).toString()
+        assertThrows(IllegalArgumentException::class.java) {
+            PortableVaultCrypto.decrypt(wrongFormat, password)
+        }
+
+        val wrongKdf = JSONObject(encrypted).put("kdf", "unsupported").toString()
+        assertThrows(IllegalArgumentException::class.java) {
+            PortableVaultCrypto.decrypt(wrongKdf, password)
+        }
+    }
+
+    @Test
+    fun rejectsMalformedIvBeforeCipherUse() {
+        val password = "backup-password".toCharArray()
+        val obj = JSONObject(PortableVaultCrypto.encrypt("secret", password))
+        obj.put("iv", "AA==")
+        assertThrows(IllegalArgumentException::class.java) {
+            PortableVaultCrypto.decrypt(obj.toString(), password)
+        }
+    }
+
+    @Test
     fun rejectsWeakPassword() {
         assertThrows(IllegalArgumentException::class.java) {
             PortableVaultCrypto.encrypt("secret", "short".toCharArray())
