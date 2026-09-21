@@ -106,6 +106,14 @@ class KeyboardControllerTest {
     }
 
     @Test
+    fun popupCharacterCommitsSelectionAndConsumesShift() {
+        tap("⇧")
+        controller.commitPopupCharacter('é')
+        assertEquals(listOf('É'.code), host.keys)
+        assertEquals(ShiftState.OFF, controller.modifiers.shift)
+    }
+
+    @Test
     fun landscapeResizeUsesNumberRow() {
         controller.resize(
             widthPx = 1600f,
