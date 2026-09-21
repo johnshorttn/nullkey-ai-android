@@ -26,10 +26,15 @@ import androidx.recyclerview.widget.RecyclerView
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.clipboard.ClipSwipeAction
+import com.nullverse.nullkeyai.clipboard.ClipSwipeApplyResult
+import com.nullverse.nullkeyai.clipboard.ClipSwipeCoordinator
+import com.nullverse.nullkeyai.clipboard.ClipSwipePresentation
 import com.nullverse.nullkeyai.clipboard.ClipSwipePreferences
+import com.nullverse.nullkeyai.clipboard.labelRes
 import com.nullverse.nullkeyai.clipboard.ClipCaptureRequest
 import com.nullverse.nullkeyai.clipboard.VaultAssetStore
 import com.nullverse.nullkeyai.clipboard.ClipboardMonitorService
+import com.nullverse.nullkeyai.db.Clip
 import com.nullverse.nullkeyai.db.NullKeyDatabase
 import com.nullverse.nullkeyai.db.ClipCaptureMethod
 import com.nullverse.nullkeyai.db.ClipContentType
@@ -114,23 +119,21 @@ class MainActivity : AppCompatActivity() {
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val position = viewHolder.bindingAdapterPosition
+                if (position == RecyclerView.NO_POSITION) return
                 val clip = adapter.clipAt(position)
-                if (clip == null) {
-                    adapter.notifyItemChanged(position)
-                    return
+                // ItemTouchHelper already dismissed the row. Restore first so
+                // cancel/failure never leave a hole in the Vault list.
+                adapter.notifyItemChanged(position)
+                if (clip == null) return
+                val action = if (direction == ItemTouchHelper.RIGHT) {
+                    ClipSwipePreferences.right(this@MainActivity)
+                } else {
+                    ClipSwipePreferences.left(this@MainActivity)
                 }
-                lifecycleScope.launch {
-                    val action = if (direction == ItemTouchHelper.RIGHT) {
-                        ClipSwipePreferences.right(this@MainActivity)
-                    } else {
-                        ClipSwipePreferences.left(this@MainActivity)
-                    }
-                    when (action) {
-                        ClipSwipeAction.PIN -> repository.setPinned(clip.id, !clip.pinned)
-                        ClipSwipeAction.PROTECT -> repository.setProtected(clip.id, !clip.protected)
-                        ClipSwipeAction.DELETE -> repository.moveToTrash(clip.id)
-                        ClipSwipeAction.TAG -> showSwipeTagDialog(clip.id)
-                    }
+                when (ClipSwipeCoordinator.presentation(action)) {
+                    ClipSwipePresentation.APPLY -> applySwipeAction(clip, action)
+                    ClipSwipePresentation.CONFIRM -> confirmSwipeAction(clip, action)
+                    ClipSwipePresentation.PROMPT_TAG -> showSwipeTagDialog(clip)
                 }
             }
         }).attachToRecyclerView(list)
@@ -235,7 +238,29 @@ class MainActivity : AppCompatActivity() {
         refresh()
     }
 
-    private fun showSwipeTagDialog(clipId: Long) {
+    private fun applySwipeAction(clip: Clip, action: ClipSwipeAction, tagName: String? = null) {
+        lifecycleScope.launch {
+            when (ClipSwipeCoordinator.apply(repository, action, clip, tagName)) {
+                ClipSwipeApplyResult.Success, ClipSwipeApplyResult.Cancelled -> Unit
+                is ClipSwipeApplyResult.Failure -> {
+                    Toast.makeText(this@MainActivity, R.string.swipe_action_failed, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun confirmSwipeAction(clip: Clip, action: ClipSwipeAction) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.swipe_delete_confirm_title)
+            .setMessage(R.string.swipe_delete_confirm_message)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.move_to_trash) { _, _ ->
+                applySwipeAction(clip, action)
+            }
+            .show()
+    }
+
+    private fun showSwipeTagDialog(clip: Clip) {
         val input = EditText(this).apply {
             hint = getString(R.string.tag_name_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
@@ -245,10 +270,10 @@ class MainActivity : AppCompatActivity() {
             .setView(input)
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                val tag = input.text.toString().trim()
-                if (tag.isNotEmpty()) lifecycleScope.launch { repository.addTag(clipId, tag) }
+                val tag = ClipSwipeCoordinator.parseTagInput(input.text?.toString())
+                if (tag == null) return@setPositiveButton
+                applySwipeAction(clip, ClipSwipeAction.TAG, tag)
             }
-            .setOnCancelListener { observeClips() }
             .show()
     }
 
