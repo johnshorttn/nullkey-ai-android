@@ -50,4 +50,16 @@ class VaultUiHardeningTest {
         (suggestedGroup.getChildAt(0) as Chip).performClick()
         assertTrue(added == "Personal" || added == "Coding")
     }
+
+    @Test
+    fun vaultHomeLayoutIsScrollableSoPrivacyControlsStayReachable() {
+        val context = RuntimeEnvironment.getApplication()
+        val themed = android.view.ContextThemeWrapper(context, R.style.Theme_NullKey)
+        val view = android.view.LayoutInflater.from(themed).inflate(R.layout.activity_main, null)
+        assertTrue(view is android.widget.ScrollView)
+        assertTrue(view.findViewById<View>(R.id.incognito_enabled) != null)
+        assertTrue(view.findViewById<View>(R.id.developer_options_enabled) != null)
+        assertTrue(view.findViewById<View>(R.id.btn_clipboard_lab) != null)
+        assertEquals(View.GONE, view.findViewById<View>(R.id.btn_clipboard_lab).visibility)
+    }
 }

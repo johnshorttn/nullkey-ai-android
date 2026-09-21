@@ -156,7 +156,13 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private fun updateSuggestions() {
         val results = suggester.suggest(currentWord.toString(), suggestionViews.size)
         suggestionViews.forEachIndexed { index, view ->
-            view.text = results.getOrNull(index).orEmpty()
+            val word = results.getOrNull(index).orEmpty()
+            view.text = word
+            view.contentDescription = if (word.isBlank()) {
+                getString(R.string.suggestion_empty, index + 1)
+            } else {
+                getString(R.string.suggestion_word, word)
+            }
         }
     }
 
@@ -166,7 +172,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         val ic = currentInputConnection ?: return
         if (currentWord.isNotEmpty()) ic.deleteSurroundingText(currentWord.length, 0)
         ic.commitText("$word ", 1)
-        suggester.learn(word)
+        learnTyped(word)
         currentWord.setLength(0)
         updateSuggestions()
     }
@@ -175,17 +181,21 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         val candidates = suggester.suggestGesture(path, 1)
         val word = candidates.firstOrNull().takeUnless { it.isNullOrBlank() } ?: path
         currentInputConnection?.commitText("$word ", 1)
-        suggester.learn(word)
+        learnTyped(word)
         currentWord.setLength(0)
         updateSuggestions()
     }
 
     private fun flushWord() {
         if (currentWord.isNotEmpty()) {
-            suggester.learn(currentWord.toString())
+            learnTyped(currentWord.toString())
             currentWord.setLength(0)
         }
         updateSuggestions()
+    }
+
+    private fun learnTyped(word: String) {
+        suggester.learn(word, enabled = KeyboardEnginePreferences.shouldLearn(this))
     }
     // endregion
 

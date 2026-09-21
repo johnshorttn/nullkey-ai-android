@@ -78,7 +78,9 @@
     <string name="restore_clip_message">This item will be moved back to your Vault.</string>
     <string name="restore">Restore</string>
     <string name="restored">Restored to Vault</string>
-    <string name="suggested_tags">Suggested tags</string>\n    <string name="add_suggested_tag">Add %1$s tag</string>\n    <string name="swipe_typing_enabled">Swipe typing</string>
+    <string name="suggested_tags">Suggested tags</string>
+    <string name="add_suggested_tag">Add %1$s tag</string>
+    <string name="swipe_typing_enabled">Swipe typing</string>
     <string name="swipe_left_default">Left swipe</string>
     <string name="swipe_right_default">Right swipe</string>
     <string name="swipe_action_label">%1$s swipe: %2$s</string>
@@ -86,4 +88,30 @@
     <string name="swipe_right_title">Right swipe action</string>
     <string name="tag_name_hint">Tag name</string>
     <string name="add_tag_title">Add tag</string>
-    <string name="swipe_direction_left">Left</string>\n    <string name="swipe_direction_right">Right</string>\n    <string name="swipe_action_pin">Pin</string>\n    <string name="swipe_action_protect">Protect</string>\n    <string name="swipe_action_delete">Delete</string>\n    <string name="swipe_action_tag">Tag</string>\n</resources>
+    <string name="swipe_direction_left">Left</string>
+    <string name="swipe_direction_right">Right</string>
+    <string name="swipe_action_pin">Pin</string>
+    <string name="swipe_action_protect">Protect</string>
+    <string name="swipe_action_delete">Delete</string>
+    <string name="swipe_action_tag">Tag</string>
+
+    <string name="incognito_enabled">Incognito (don’t learn words)</string>
+    <string name="developer_options_enabled">Developer options</string>
+    <string name="privacy_settings_title">Privacy and developer</string>
+    <string name="key_a11y_space">Space</string>
+    <string name="key_a11y_shift">Shift</string>
+    <string name="key_a11y_shift_on">Shift on</string>
+    <string name="key_a11y_caps_lock">Caps lock</string>
+    <string name="key_a11y_delete">Delete</string>
+    <string name="key_a11y_enter">Enter</string>
+    <string name="key_a11y_symbols">Symbols</string>
+    <string name="key_a11y_letters">Letters</string>
+    <string name="key_a11y_comma">Comma</string>
+    <string name="key_a11y_period">Period</string>
+    <string name="key_a11y_apostrophe">Apostrophe</string>
+    <string name="key_a11y_quote">Quotation mark</string>
+    <string name="key_a11y_incognito">Incognito. Typed words will not be learned.</string>
+    <string name="suggestion_empty">Suggestion %1$d, empty</string>
+    <string name="suggestion_word">Suggestion %1$s</string>
+    <string name="paste_clip">Paste clip: %1$s</string>
+</resources>

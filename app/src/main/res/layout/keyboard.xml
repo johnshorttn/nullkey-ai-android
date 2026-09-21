@@ -18,6 +18,7 @@
             android:layout_weight="1"
             android:background="@color/kb_key"
             android:hint="@string/search_clips"
+            android:importantForAccessibility="yes"
             android:inputType="text"
             android:padding="8dp"
             android:textColor="@color/neon"
@@ -52,6 +53,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
+            android:importantForAccessibility="yes"
             android:textColor="@color/neon"
             android:textSize="15sp" />
 
@@ -61,6 +63,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
+            android:importantForAccessibility="yes"
             android:textColor="@color/neon"
             android:textSize="15sp" />
 
@@ -70,6 +73,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
+            android:importantForAccessibility="yes"
             android:textColor="@color/neon"
             android:textSize="15sp" />
     </LinearLayout>
@@ -81,7 +85,8 @@
         <com.nullverse.nullkeyai.ime.engine.NullKeyKeyboardView
             android:id="@+id/keyboard_engine_view"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:importantForAccessibility="yes" />
 
         <android.inputmethodservice.KeyboardView
             android:id="@+id/keyboard_view"

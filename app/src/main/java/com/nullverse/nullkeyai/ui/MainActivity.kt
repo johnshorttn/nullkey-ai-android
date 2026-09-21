@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
+import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -27,6 +28,7 @@ import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.clipboard.ClipSwipeAction
 import com.nullverse.nullkeyai.clipboard.ClipSwipePreferences
+import com.nullverse.nullkeyai.clipboard.labelRes
 import com.nullverse.nullkeyai.clipboard.ClipCaptureRequest
 import com.nullverse.nullkeyai.clipboard.VaultAssetStore
 import com.nullverse.nullkeyai.clipboard.ClipboardMonitorService
@@ -154,6 +156,28 @@ class MainActivity : AppCompatActivity() {
                 KeyboardEnginePreferences.setSwipeTypingEnabled(this@MainActivity, checked)
             }
         }
+        findViewById<CheckBox>(R.id.incognito_enabled).apply {
+            isChecked = KeyboardEnginePreferences.incognitoEnabled(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                KeyboardEnginePreferences.setIncognitoEnabled(this@MainActivity, checked)
+            }
+        }
+        val labButton = findViewById<Button>(R.id.btn_clipboard_lab)
+        fun refreshDeveloperTools() {
+            labButton.visibility = if (KeyboardEnginePreferences.developerOptionsEnabled(this)) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+        }
+        findViewById<CheckBox>(R.id.developer_options_enabled).apply {
+            isChecked = KeyboardEnginePreferences.developerOptionsEnabled(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                KeyboardEnginePreferences.setDeveloperOptionsEnabled(this@MainActivity, checked)
+                refreshDeveloperTools()
+            }
+        }
+        refreshDeveloperTools()
         bindSwipeActionButton(R.id.btn_swipe_left_action, true)
         bindSwipeActionButton(R.id.btn_swipe_right_action, false)
         findViewById<Button>(R.id.btn_start_monitor).setOnClickListener {
@@ -215,7 +239,11 @@ class MainActivity : AppCompatActivity() {
         val button = findViewById<Button>(buttonId)
         fun refresh() {
             val action = if (left) ClipSwipePreferences.left(this) else ClipSwipePreferences.right(this)
-            button.text = getString(\n                R.string.swipe_action_label,\n                getString(if (left) R.string.swipe_direction_left else R.string.swipe_direction_right),\n                getString(action.labelRes)\n            )
+            button.text = getString(
+                R.string.swipe_action_label,
+                getString(if (left) R.string.swipe_direction_left else R.string.swipe_direction_right),
+                getString(action.labelRes)
+            )
         }
         button.setOnClickListener {
             val actions = ClipSwipeAction.entries.toTypedArray()

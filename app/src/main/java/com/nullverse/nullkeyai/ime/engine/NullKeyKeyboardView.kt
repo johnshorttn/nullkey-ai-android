@@ -5,15 +5,21 @@ import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
+import android.os.Bundle
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.MotionEvent
+import android.widget.Button
 import android.widget.PopupWindow
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.view.Gravity
 import android.view.View
 import androidx.annotation.VisibleForTesting
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
+import androidx.customview.widget.ExploreByTouchHelper
 
 /**
  * Custom keyboard surface: renders [KeyboardGeometry] and feeds pointer events
@@ -64,6 +70,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         host = object : KeyboardController.Host {
             override fun requestRedraw() {
                 postInvalidateOnAnimation()
+                exploreHelper.invalidateRoot()
             }
 
             override fun onKey(code: Int) {
@@ -89,11 +96,18 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         },
     )
 
+    private val exploreHelper = KeyExploreHelper()
+    private var a11yStrings: KeyAccessibility.Strings = KeyAccessibility.Strings.from(context)
+
     init {
         controller.swipeTypingEnabled = KeyboardEnginePreferences.swipeTypingEnabled(context)
         isClickable = true
         isFocusable = false
-        contentDescription = context.getString(com.nullverse.nullkeyai.R.string.ime_label)
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
+        // Per-key virtual views own TalkBack labels; a host description would
+        // collapse the keyboard into a single inaccessible node.
+        contentDescription = null
+        ViewCompat.setAccessibilityDelegate(this, exploreHelper)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -125,6 +139,10 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         super.onDraw(canvas)
         renderer.draw(canvas, theme, controller)
         drawGestureTrail(canvas)
+    }
+
+    override fun dispatchHoverEvent(event: MotionEvent): Boolean {
+        return exploreHelper.dispatchHoverEvent(event) || super.dispatchHoverEvent(event)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -189,7 +207,12 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         popupSourceKeyId = null
         popupSourceCharacters = ""
         controller.swipeTypingEnabled = KeyboardEnginePreferences.swipeTypingEnabled(context)
+        a11yStrings = KeyAccessibility.Strings.from(context)
         controller.reset()
+        exploreHelper.invalidateRoot()
+        if (KeyboardEnginePreferences.incognitoEnabled(context)) {
+            announceForAccessibility(a11yStrings.incognito)
+        }
     }
 
     fun setSwipeTypingEnabled(enabled: Boolean) {
@@ -233,6 +256,13 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                 setTextColor(theme.labelColor)
                 minWidth = (42 * density).toInt()
                 minHeight = (44 * density).toInt()
+                contentDescription = KeyAccessibility.spokenLabel(
+                    code = character.code,
+                    displayLabel = character.toString(),
+                    shift = controller.modifiers.shift,
+                    layer = controller.modifiers.layer,
+                    strings = a11yStrings,
+                )
                 setOnClickListener {
                     controller.commitPopupCharacter(character)
                     popup.dismiss()
@@ -290,6 +320,66 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             paddingVerticalPx = keyboardPaddingVerticalPx(density),
             gapPx = keyboardGapPx(density, orientation),
         )
+        exploreHelper.invalidateRoot()
+    }
+
+    private inner class KeyExploreHelper : ExploreByTouchHelper(this) {
+        override fun getVirtualViewAt(x: Float, y: Float): Int {
+            val key = controller.geometry.hitTest(x, y) ?: return HOST_ID
+            return key.id
+        }
+
+        override fun getVisibleVirtualViews(virtualViewIds: MutableList<Int>) {
+            controller.geometry.placedKeys.forEach { virtualViewIds.add(it.id) }
+        }
+
+        override fun onPopulateNodeForVirtualView(
+            virtualViewId: Int,
+            node: AccessibilityNodeInfoCompat,
+        ) {
+            val key = controller.geometry.keyById(virtualViewId)
+            if (key == null) {
+                node.contentDescription = ""
+                node.setBoundsInParent(Rect(0, 0, 1, 1))
+                return
+            }
+            node.contentDescription = KeyAccessibility.spokenLabel(
+                code = key.spec.code,
+                displayLabel = controller.labelFor(key),
+                shift = controller.modifiers.shift,
+                layer = controller.modifiers.layer,
+                strings = a11yStrings,
+            )
+            node.className = Button::class.java.name
+            node.isClickable = true
+            node.isFocusable = true
+            node.addAction(AccessibilityNodeInfoCompat.ACTION_CLICK)
+            node.setBoundsInParent(
+                Rect(
+                    key.slot.left.toInt(),
+                    key.slot.top.toInt(),
+                    key.slot.right.toInt().coerceAtLeast(key.slot.left.toInt() + 1),
+                    key.slot.bottom.toInt().coerceAtLeast(key.slot.top.toInt() + 1),
+                ),
+            )
+        }
+
+        override fun onPerformActionForVirtualView(
+            virtualViewId: Int,
+            action: Int,
+            arguments: Bundle?,
+        ): Boolean {
+            if (action != AccessibilityNodeInfoCompat.ACTION_CLICK) return false
+            val key = controller.geometry.keyById(virtualViewId) ?: return false
+            controller.down(A11Y_POINTER_ID, key.slot.centerX, key.slot.centerY)
+            controller.up(A11Y_POINTER_ID, key.slot.centerX, key.slot.centerY)
+            invalidateVirtualView(virtualViewId)
+            return true
+        }
+    }
+
+    companion object {
+        private const val A11Y_POINTER_ID = 99
     }
 
     private fun currentOrientation(): LayoutOrientation {

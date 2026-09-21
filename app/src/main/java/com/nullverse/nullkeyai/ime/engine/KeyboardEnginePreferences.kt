@@ -3,13 +3,17 @@ package com.nullverse.nullkeyai.ime.engine
 import android.content.Context
 
 /**
- * IME renderer preference. The custom engine is the default; the legacy
- * KeyboardView remains available as a fallback while the engine is developed.
+ * IME renderer and privacy/developer preferences. The custom engine is the
+ * default; the legacy KeyboardView remains available as a fallback while the
+ * engine is developed. Incognito and developer options live in the same local
+ * SharedPreferences file — no network, no account.
  */
 object KeyboardEnginePreferences {
     const val PREFS = "nullkey_ime"
     const val KEY_USE_CUSTOM_ENGINE = "use_custom_keyboard_engine"
     const val KEY_SWIPE_TYPING = "swipe_typing_enabled"
+    const val KEY_INCOGNITO = "incognito_enabled"
+    const val KEY_DEVELOPER_OPTIONS = "developer_options_enabled"
 
     fun useCustomEngine(context: Context): Boolean =
         prefs(context).getBoolean(KEY_USE_CUSTOM_ENGINE, true)
@@ -23,6 +27,23 @@ object KeyboardEnginePreferences {
 
     fun setSwipeTypingEnabled(context: Context, enabled: Boolean) {
         prefs(context).edit().putBoolean(KEY_SWIPE_TYPING, enabled).apply()
+    }
+
+    fun incognitoEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_INCOGNITO, false)
+
+    fun setIncognitoEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_INCOGNITO, enabled).apply()
+    }
+
+    /** Learning is on unless the user opts into incognito / no-learn. */
+    fun shouldLearn(context: Context): Boolean = !incognitoEnabled(context)
+
+    fun developerOptionsEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_DEVELOPER_OPTIONS, false)
+
+    fun setDeveloperOptionsEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_DEVELOPER_OPTIONS, enabled).apply()
     }
 
     private fun prefs(context: Context) =
