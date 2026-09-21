@@ -57,4 +57,8 @@
     <string name="open_asset">Open</string>
     <string name="share_asset">Share</string>
     <string name="no_app_for_asset">No compatible app is installed</string>
+    <string name="unlock_protected">Unlock protected clip</string>
+    <string name="unlock_title">Unlock NullKey Vault</string>
+    <string name="unlock_subtitle">Authenticate to reveal this protected clip.</string>
+    <string name="unlock_failed">Authentication was not completed</string>
 </resources>
