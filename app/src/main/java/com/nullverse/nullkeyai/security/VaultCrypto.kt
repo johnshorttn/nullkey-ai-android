@@ -8,6 +8,7 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import java.io.File
 
 /**
  * Device-local authenticated encryption for protected Vault fields.
@@ -54,6 +55,46 @@ class VaultCrypto {
         return cipher.doFinal(Base64.decode(parts[1], Base64.NO_WRAP)).toString(Charsets.UTF_8)
     }
 
+    fun encryptFileInPlace(file: File) {
+        val plain = file.readBytes()
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, key())
+        val encrypted = cipher.doFinal(plain)
+        val temp = File(file.parentFile, file.name + ".encpart")
+        temp.outputStream().use { out ->
+            out.write(FILE_MAGIC)
+            out.write(cipher.iv.size)
+            out.write(cipher.iv)
+            out.write(encrypted)
+        }
+        if (!temp.renameTo(file)) {
+            temp.delete()
+            throw IllegalStateException("Unable to finalize encrypted Vault asset")
+        }
+    }
+
+    fun decryptFile(file: File): ByteArray {
+        val bytes = file.readBytes()
+        require(bytes.size > FILE_MAGIC.size + 1 && bytes.copyOfRange(0, FILE_MAGIC.size).contentEquals(FILE_MAGIC)) {
+            "Vault asset is not encrypted"
+        }
+        val ivSize = bytes[FILE_MAGIC.size].toInt() and 0xff
+        val ivStart = FILE_MAGIC.size + 1
+        val ivEnd = ivStart + ivSize
+        require(ivSize in 12..32 && ivEnd < bytes.size) { "Invalid encrypted Vault asset" }
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(ivStart, ivEnd)))
+        return cipher.doFinal(bytes.copyOfRange(ivEnd, bytes.size))
+    }
+
+    fun isEncryptedFile(file: File): Boolean {
+        if (!file.isFile || file.length() < FILE_MAGIC.size) return false
+        return file.inputStream().use { input ->
+            val header = ByteArray(FILE_MAGIC.size)
+            input.read(header) == header.size && header.contentEquals(FILE_MAGIC)
+        }
+    }
+
     fun isEncrypted(value: String): Boolean = value.startsWith(PREFIX)
 
     companion object {
@@ -61,5 +102,6 @@ class VaultCrypto {
         private const val ALIAS = "nullkey_vault_local_v1"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val PREFIX = "nkenc:v1:"
+        private val FILE_MAGIC = byteArrayOf(0x4e, 0x4b, 0x46, 0x31)
     }
 }
