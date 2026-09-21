@@ -24,12 +24,14 @@ object ClipBackup {
         val array = JSONArray()
         for (clip in clips) {
             val obj = JSONObject()
+                // Protected payloads remain ciphertext in portable JSON; never decrypt during export.
                 .put("content", clip.content)
                 .put("isFile", clip.isFile)
                 .put("pinned", clip.pinned)
                 .put("createdAt", clip.createdAt)
                 .put("contentType", clip.contentType)
                 .put("notes", clip.notes)
+                .put("protectionPayload", if (clip.protected) "ANDROID_KEYSTORE_AES_GCM_V1" else "NONE")
                 .put("protected", clip.protected)
                 .put("captureMethod", clip.captureMethod)
                 .put("sourceConfidence", clip.sourceConfidence)
