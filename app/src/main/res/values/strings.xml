@@ -45,4 +45,7 @@
     <string name="save_changes">Save changes</string>
     <string name="move_to_trash">Move to Trash</string>
     <string name="saved">Saved</string>
+    <string name="no_tags">No tags</string>
+    <string name="add_tag">Add tag…</string>
+    <string name="add">Add</string>
 </resources>
