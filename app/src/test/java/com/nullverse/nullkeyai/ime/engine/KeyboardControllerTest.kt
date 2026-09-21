@@ -141,6 +141,31 @@ class KeyboardControllerTest {
     }
 
     @Test
+    fun disablingSwipeTypingFallsBackToFinalKeyTap() {
+        controller.swipeTypingEnabled = false
+        val h = key("h")
+        val e = key("e")
+        controller.down(0, h.slot.centerX, h.slot.centerY)
+        controller.move(0, e.slot.centerX, e.slot.centerY)
+        controller.up(0, e.slot.centerX, e.slot.centerY)
+        assertTrue(host.gestures.isEmpty())
+        assertEquals(listOf('e'.code), host.keys)
+    }
+
+    @Test
+    fun disablingSwipeTypingStillConsumesOneShotShiftOnFallbackTap() {
+        controller.swipeTypingEnabled = false
+        tap("⇧")
+        val h = key("h")
+        val e = key("e")
+        controller.down(0, h.slot.centerX, h.slot.centerY)
+        controller.move(0, e.slot.centerX, e.slot.centerY)
+        controller.up(0, e.slot.centerX, e.slot.centerY)
+        assertEquals(listOf('E'.code), host.keys)
+        assertEquals(ShiftState.OFF, controller.modifiers.shift)
+    }
+
+    @Test
     fun landscapeResizeUsesNumberRow() {
         controller.resize(
             widthPx = 1600f,
