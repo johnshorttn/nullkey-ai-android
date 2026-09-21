@@ -129,10 +129,16 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN,
-            MotionEvent.ACTION_POINTER_DOWN -> {
+            MotionEvent.ACTION_DOWN -> {
                 val index = event.actionIndex
-                controller.down(event.getPointerId(index), event.getX(index), event.getY(index))
+                gesturePointerX = event.getX(index)
+                gesturePointerY = event.getY(index)
+                gesturePointerActive = false
+                controller.down(event.getPointerId(index), gesturePointerX, gesturePointerY)
+            }
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                // The engine deliberately tracks one active pointer. Ignore extra
+                // fingers so they cannot steal or corrupt the current gesture.
             }
             MotionEvent.ACTION_MOVE -> {
                 val pointerId = controller.touch.activePointerId
@@ -146,11 +152,18 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                     }
                 }
             }
-            MotionEvent.ACTION_UP,
-            MotionEvent.ACTION_POINTER_UP -> {
+            MotionEvent.ACTION_UP -> {
                 val index = event.actionIndex
                 gesturePointerActive = false
                 controller.up(event.getPointerId(index), event.getX(index), event.getY(index))
+            }
+            MotionEvent.ACTION_POINTER_UP -> {
+                val index = event.actionIndex
+                val pointerId = event.getPointerId(index)
+                if (pointerId == controller.touch.activePointerId) {
+                    gesturePointerActive = false
+                    controller.up(pointerId, event.getX(index), event.getY(index))
+                }
             }
             MotionEvent.ACTION_CANCEL -> {
                 gesturePointerActive = false
