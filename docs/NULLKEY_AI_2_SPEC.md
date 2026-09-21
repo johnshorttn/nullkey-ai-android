@@ -598,3 +598,14 @@ A feature is not considered complete merely because its UI exists. Each subsyste
 NullKey 2.0 compiles and targets **API 36** (Android 16) with `minSdk` 24. Play phone listings after 31 August 2026 require this target.
 
 On-device privacy/security findings and the small fixes that shipped with the bump live in [`docs/SECURITY_REVIEW.md`](SECURITY_REVIEW.md). Offline defaults remain: no `INTERNET` permission, no production sync host, Vault Auto Backup disabled.
+
+## 21. Play Store / signed AAB
+
+Release signing, AAB smoke, listing notes, and the privacy-policy draft live next to this spec:
+
+- [RELEASE_AAB.md](RELEASE_AAB.md) — keystore placeholders, env vars, CI, no secrets in git
+- [PLAY_STORE.md](PLAY_STORE.md) — listing copy, Data Safety, IME / FGS declarations
+- [PRIVACY.md](PRIVACY.md) — policy draft matching the shipping offline defaults
+- [RELEASE_NOTES.md](RELEASE_NOTES.md) — what 1.2 actually contains
+
+Do not treat a signed AAB as Play-submittable until issue #17 remaining product scope is either shipped or explicitly deferred. `compileSdk` / `targetSdk` are **36**.

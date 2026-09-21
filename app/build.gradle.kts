@@ -1,3 +1,4 @@
+import java.io.File
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -8,8 +9,10 @@ plugins {
 }
 
 // Release signing is sourced from a git-ignored `keystore.properties` (local) or
-// environment variables (CI). No keystore or password is ever committed. When no
-// keystore is configured, `release` stays unsigned so ordinary builds still work.
+// environment variables (CI / smoke). Environment variables win so CI and
+// `scripts/smoke-signed-aab.sh` never accidentally use a developer keystore.
+// No keystore or password is ever committed. When no keystore is configured,
+// `release` stays unsigned so ordinary builds still work.
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) {
@@ -18,9 +21,15 @@ val keystoreProperties = Properties().apply {
 }
 
 fun releaseSigningValue(propKey: String, envKey: String): String? =
-    (keystoreProperties.getProperty(propKey) ?: System.getenv(envKey))?.takeIf { it.isNotBlank() }
+    (System.getenv(envKey) ?: keystoreProperties.getProperty(propKey))?.takeIf { it.isNotBlank() }
 
-val releaseStoreFile: String? = releaseSigningValue("storeFile", "KEYSTORE_FILE")
+fun resolveReleaseStoreFile(path: String): File {
+    val asFile = File(path)
+    return if (asFile.isAbsolute) asFile else rootProject.file(path)
+}
+
+val releaseStoreFilePath: String? = releaseSigningValue("storeFile", "KEYSTORE_FILE")
+val releaseStoreFileResolved: File? = releaseStoreFilePath?.let { resolveReleaseStoreFile(it) }
 
 android {
     namespace = "com.nullverse.nullkeyai"
@@ -42,9 +51,9 @@ android {
     }
 
     signingConfigs {
-        if (releaseStoreFile != null) {
+        if (releaseStoreFileResolved != null) {
             create("release") {
-                storeFile = rootProject.file(releaseStoreFile)
+                storeFile = releaseStoreFileResolved
                 storePassword = releaseSigningValue("storePassword", "KEYSTORE_PASSWORD")
                 keyAlias = releaseSigningValue("keyAlias", "KEY_ALIAS")
                 keyPassword = releaseSigningValue("keyPassword", "KEY_PASSWORD")
@@ -59,7 +68,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            if (releaseStoreFile != null) {
+            if (releaseStoreFileResolved != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
@@ -81,6 +90,36 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+        }
+    }
+}
+
+tasks.register("printReleaseSigningStatus") {
+    group = "help"
+    description = "Prints whether release signing is configured. Never prints secrets."
+    doLast {
+        val configured = releaseStoreFileResolved != null
+        val exists = releaseStoreFileResolved?.isFile == true
+        println("applicationId=com.nullverse.nullkeyai")
+        println("versionName=1.2")
+        println("versionCode=12")
+        println("minSdk=24")
+        println("compileSdk=36")
+        println("targetSdk=36")
+        println("minifyRelease=false")
+        println("releaseSigningConfigured=$configured")
+        println("releaseStoreFileExists=$exists")
+        println("playTargetApiNote=compileSdk/targetSdk 36; see docs/PLAY_STORE.md")
+    }
+}
+
+tasks.register("checkReleaseScaffold") {
+    group = "verification"
+    description = "Verifies Play/AAB signing placeholders and gitignore. Does not read secrets."
+    doLast {
+        exec {
+            workingDir = rootProject.projectDir
+            commandLine("bash", rootProject.file("scripts/check-release-scaffold.sh").absolutePath)
         }
     }
 }

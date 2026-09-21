@@ -1,12 +1,13 @@
 name: Release (signed)
 
 # Builds a signed AAB + APK. Signing material comes from repository secrets, never
-# from the repo. Configure these secrets to enable signing:
+# from the repo. Configure these secrets to enable a Play-uploadable build:
 #   KEYSTORE_BASE64   - base64 of your upload keystore (.jks):  base64 -w0 upload-keystore.jks
 #   KEYSTORE_PASSWORD - keystore store password
 #   KEY_ALIAS         - key alias
 #   KEY_PASSWORD      - key password
-# Without the secrets the job skips signing gracefully (no failure).
+# Without the secrets the job still proves the AAB path with a throwaway keystore
+# (that artifact must not be uploaded to Play). See docs/RELEASE_AAB.md.
 
 on:
   push:
@@ -18,19 +19,24 @@ jobs:
     name: Build signed AAB + APK
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Check Play/AAB signing scaffold
+        run: bash scripts/check-release-scaffold.sh
 
       - name: Check for signing secrets
         id: signing
@@ -41,7 +47,7 @@ jobs:
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::No KEYSTORE_BASE64 secret configured; skipping signed release build."
+            echo "::warning::No KEYSTORE_BASE64 secret configured; running throwaway AAB smoke instead of a Play upload key."
           fi
 
       - name: Decode keystore
@@ -57,12 +63,17 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew :app:bundleRelease :app:assembleRelease
+        run: ./gradlew :app:printReleaseSigningStatus :app:bundleRelease :app:assembleRelease
 
       - name: Verify APK signature
         if: steps.signing.outputs.available == 'true'
         run: |
-          BT="$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort | tail -1)"
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          BT="$(ls -d "$SDK"/build-tools/* 2>/dev/null | sort | tail -1)"
+          if [ -z "$BT" ]; then
+            echo "FAIL: Android build-tools not found for apksigner" >&2
+            exit 1
+          fi
           "$BT/apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk
 
       - name: Upload signed artifacts
@@ -74,3 +85,7 @@ jobs:
             app/build/outputs/bundle/release/app-release.aab
             app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
+
+      - name: Smoke signed AAB with throwaway keystore
+        if: steps.signing.outputs.available != 'true'
+        run: bash scripts/smoke-signed-aab.sh
