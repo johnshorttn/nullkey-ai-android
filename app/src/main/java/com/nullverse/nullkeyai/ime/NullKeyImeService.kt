@@ -78,6 +78,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         keyboardView.isPreviewEnabled = false
         keyboardEngineView.listener = object : NullKeyKeyboardView.Listener {
             override fun onKey(code: Int) = handleKey(code, alreadyCased = true)
+            override fun onGestureWord(path: String) = handleGestureWord(path)
         }
         applyRendererPreference()
 
@@ -165,6 +166,15 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         val ic = currentInputConnection ?: return
         if (currentWord.isNotEmpty()) ic.deleteSurroundingText(currentWord.length, 0)
         ic.commitText("$word ", 1)
+        suggester.learn(word)
+        currentWord.setLength(0)
+        updateSuggestions()
+    }
+
+    private fun handleGestureWord(path: String) {
+        val candidates = suggester.suggest(path, 1)
+        val word = candidates.firstOrNull().takeUnless { it.isNullOrBlank() } ?: path
+        currentInputConnection?.commitText("$word ", 1)
         suggester.learn(word)
         currentWord.setLength(0)
         updateSuggestions()
