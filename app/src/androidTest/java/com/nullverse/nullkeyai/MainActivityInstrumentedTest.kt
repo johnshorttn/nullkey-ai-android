@@ -37,6 +37,7 @@ class MainActivityInstrumentedTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.btn_enable)).check(matches(isDisplayed()))
             onView(withId(R.id.btn_switch)).check(matches(isDisplayed()))
+            onView(withId(R.id.use_custom_keyboard_engine)).check(matches(isDisplayed()))
             onView(withId(R.id.search)).check(matches(isDisplayed()))
             onView(withId(R.id.files_only)).check(matches(isDisplayed()))
         }
