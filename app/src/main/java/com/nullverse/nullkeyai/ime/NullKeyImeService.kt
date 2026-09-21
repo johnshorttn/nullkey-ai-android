@@ -172,7 +172,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     private fun handleGestureWord(path: String) {
-        val candidates = suggester.suggest(path, 1)
+        val candidates = suggester.suggestGesture(path, 1)
         val word = candidates.firstOrNull().takeUnless { it.isNullOrBlank() } ?: path
         currentInputConnection?.commitText("$word ", 1)
         suggester.learn(word)
