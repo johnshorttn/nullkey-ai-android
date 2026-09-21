@@ -13,6 +13,11 @@
         android:theme="@style/Theme.NullKey">
 
         <activity
+            android:name=".ui.TrashActivity"
+            android:exported="false"
+            android:label="@string/trash" />
+
+        <activity
             android:name=".ui.ClipDetailActivity"
             android:exported="false"
             android:label="@string/clip_details" />
