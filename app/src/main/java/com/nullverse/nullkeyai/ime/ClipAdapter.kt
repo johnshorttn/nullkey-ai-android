@@ -44,11 +44,20 @@ class ClipAdapter(
         private val meta: TextView = view.findViewById(R.id.clip_meta)
 
         fun bind(clip: Clip) {
-            preview.text = clip.content
-            val kind = if (clip.isFile) "FILE" else "TEXT"
+            preview.text = when {
+                clip.protected -> "Protected clip"
+                clip.contentType == "IMAGE" -> clip.notes.ifBlank { "Image" }
+                clip.contentType == "FILE" -> clip.notes.ifBlank { clip.mimeType ?: "File" }
+                else -> clip.content
+            }
+            val kind = clip.contentType
             val pin = if (clip.pinned) " • PIN" else ""
-            val tag = clip.tag?.let { " • $it" } ?: ""
-            meta.text = "$kind$pin$tag"
+            val lock = if (clip.protected) " • PROTECTED" else ""
+            val source = clip.sourceAppLabel?.let { " • $it" }
+                ?: clip.sourcePackage?.let { " • $it" }
+                ?: ""
+            val note = if (clip.notes.isNotBlank() && clip.contentType == "TEXT") " • NOTE" else ""
+            meta.text = "$kind$pin$lock$note$source"
             itemView.setOnClickListener { onClick(clip) }
         }
     }
