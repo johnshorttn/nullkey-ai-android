@@ -69,6 +69,9 @@ interface ClipDao {
     @Query("UPDATE clips SET notes = :notes, updatedAt = :now WHERE id = :id")
     suspend fun setNotes(id: Long, notes: String, now: Long = System.currentTimeMillis())
 
+    @Query("UPDATE clips SET content = :content, notes = :notes, protected = :isProtected, updatedAt = :now WHERE id = :id")
+    suspend fun setProtectionPayload(id: Long, content: String, notes: String, isProtected: Boolean, now: Long = System.currentTimeMillis())
+
     @Query("UPDATE clips SET protected = :isProtected, updatedAt = :now WHERE id = :id")
     suspend fun setProtected(id: Long, isProtected: Boolean, now: Long = System.currentTimeMillis())
 
