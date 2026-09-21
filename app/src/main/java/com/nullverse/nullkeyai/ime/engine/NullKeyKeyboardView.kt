@@ -68,6 +68,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     )
 
     init {
+        controller.swipeTypingEnabled = KeyboardEnginePreferences.swipeTypingEnabled(context)
         isClickable = true
         isFocusable = false
         contentDescription = context.getString(com.nullverse.nullkeyai.R.string.ime_label)
@@ -131,7 +132,13 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     }
 
     fun resetEngine() {
+        controller.swipeTypingEnabled = KeyboardEnginePreferences.swipeTypingEnabled(context)
         controller.reset()
+    }
+
+    fun setSwipeTypingEnabled(enabled: Boolean) {
+        controller.swipeTypingEnabled = enabled
+        KeyboardEnginePreferences.setSwipeTypingEnabled(context, enabled)
     }
 
     @VisibleForTesting
