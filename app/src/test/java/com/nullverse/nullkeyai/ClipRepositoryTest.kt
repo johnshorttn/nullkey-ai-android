@@ -29,7 +29,7 @@ class ClipRepositoryTest {
             ApplicationProvider.getApplicationContext(),
             NullKeyDatabase::class.java
         ).allowMainThreadQueries().build()
-        repo = ClipRepository(db.clipDao())
+        repo = ClipRepository(db.clipDao(), tagDao = db.tagDao())
     }
 
     @After
@@ -114,5 +114,27 @@ class ClipRepositoryTest {
         val results = repo.searchOnce("", false)
         assertEquals("second", results[0].content)
         assertTrue(results[0].pinned)
+    }
+
+    @Test
+    fun addAndRemoveTag_updatesRelationOnly() = runBlocking {
+        val id = repo.capture("tagged")!!
+        repo.addTag(id, "Work")
+        repo.addTag(id, "Coding")
+        repo.addTag(id, "  Work  ")
+        assertEquals(listOf("Coding", "Work"), repo.tagsForClip(id).map { it.name })
+        val workId = repo.tagsForClip(id).first { it.name == "Work" }.id
+        repo.removeTag(id, workId)
+        assertEquals(listOf("Coding"), repo.tagsForClip(id).map { it.name })
+    }
+
+    @Test
+    fun restore_preservesTags() = runBlocking {
+        val id = repo.capture("bring me back")!!
+        repo.addTag(id, "Personal")
+        repo.moveToTrash(id)
+        repo.restore(id)
+        assertEquals(listOf("Personal"), repo.tagsForClip(id).map { it.name })
+        assertEquals(1, repo.searchOnce("bring me back", false).size)
     }
 }
