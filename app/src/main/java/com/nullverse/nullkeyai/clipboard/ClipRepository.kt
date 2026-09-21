@@ -9,6 +9,7 @@ import com.nullverse.nullkeyai.db.ClipTagCrossRef
 import com.nullverse.nullkeyai.db.Tag
 import com.nullverse.nullkeyai.db.TagDao
 import com.nullverse.nullkeyai.security.VaultCrypto
+import com.nullverse.nullkeyai.security.PortableVaultCrypto
 import kotlinx.coroutines.flow.Flow
 import java.util.concurrent.TimeUnit
 
@@ -157,8 +158,25 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
         tagDao?.detach(id, tagId)
     }
 
-    /** Serialize all active clips to a portable JSON backup document. */
+    /** Serialize all active clips to JSON. Protected records remain device-key ciphertext. */
     suspend fun exportJson(): String = ClipBackup.toJson(dao.allActive())
+
+    /**
+     * Create a cross-device backup. Protected records are first decrypted with the
+     * local Keystore key, then the entire document is re-encrypted under the user's
+     * backup password. Plaintext exists only in memory for this operation.
+     */
+    suspend fun exportPortableEncrypted(password: CharArray): String {
+        val vaultCrypto = crypto ?: throw IllegalStateException("Vault crypto unavailable")
+        val portable = dao.allActive().map { clip ->
+            if (!clip.protected) clip else clip.copy(
+                content = vaultCrypto.decrypt(clip.content),
+                notes = vaultCrypto.decrypt(clip.notes),
+                protected = false
+            )
+        }
+        return PortableVaultCrypto.encrypt(ClipBackup.toJson(portable), password)
+    }
 
     /**
      * Import clips from a JSON backup. Blank clips and clips whose content already
