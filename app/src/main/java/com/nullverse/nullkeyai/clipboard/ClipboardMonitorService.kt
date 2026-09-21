@@ -3,6 +3,7 @@ package com.nullverse.nullkeyai.clipboard
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.ClipboardManager
 import android.content.Context
@@ -12,6 +13,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.db.NullKeyDatabase
+import com.nullverse.nullkeyai.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -75,10 +77,20 @@ class ClipboardMonitorService : Service() {
             )
             manager.createNotificationChannel(channel)
         }
+        val vaultIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val vaultPendingIntent = PendingIntent.getActivity(
+            this, 0, vaultIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.monitor_title))
             .setContentText(getString(R.string.monitor_text))
             .setSmallIcon(R.drawable.ic_clip)
+            .setContentIntent(vaultPendingIntent)
+            .addAction(R.drawable.ic_clip, getString(R.string.open_vault), vaultPendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .build()
