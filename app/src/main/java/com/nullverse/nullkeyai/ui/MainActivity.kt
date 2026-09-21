@@ -74,8 +74,10 @@ class MainActivity : AppCompatActivity() {
 
         val list = findViewById<RecyclerView>(R.id.clips)
         adapter = ClipAdapter { clip ->
-            copyToSystemClipboard(clip.content)
-            Toast.makeText(this, R.string.copied, Toast.LENGTH_SHORT).show()
+            startActivity(
+                Intent(this, ClipDetailActivity::class.java)
+                    .putExtra(ClipDetailActivity.EXTRA_CLIP_ID, clip.id)
+            )
         }
         list.layoutManager = LinearLayoutManager(this)
         list.adapter = adapter
