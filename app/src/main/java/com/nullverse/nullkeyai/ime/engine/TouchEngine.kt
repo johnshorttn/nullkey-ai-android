@@ -48,6 +48,8 @@ class TouchEngine(
     private var lastX = 0f
     private var lastY = 0f
     private var gestureStarted = false
+    private var gestureStartX = 0f
+    private var gestureStartY = 0f
 
     fun down(pointerId: Int, x: Float, y: Float) {
         if (activePointerId != null) return
@@ -63,6 +65,8 @@ class TouchEngine(
         gestureStarted = false
         lastX = x
         lastY = y
+        gestureStartX = x
+        gestureStartY = y
         press(key)
     }
 
@@ -76,11 +80,18 @@ class TouchEngine(
         val key = listener.hitTest(x, y)
         if (key?.id == pressed?.id) return
         if (key != null && key.spec.code.toChar().isLetter() && gesturePath.firstOrNull()?.spec?.code?.toChar()?.isLetter() == true) {
-            gestureStarted = true
+            val startKey = gesturePath.first()
+            val threshold = kotlin.math.min(startKey.slot.width, startKey.slot.height) * 0.35f
+            val fromStartX = x - gestureStartX
+            val fromStartY = y - gestureStartY
+            gestureStarted = gestureStarted || kotlin.math.sqrt(fromStartX * fromStartX + fromStartY * fromStartY) >= threshold
+
             // Once a swipe crosses into another letter, long-press must not fire
             // on keys visited while the finger is still moving.
-            longPressTask?.cancel()
-            longPressTask = null
+            if (gestureStarted) {
+                longPressTask?.cancel()
+                longPressTask = null
+            }
         }
         listener.onRelease(pressed)
         if (key == null) {
@@ -170,6 +181,8 @@ class TouchEngine(
         gesturePath.clear()
         gestureDistancePx = 0f
         gestureStarted = false
+        gestureStartX = 0f
+        gestureStartY = 0f
         listener.onGestureProgress(emptyList())
     }
 }
