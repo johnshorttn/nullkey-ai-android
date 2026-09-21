@@ -86,4 +86,4 @@
     <string name="swipe_right_title">Right swipe action</string>
     <string name="tag_name_hint">Tag name</string>
     <string name="add_tag_title">Add tag</string>
-</resources>
+    <string name="swipe_direction_left">Left</string>\n    <string name="swipe_direction_right">Right</string>\n    <string name="swipe_action_pin">Pin</string>\n    <string name="swipe_action_protect">Protect</string>\n    <string name="swipe_action_delete">Delete</string>\n    <string name="swipe_action_tag">Tag</string>\n</resources>
