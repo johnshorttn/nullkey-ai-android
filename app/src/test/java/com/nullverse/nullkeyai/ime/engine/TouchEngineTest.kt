@@ -103,7 +103,19 @@ class TouchEngineTest {
     }
 
     @Test
-    fun longPressCallbackFiresAfterTimeout() {
+    fun swipeAcrossLettersCancelsLongPressOnVisitedKey() {
+        val e = key("e")
+        val r = key("r")
+        engine.down(1, e.slot.centerX, e.slot.centerY)
+        engine.move(1, r.slot.centerX, r.slot.centerY)
+        scheduler.advance(800)
+        assertTrue(recorder.longPresses.isEmpty())
+        engine.up(1, r.slot.centerX, r.slot.centerY)
+        assertEquals(listOf(listOf("e", "r")), recorder.gestures)
+    }
+
+    @Test
+    fun longPressStillWorksBeforeSwipeBegins() {
         val e = key("e")
         engine.down(1, e.slot.centerX, e.slot.centerY)
         scheduler.advance(399)
