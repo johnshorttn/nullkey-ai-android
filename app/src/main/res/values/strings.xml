@@ -26,7 +26,8 @@
 
     <string name="monitor_channel_name">Clipboard monitor</string>
     <string name="monitor_title">NullKey clipboard monitor</string>
-    <string name="monitor_text">Capturing clips in the background</string>
+    <string name="monitor_text">Capturing clips when Android permits it</string>
+    <string name="open_vault">Vault</string>
     <string name="clipboard_lab_title">Clipboard Capture Lab</string>
     <string name="clipboard_lab_description">Runs privacy-safe capability tests using generated clipboard values. It does not display, log, or persist your existing clipboard contents; it may temporarily retain the current clip in memory so it can restore it after testing.</string>
     <string name="clipboard_lab_run">Run tests</string>
