@@ -18,7 +18,7 @@ import org.json.JSONObject
 object ClipBackup {
 
     const val APP_TAG = "NullKey AI"
-    const val FORMAT_VERSION = 1
+    const val FORMAT_VERSION = 2
 
     fun toJson(clips: List<Clip>, exportedAt: Long = System.currentTimeMillis()): String {
         val array = JSONArray()
@@ -28,8 +28,25 @@ object ClipBackup {
                 .put("isFile", clip.isFile)
                 .put("pinned", clip.pinned)
                 .put("createdAt", clip.createdAt)
+                .put("contentType", clip.contentType)
+                .put("notes", clip.notes)
+                .put("protected", clip.protected)
+                .put("captureMethod", clip.captureMethod)
+                .put("sourceConfidence", clip.sourceConfidence)
+                .put("updatedAt", clip.updatedAt)
+                .put("syncId", clip.syncId)
+                .put("revision", clip.revision)
+                .put("syncState", clip.syncState)
+                .put("syncExcluded", clip.syncExcluded)
             clip.mimeType?.let { obj.put("mimeType", it) }
             clip.tag?.let { obj.put("tag", it) }
+            clip.localAssetPath?.let { obj.put("localAssetPath", it) }
+            clip.sourcePackage?.let { obj.put("sourcePackage", it) }
+            clip.sourceAppLabel?.let { obj.put("sourceAppLabel", it) }
+            clip.sourceUri?.let { obj.put("sourceUri", it) }
+            clip.ocrText?.let { obj.put("ocrText", it) }
+            clip.originDeviceId?.let { obj.put("originDeviceId", it) }
+            clip.modifiedByDeviceId?.let { obj.put("modifiedByDeviceId", it) }
             array.put(obj)
         }
         return JSONObject()
@@ -66,7 +83,24 @@ object ClipBackup {
                     mimeType = obj.optStringOrNull("mimeType"),
                     tag = obj.optStringOrNull("tag"),
                     pinned = obj.optBoolean("pinned", false),
-                    createdAt = obj.optLong("createdAt", System.currentTimeMillis())
+                    createdAt = obj.optLong("createdAt", System.currentTimeMillis()),
+                    contentType = obj.optString("contentType", "TEXT"),
+                    notes = obj.optString("notes", ""),
+                    protected = obj.optBoolean("protected", false),
+                    localAssetPath = obj.optStringOrNull("localAssetPath"),
+                    sourcePackage = obj.optStringOrNull("sourcePackage"),
+                    sourceAppLabel = obj.optStringOrNull("sourceAppLabel"),
+                    sourceUri = obj.optStringOrNull("sourceUri"),
+                    captureMethod = obj.optString("captureMethod", "UNKNOWN"),
+                    sourceConfidence = obj.optString("sourceConfidence", "UNKNOWN"),
+                    ocrText = obj.optStringOrNull("ocrText"),
+                    updatedAt = obj.optLong("updatedAt", obj.optLong("createdAt", System.currentTimeMillis())),
+                    syncId = obj.optString("syncId").takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString(),
+                    revision = obj.optLong("revision", 1L),
+                    originDeviceId = obj.optStringOrNull("originDeviceId"),
+                    modifiedByDeviceId = obj.optStringOrNull("modifiedByDeviceId"),
+                    syncState = obj.optString("syncState", "LOCAL"),
+                    syncExcluded = obj.optBoolean("syncExcluded", false)
                 )
             )
         }
