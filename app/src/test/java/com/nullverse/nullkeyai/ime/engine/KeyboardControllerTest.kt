@@ -94,7 +94,7 @@ class KeyboardControllerTest {
     }
 
     @Test
-    fun letterLongPressExposesPopupCharactersButStillTypes() {
+    fun letterLongPressExposesPopupCharactersWithoutTypingBaseCharacter() {
         val e = key("e")
         controller.down(0, e.slot.centerX, e.slot.centerY)
         scheduler.advance(400)
@@ -102,7 +102,7 @@ class KeyboardControllerTest {
         assertEquals(1, host.longPresses.size)
         assertEquals('e'.code, host.longPresses[0].first)
         assertTrue(host.longPresses[0].second.contains("é"))
-        assertEquals(listOf('e'.code), host.keys)
+        assertTrue(host.keys.isEmpty())
     }
 
     @Test
