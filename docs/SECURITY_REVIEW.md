@@ -44,7 +44,7 @@ Compile restore (literal `\n` in vault-swipe Kotlin/XML) is included so this bra
 
 | ID | Severity | Finding | Recommended next |
 | --- | --- | --- | --- |
-| D1 | P2 | Release `isMinifyEnabled = false`. R8/ProGuard rules exist only as Room keep stubs. | Enable R8 on release after a mapping-file smoke on signing (PR #23 path). Do not ship a first minify pass blindly. |
+| D1 | P2 | Release R8 is now **on** by default (`isMinifyEnabled` + `isShrinkResources`), with keep rules for IME components, Room `*_Impl`, and persisted enum names. Debug stays off. | Residual: instrumented CI still uses the debug APK. Install a minified release build on a device before the first Play upload. Opt out with `-Pnullkey.releaseMinify=false`. Upload `mapping.txt`. |
 | D2 | P2 | Unprotected JSON **Export** writes clip plaintext by design (user-initiated). | Keep; listing/privacy copy (PR #23) should say Export is user-driven and not Auto Backup. |
 | D3 | P3 | `WordSuggester.learn` persists the whole frequency map on every committed word (`MAX_WORDS = 2000`). Fine at current size; a debounce would be a later polish. | Leave until swipe-typing / spelling work lands. |
 | D4 | P3 | IME `refreshClips()` runs a Room query on every search keystroke (no debounce). | Optional later; vault search is local. |
@@ -75,4 +75,4 @@ Compile restore (literal `\n` in vault-swipe Kotlin/XML) is included so this bra
 
 ## Recommended next milestone for #17
 
-Do **not** claim 100%. After this PR: **merge/land wave** for open tracks **#9 / #11 / #16 / #18–#23** (resolve `ClipSwipePreferences.kt` / `strings.xml` / `MainActivity.kt` by keeping **real newlines** and **both control sets**). Then decide OCR/spelling only if they can ship offline-private, or enable R8 (D1) on the signed-AAB path.
+Do **not** claim 100%. D1 (release R8) is enabled on this tree with the residual device pass noted above. The next #17 milestone is a **public HTTPS privacy-policy URL** (host [PRIVACY.md](PRIVACY.md)). OCR/spelling stay deferred unless they can ship with no `INTERNET` permission. Promoting `rewrite/v2` to `main` (#16) waits on that product decision.

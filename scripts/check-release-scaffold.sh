@@ -18,6 +18,11 @@ ok() {
 GITIGNORE="$ROOT/.gitignore"
 EXAMPLE="$ROOT/keystore.properties.example"
 MANIFEST="$ROOT/app/src/main/AndroidManifest.xml"
+RULES="$ROOT/app/proguard-rules.pro"
+APP_GRADLE="$ROOT/app/build.gradle.kts"
+RELEASE_DOC="$ROOT/docs/RELEASE_AAB.md"
+SMOKE="$ROOT/scripts/smoke-signed-aab.sh"
+R8_CHECK="$ROOT/scripts/check-r8-mapping.sh"
 
 [[ -f "$GITIGNORE" ]] || fail ".gitignore missing"
 [[ -f "$EXAMPLE" ]] || fail "keystore.properties.example missing"
@@ -49,4 +54,35 @@ if grep -Eq 'android\.permission\.INTERNET' "$MANIFEST"; then
   fail "app AndroidManifest requests INTERNET; update docs/PRIVACY.md and Play Data Safety before adding network"
 fi
 
+[[ -f "$RULES" ]] || fail "app/proguard-rules.pro missing"
+[[ -f "$R8_CHECK" ]] || fail "scripts/check-r8-mapping.sh missing"
+[[ -x "$R8_CHECK" ]] || fail "scripts/check-r8-mapping.sh must be executable"
+
+for token in \
+  'NullKeyImeService' \
+  'ClipboardMonitorService' \
+  'NullKeyKeyboardView' \
+  'NullKeyDatabase_Impl' \
+  'androidx.room.RoomDatabase' \
+  '-keep enum com.nullverse.nullkeyai.**'
+do
+  grep -F -q -e "$token" "$RULES" || fail "proguard-rules.pro must mention $token"
+done
+
+grep -Fq 'isMinifyEnabled = minifyRelease' "$APP_GRADLE" || fail "release minify must follow minifyRelease"
+grep -Fq 'isShrinkResources = minifyRelease' "$APP_GRADLE" || fail "release resource shrinking must follow minifyRelease"
+grep -Fq 'NULLKEY_RELEASE_MINIFY' "$APP_GRADLE" || fail "release minify must honor NULLKEY_RELEASE_MINIFY"
+grep -Fq 'isMinifyEnabled = false' "$APP_GRADLE" || fail "debug minify must stay off"
+
+grep -Fq 'nullkey.releaseMinify' "$RELEASE_DOC" || fail "docs/RELEASE_AAB.md must document the R8 opt-out"
+grep -Fq 'mapping.txt' "$RELEASE_DOC" || fail "docs/RELEASE_AAB.md must mention mapping.txt"
+if grep -Fq 'R8/minify stays' "$RELEASE_DOC"; then
+  fail "docs/RELEASE_AAB.md still says R8 stays off"
+fi
+
+grep -Fq 'check-r8-mapping.sh' "$SMOKE" || fail "smoke-signed-aab.sh must run check-r8-mapping.sh"
+grep -Fq 'assembleRelease' "$SMOKE" || fail "smoke-signed-aab.sh must assembleRelease"
+grep -Fq 'bundleRelease' "$SMOKE" || fail "smoke-signed-aab.sh must bundleRelease"
+
 ok "release signing scaffold (placeholders, gitignore, no INTERNET permission)"
+ok "release R8 rules, opt-out flag, and AAB docs"

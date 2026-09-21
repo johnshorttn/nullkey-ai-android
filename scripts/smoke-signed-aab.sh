@@ -39,8 +39,32 @@ export KEYSTORE_PASSWORD="$SMOKE_PASS"
 export KEY_ALIAS=upload
 export KEY_PASSWORD="$SMOKE_PASS"
 
-echo "bundleRelease with throwaway signing..."
-./gradlew --no-daemon :app:printReleaseSigningStatus :app:bundleRelease
+echo "Confirming the release minify opt-out still resolves to off..."
+# Ignore a caller-set NULLKEY_RELEASE_MINIFY so this smoke always checks the flag.
+OFF_STATUS="$(env -u NULLKEY_RELEASE_MINIFY ./gradlew --no-daemon --console=plain :app:printReleaseSigningStatus -Pnullkey.releaseMinify=false)"
+grep -q 'minifyRelease=false' <<<"$OFF_STATUS" || {
+  echo "FAIL: -Pnullkey.releaseMinify=false did not disable R8" >&2
+  echo "$OFF_STATUS" >&2
+  exit 1
+}
+grep -q 'shrinkResourcesRelease=false' <<<"$OFF_STATUS" || {
+  echo "FAIL: resource shrinking stayed on when minify was disabled" >&2
+  echo "$OFF_STATUS" >&2
+  exit 1
+}
+grep -E '^(minifyRelease|shrinkResourcesRelease)=' <<<"$OFF_STATUS"
+
+echo "bundleRelease + assembleRelease with throwaway signing (R8 on)..."
+env -u NULLKEY_RELEASE_MINIFY ./gradlew --no-daemon --console=plain :app:printReleaseSigningStatus :app:bundleRelease :app:assembleRelease | tee "$TMP/release-build.log"
+
+grep -q 'minifyRelease=true' "$TMP/release-build.log" || {
+  echo "FAIL: release build did not report minifyRelease=true" >&2
+  exit 1
+}
+grep -q 'shrinkResourcesRelease=true' "$TMP/release-build.log" || {
+  echo "FAIL: release build did not report shrinkResourcesRelease=true" >&2
+  exit 1
+}
 
 [[ -f "$AAB" ]] || {
   echo "FAIL: AAB not produced at $AAB" >&2
@@ -56,5 +80,20 @@ SIZE="$(wc -c < "$AAB" | tr -d ' ')"
 echo "Verifying AAB jar signature..."
 jarsigner -verify "$AAB" >/dev/null
 
-echo "OK: signed AAB smoke produced $AAB ($SIZE bytes)"
+APK="$ROOT/app/build/outputs/apk/release/app-release.apk"
+[[ -f "$APK" ]] || {
+  echo "FAIL: release APK not produced at $APK" >&2
+  exit 1
+}
+APK_SIZE="$(wc -c < "$APK" | tr -d ' ')"
+[[ "$APK_SIZE" -gt 10000 ]] || {
+  echo "FAIL: release APK is implausibly small ($APK_SIZE bytes)" >&2
+  exit 1
+}
+
+echo "Checking R8 mapping, kept IME/Room/enum names, and release permissions..."
+bash "$ROOT/scripts/check-r8-mapping.sh"
+
+echo "OK: signed AAB smoke produced $AAB ($SIZE bytes) and release APK ($APK_SIZE bytes)"
 echo "Do not upload this artifact to Google Play; it uses a throwaway keystore."
+echo "Keep app/build/outputs/mapping/release/mapping.txt with any Play upload of a minified AAB."

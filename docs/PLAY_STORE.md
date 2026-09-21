@@ -87,7 +87,7 @@ If `INTERNET` is added later, this form must be redone before release.
 | `targetSdk` / `compileSdk` | **36** | Meets the 2026-08-31 phone/tablet floor. |
 | AAB | `./gradlew :app:bundleRelease` | Required (not APK) |
 | Play App Signing | Upload key from `docs/RELEASE_AAB.md` | Required |
-| R8 | Off | Allowed; keep off until a minify regression pass |
+| R8 | **On** for release (minify + resource shrink). Debug stays off. Opt out: `-Pnullkey.releaseMinify=false`. | Upload `mapping.txt` with the AAB. See [RELEASE_AAB.md](RELEASE_AAB.md). |
 | Native 16 KB | No `.so` files | N/A |
 
 ## Permissions to declare in Console
@@ -105,7 +105,7 @@ No `INTERNET`, `CAMERA`, `RECORD_AUDIO`, `READ_CONTACTS`, or location.
 
 1. `./scripts/check-release-scaffold.sh`
 2. `./scripts/smoke-signed-aab.sh` (throwaway; not for Console)
-3. Production `bundleRelease` with the upload keystore
+3. Production `bundleRelease` with the upload keystore (R8 on) and upload `mapping.txt` alongside the AAB
 4. Confirm Data Safety still matches the merged manifest (no new network libraries)
 5. Do not upload CI smoke artifacts
 

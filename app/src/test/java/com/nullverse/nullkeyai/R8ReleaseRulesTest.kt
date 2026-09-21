@@ -1,0 +1,71 @@
+package com.nullverse.nullkeyai
+
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.io.File
+
+/**
+ * Source contract for release R8. The minified dex is checked by
+ * scripts/check-r8-mapping.sh after assembleRelease; these assertions keep the
+ * Gradle flag, keep rules, and docs from drifting without a release build.
+ */
+class R8ReleaseRulesTest {
+
+    private fun repoRoot(): File {
+        val cwd = File(".").canonicalFile
+        val candidates = listOf(cwd, cwd.parentFile, cwd.parentFile?.parentFile).filterNotNull()
+        return candidates.firstOrNull { File(it, "app/proguard-rules.pro").isFile }
+            ?: error("Could not locate repo root from $cwd")
+    }
+
+    @Test
+    fun releaseMinifyIsOnByDefaultAndDebugStaysOff() {
+        val gradle = File(repoRoot(), "app/build.gradle.kts").readText()
+        assertTrue(gradle.contains("isMinifyEnabled = minifyRelease"))
+        assertTrue(gradle.contains("isShrinkResources = minifyRelease"))
+        assertTrue(gradle.contains("NULLKEY_RELEASE_MINIFY"))
+        assertTrue(gradle.contains("nullkey.releaseMinify"))
+        assertTrue(gradle.contains("isMinifyEnabled = false"))
+        assertTrue(gradle.contains("isShrinkResources = false"))
+        assertFalse(gradle.contains("isMinifyEnabled = false\n            proguardFiles"))
+    }
+
+    @Test
+    fun proguardRulesKeepImeRoomAndPersistedEnums() {
+        val rules = File(repoRoot(), "app/proguard-rules.pro").readText()
+        listOf(
+            "com.nullverse.nullkeyai.ime.NullKeyImeService",
+            "com.nullverse.nullkeyai.clipboard.ClipboardMonitorService",
+            "com.nullverse.nullkeyai.ui.MainActivity",
+            "com.nullverse.nullkeyai.ime.engine.NullKeyKeyboardView",
+            "com.nullverse.nullkeyai.db.NullKeyDatabase_Impl",
+            "androidx.room.RoomDatabase",
+            "@androidx.room.Entity",
+            "@androidx.room.Dao",
+            "-keep enum com.nullverse.nullkeyai.**"
+        ).forEach { token ->
+            assertTrue("missing keep rule token: $token", rules.contains(token))
+        }
+    }
+
+    @Test
+    fun releaseDocsDescribeR8AndTheOptOut() {
+        val root = repoRoot()
+        val release = File(root, "docs/RELEASE_AAB.md").readText()
+        assertTrue(release.contains("nullkey.releaseMinify"))
+        assertTrue(release.contains("mapping.txt"))
+        assertTrue(release.contains("NullKeyDatabase_Impl"))
+        assertFalse(release.contains("R8/minify stays"))
+
+        val play = File(root, "docs/PLAY_STORE.md").readText()
+        assertTrue(play.contains("minify + resource shrink"))
+        assertTrue(play.contains("mapping.txt"))
+
+        val smoke = File(root, "scripts/smoke-signed-aab.sh").readText()
+        assertTrue(smoke.contains("check-r8-mapping.sh"))
+        assertTrue(smoke.contains("assembleRelease"))
+        assertTrue(smoke.contains("bundleRelease"))
+        assertTrue(File(root, "scripts/check-r8-mapping.sh").isFile)
+    }
+}
