@@ -154,6 +154,8 @@ class MainActivity : AppCompatActivity() {
                 KeyboardEnginePreferences.setSwipeTypingEnabled(this@MainActivity, checked)
             }
         }
+        bindSwipeActionButton(R.id.btn_swipe_left_action, true)
+        bindSwipeActionButton(R.id.btn_swipe_right_action, false)
         findViewById<Button>(R.id.btn_start_monitor).setOnClickListener {
             ClipboardMonitorService.start(this)
             Toast.makeText(this, R.string.monitor_started, Toast.LENGTH_SHORT).show()
@@ -207,6 +209,26 @@ class MainActivity : AppCompatActivity() {
                 else android.view.View.GONE
             }
         }
+    }
+
+    private fun bindSwipeActionButton(buttonId: Int, left: Boolean) {
+        val button = findViewById<Button>(buttonId)
+        fun refresh() {
+            val action = if (left) ClipSwipePreferences.left(this) else ClipSwipePreferences.right(this)
+            button.text = "${if (left) "Left" else "Right"} swipe: ${action.name.lowercase().replaceFirstChar { it.uppercase() }}"
+        }
+        button.setOnClickListener {
+            val actions = ClipSwipeAction.entries.toTypedArray()
+            AlertDialog.Builder(this)
+                .setTitle(if (left) "Left swipe action" else "Right swipe action")
+                .setItems(actions.map { it.name.lowercase().replaceFirstChar { ch -> ch.uppercase() } }.toTypedArray()) { _, which ->
+                    if (left) ClipSwipePreferences.setLeft(this, actions[which])
+                    else ClipSwipePreferences.setRight(this, actions[which])
+                    refresh()
+                }
+                .show()
+        }
+        refresh()
     }
 
     private fun showSwipeTagDialog(clipId: Long) {
