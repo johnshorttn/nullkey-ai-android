@@ -13,6 +13,9 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.db.NullKeyDatabase
+import com.nullverse.nullkeyai.db.ClipCaptureMethod
+import com.nullverse.nullkeyai.db.ClipContentType
+import com.nullverse.nullkeyai.db.ClipSourceConfidence
 import com.nullverse.nullkeyai.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +35,7 @@ class ClipboardMonitorService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var repository: ClipRepository
     private lateinit var clipboard: ClipboardManager
+    private lateinit var assetStore: VaultAssetStore
 
     private val listener = ClipboardManager.OnPrimaryClipChangedListener {
         captureCurrentClip()
@@ -41,6 +45,7 @@ class ClipboardMonitorService : Service() {
         super.onCreate()
         repository = ClipRepository(NullKeyDatabase.get(this).clipDao())
         clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        assetStore = VaultAssetStore(this)
         clipboard.addPrimaryClipChangedListener(listener)
     }
 
@@ -57,12 +62,46 @@ class ClipboardMonitorService : Service() {
         val text = item.text?.toString()
         scope.launch {
             when {
-                uri != null -> repository.capture(
-                    content = uri.toString(),
-                    isFile = true,
-                    mimeType = clip.description?.getMimeType(0)
+                uri != null -> {
+                    val mimeType = clip.description?.getMimeType(0)
+                    try {
+                        val asset = assetStore.importUri(uri, mimeType)
+                        repository.capture(
+                            ClipCaptureRequest(
+                                content = uri.toString(),
+                                contentType = if (mimeType?.startsWith("image/") == true) ClipContentType.IMAGE else ClipContentType.FILE,
+                                isFile = true,
+                                mimeType = mimeType,
+                                localAssetPath = asset.relativePath,
+                                sourceUri = uri.toString(),
+                                captureMethod = ClipCaptureMethod.CLIPBOARD,
+                                sourceConfidence = ClipSourceConfidence.UNKNOWN
+                            )
+                        )
+                    } catch (_: Exception) {
+                        // URI permission may be temporary or unavailable. Keep metadata,
+                        // but never pretend the asset was persisted successfully.
+                        repository.capture(
+                            ClipCaptureRequest(
+                                content = uri.toString(),
+                                contentType = if (mimeType?.startsWith("image/") == true) ClipContentType.IMAGE else ClipContentType.FILE,
+                                isFile = true,
+                                mimeType = mimeType,
+                                sourceUri = uri.toString(),
+                                captureMethod = ClipCaptureMethod.CLIPBOARD,
+                                sourceConfidence = ClipSourceConfidence.UNKNOWN
+                            )
+                        )
+                    }
+                }
+                !text.isNullOrBlank() -> repository.capture(
+                    ClipCaptureRequest(
+                        content = text,
+                        contentType = ClipContentType.TEXT,
+                        captureMethod = ClipCaptureMethod.CLIPBOARD,
+                        sourceConfidence = ClipSourceConfidence.UNKNOWN
+                    )
                 )
-                !text.isNullOrBlank() -> repository.capture(content = text)
             }
         }
     }
