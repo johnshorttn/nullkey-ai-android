@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.clipboard.VaultAssetStore
+import com.nullverse.nullkeyai.sync.DeviceIdentity
 import com.nullverse.nullkeyai.db.NullKeyDatabase
 import com.nullverse.nullkeyai.ime.ClipAdapter
 import kotlinx.coroutines.flow.collectLatest
@@ -24,7 +25,7 @@ class TrashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_trash)
         val db = NullKeyDatabase.get(this)
-        repository = ClipRepository(db.clipDao(), VaultAssetStore(this), db.tagDao())
+        repository = ClipRepository(db.clipDao(), VaultAssetStore(this), db.tagDao(), deviceIdentity = DeviceIdentity.from(this))
         val empty = findViewById<TextView>(R.id.trash_empty)
         adapter = ClipAdapter { clip ->
             AlertDialog.Builder(this)
