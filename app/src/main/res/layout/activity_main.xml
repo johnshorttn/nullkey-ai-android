@@ -143,6 +143,34 @@
             android:progressTint="@color/neon"
             android:thumbTint="@color/neon" />
 
+        <TextView
+            android:id="@+id/privacy_settings_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/privacy_settings_title"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <CheckBox
+            android:id="@+id/incognito_enabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:buttonTint="@color/neon"
+            android:checked="false"
+            android:text="@string/incognito_enabled"
+            android:textColor="@color/text_primary" />
+
+        <CheckBox
+            android:id="@+id/developer_options_enabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:buttonTint="@color/neon"
+            android:checked="false"
+            android:text="@string/developer_options_enabled"
+            android:textColor="@color/text_primary" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -180,7 +208,8 @@
             android:id="@+id/btn_clipboard_lab"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/clipboard_lab_title" />
+            android:text="@string/clipboard_lab_title"
+            android:visibility="gone" />
 
         <LinearLayout
             android:layout_width="match_parent"

@@ -118,6 +118,41 @@ class NullKeyKeyboardViewTest {
         KeyboardEnginePreferences.setHeightScale(context, 1.0f)
         assertTrue(tallHeight > defaultHeight)
     }
+
+    @Test
+    fun talkBackVirtualViewsExposeSpokenKeyLabels() {
+        val view = layoutView()
+        val provider = view.accessibilityNodeProvider
+        assertTrue(provider != null)
+        val q = view.keyWithLabel("q")
+        val qNode = requireNotNull(provider!!.createAccessibilityNodeInfo(q.id))
+        assertEquals("q", qNode.contentDescription.toString())
+        val space = view.keyWithLabel("space")
+        val spaceNode = requireNotNull(provider.createAccessibilityNodeInfo(space.id))
+        assertEquals("Space", spaceNode.contentDescription.toString())
+        val delete = view.keyWithLabel("⌫")
+        val deleteNode = requireNotNull(provider.createAccessibilityNodeInfo(delete.id))
+        assertEquals("Delete", deleteNode.contentDescription.toString())
+        val shift = view.keyWithLabel("⇧")
+        val shiftNode = requireNotNull(provider.createAccessibilityNodeInfo(shift.id))
+        assertEquals("Shift", shiftNode.contentDescription.toString())
+    }
+
+    @Test
+    fun talkBackVirtualClickCommitsTheKey() {
+        val view = layoutView()
+        val codes = mutableListOf<Int>()
+        view.listener = object : NullKeyKeyboardView.Listener {
+            override fun onKey(code: Int) {
+                codes += code
+            }
+        }
+        val q = view.keyWithLabel("q")
+        val provider = view.accessibilityNodeProvider
+        assertTrue(provider != null)
+        assertTrue(provider!!.performAction(q.id, android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK, null))
+        assertEquals(listOf('q'.code), codes)
+    }
 }
 
 @RunWith(RobolectricTestRunner::class)
@@ -131,5 +166,29 @@ class KeyboardEnginePreferencesTest {
         assertEquals(false, KeyboardEnginePreferences.useCustomEngine(context))
         KeyboardEnginePreferences.setUseCustomEngine(context, true)
         assertTrue(KeyboardEnginePreferences.useCustomEngine(context))
+    }
+
+    @Test
+    fun incognitoDefaultsOffAndBlocksLearning() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.getSharedPreferences(KeyboardEnginePreferences.PREFS, Context.MODE_PRIVATE).edit().clear().commit()
+        assertEquals(false, KeyboardEnginePreferences.incognitoEnabled(context))
+        assertTrue(KeyboardEnginePreferences.shouldLearn(context))
+        KeyboardEnginePreferences.setIncognitoEnabled(context, true)
+        assertTrue(KeyboardEnginePreferences.incognitoEnabled(context))
+        assertEquals(false, KeyboardEnginePreferences.shouldLearn(context))
+        KeyboardEnginePreferences.setIncognitoEnabled(context, false)
+        assertTrue(KeyboardEnginePreferences.shouldLearn(context))
+    }
+
+    @Test
+    fun developerOptionsDefaultOffAndPersist() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.getSharedPreferences(KeyboardEnginePreferences.PREFS, Context.MODE_PRIVATE).edit().clear().commit()
+        assertEquals(false, KeyboardEnginePreferences.developerOptionsEnabled(context))
+        KeyboardEnginePreferences.setDeveloperOptionsEnabled(context, true)
+        assertTrue(KeyboardEnginePreferences.developerOptionsEnabled(context))
+        KeyboardEnginePreferences.setDeveloperOptionsEnabled(context, false)
+        assertEquals(false, KeyboardEnginePreferences.developerOptionsEnabled(context))
     }
 }

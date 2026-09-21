@@ -162,7 +162,13 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         if (pendingSwipeCommit != null) return
         val results = suggester.suggest(currentWord.toString(), suggestionViews.size)
         suggestionViews.forEachIndexed { index, view ->
-            view.text = results.getOrNull(index).orEmpty()
+            val word = results.getOrNull(index).orEmpty()
+            view.text = word
+            view.contentDescription = if (word.isBlank()) {
+                getString(R.string.suggestion_empty, index + 1)
+            } else {
+                getString(R.string.suggestion_word, word)
+            }
         }
     }
 
@@ -175,14 +181,14 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
             if (word != swipeWord) {
                 ic.deleteSurroundingText(swipeWord.length + 1, 0)
                 ic.commitText("$word ", 1)
-                suggester.learn(word)
+                learnTyped(word)
                 pendingSwipeCommit = word
             }
             return
         }
         if (currentWord.isNotEmpty()) ic.deleteSurroundingText(currentWord.length, 0)
         ic.commitText("$word ", 1)
-        suggester.learn(word)
+        learnTyped(word)
         currentWord.setLength(0)
         updateSuggestions()
     }
@@ -191,21 +197,31 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         val ranked = suggester.suggestGesture(path, suggestionViews.size)
         val resolved = SwipeCommit.resolve(path, ranked) ?: return
         currentInputConnection?.commitText("${resolved.committed} ", 1)
-        suggester.learn(ranked.first())
+        learnTyped(ranked.first())
         currentWord.setLength(0)
         pendingSwipeCommit = resolved.committed
         suggestionViews.forEachIndexed { index, view ->
-            view.text = resolved.suggestions.getOrNull(index).orEmpty()
+            val word = resolved.suggestions.getOrNull(index).orEmpty()
+            view.text = word
+            view.contentDescription = if (word.isBlank()) {
+                getString(R.string.suggestion_empty, index + 1)
+            } else {
+                getString(R.string.suggestion_word, word)
+            }
         }
     }
 
     private fun flushWord() {
         pendingSwipeCommit = null
         if (currentWord.isNotEmpty()) {
-            suggester.learn(currentWord.toString())
+            learnTyped(currentWord.toString())
             currentWord.setLength(0)
         }
         updateSuggestions()
+    }
+
+    private fun learnTyped(word: String) {
+        suggester.learn(word, enabled = KeyboardEnginePreferences.shouldLearn(this))
     }
     // endregion
 

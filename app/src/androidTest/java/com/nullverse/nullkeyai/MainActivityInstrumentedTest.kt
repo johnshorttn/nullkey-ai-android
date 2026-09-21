@@ -11,6 +11,8 @@ import androidx.test.espresso.matcher.ViewMatchers.isChecked
 import androidx.test.espresso.matcher.ViewMatchers.isNotChecked
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.scrollTo
+import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
+import androidx.test.espresso.matcher.ViewMatchers.Visibility
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.nullverse.nullkeyai.ui.MainActivity
@@ -46,6 +48,9 @@ class MainActivityInstrumentedTest {
             onView(withId(R.id.swipe_typing_enabled)).perform(scrollTo()).check(matches(isDisplayed()))
             onView(withId(R.id.search)).perform(scrollTo()).check(matches(isDisplayed()))
             onView(withId(R.id.files_only)).perform(scrollTo()).check(matches(isDisplayed()))
+            onView(withId(R.id.incognito_enabled)).perform(scrollTo()).check(matches(isDisplayed()))
+            onView(withId(R.id.developer_options_enabled)).perform(scrollTo()).check(matches(isDisplayed()))
+            onView(withId(R.id.btn_clipboard_lab)).check(matches(withEffectiveVisibility(Visibility.GONE)))
         }
     }
 
@@ -100,6 +105,27 @@ class MainActivityInstrumentedTest {
         KeyboardEnginePreferences.setThemeId(context, KeyboardThemeId.DARK_VAULT)
         KeyboardEnginePreferences.setHapticsEnabled(context, true)
         KeyboardEnginePreferences.setSoundEnabled(context, false)
+    }
+
+    @Test
+    fun incognitoAndDeveloperOptionsPersistAndRevealClipboardLab() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        KeyboardEnginePreferences.setIncognitoEnabled(context, false)
+        KeyboardEnginePreferences.setDeveloperOptionsEnabled(context, false)
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onView(withId(R.id.incognito_enabled)).perform(scrollTo()).check(matches(isNotChecked()))
+            onView(withId(R.id.incognito_enabled)).perform(click())
+            onView(withId(R.id.incognito_enabled)).check(matches(isChecked()))
+            org.junit.Assert.assertTrue(KeyboardEnginePreferences.incognitoEnabled(context))
+            org.junit.Assert.assertFalse(KeyboardEnginePreferences.shouldLearn(context))
+            onView(withId(R.id.btn_clipboard_lab)).check(matches(withEffectiveVisibility(Visibility.GONE)))
+            onView(withId(R.id.developer_options_enabled)).perform(scrollTo()).perform(click())
+            onView(withId(R.id.developer_options_enabled)).check(matches(isChecked()))
+            onView(withId(R.id.btn_clipboard_lab)).perform(scrollTo()).check(matches(isDisplayed()))
+            org.junit.Assert.assertTrue(KeyboardEnginePreferences.developerOptionsEnabled(context))
+        }
+        KeyboardEnginePreferences.setIncognitoEnabled(context, false)
+        KeyboardEnginePreferences.setDeveloperOptionsEnabled(context, false)
     }
 
     @Test

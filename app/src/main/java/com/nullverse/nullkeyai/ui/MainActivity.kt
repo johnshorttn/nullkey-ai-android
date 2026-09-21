@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
+import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -162,6 +163,28 @@ class MainActivity : AppCompatActivity() {
             }
         }
         bindKeyboardInputSettings()
+        findViewById<CheckBox>(R.id.incognito_enabled).apply {
+            isChecked = KeyboardEnginePreferences.incognitoEnabled(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                KeyboardEnginePreferences.setIncognitoEnabled(this@MainActivity, checked)
+            }
+        }
+        val labButton = findViewById<Button>(R.id.btn_clipboard_lab)
+        fun refreshDeveloperTools() {
+            labButton.visibility = if (KeyboardEnginePreferences.developerOptionsEnabled(this)) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+        }
+        findViewById<CheckBox>(R.id.developer_options_enabled).apply {
+            isChecked = KeyboardEnginePreferences.developerOptionsEnabled(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                KeyboardEnginePreferences.setDeveloperOptionsEnabled(this@MainActivity, checked)
+                refreshDeveloperTools()
+            }
+        }
+        refreshDeveloperTools()
         bindSwipeActionButton(R.id.btn_swipe_left_action, true)
         bindSwipeActionButton(R.id.btn_swipe_right_action, false)
         findViewById<Button>(R.id.btn_start_monitor).setOnClickListener {

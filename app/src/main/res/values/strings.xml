@@ -110,4 +110,24 @@
     <string name="key_sound_enabled">Key sound</string>
     <string name="long_press_label">Long-press: %1$d ms</string>
     <string name="long_press_duration">Long-press duration</string>
+
+    <string name="incognito_enabled">Incognito (don’t learn words)</string>
+    <string name="developer_options_enabled">Developer options</string>
+    <string name="privacy_settings_title">Privacy and developer</string>
+    <string name="key_a11y_space">Space</string>
+    <string name="key_a11y_shift">Shift</string>
+    <string name="key_a11y_shift_on">Shift on</string>
+    <string name="key_a11y_caps_lock">Caps lock</string>
+    <string name="key_a11y_delete">Delete</string>
+    <string name="key_a11y_enter">Enter</string>
+    <string name="key_a11y_symbols">Symbols</string>
+    <string name="key_a11y_letters">Letters</string>
+    <string name="key_a11y_comma">Comma</string>
+    <string name="key_a11y_period">Period</string>
+    <string name="key_a11y_apostrophe">Apostrophe</string>
+    <string name="key_a11y_quote">Quotation mark</string>
+    <string name="key_a11y_incognito">Incognito. Typed words will not be learned.</string>
+    <string name="suggestion_empty">Suggestion %1$d, empty</string>
+    <string name="suggestion_word">Suggestion %1$s</string>
+    <string name="paste_clip">Paste clip: %1$s</string>
 </resources>

@@ -4,10 +4,11 @@ import android.content.Context
 import android.content.res.Configuration
 
 /**
- * IME renderer and input preferences. The custom engine is the default; the
- * legacy KeyboardView remains available as a fallback while the engine is
- * developed. Theme, height, haptics, sound, and long-press live in the same
- * local SharedPreferences file — no network, no account.
+ * IME renderer, input, and privacy/developer preferences. The custom engine is
+ * the default; the legacy KeyboardView remains available as a fallback while
+ * the engine is developed. Theme, height, haptics, sound, long-press, incognito,
+ * and developer options live in the same local SharedPreferences file — no
+ * network, no account.
  */
 object KeyboardEnginePreferences {
     const val PREFS = "nullkey_ime"
@@ -18,6 +19,8 @@ object KeyboardEnginePreferences {
     const val KEY_HAPTICS = "haptics_enabled"
     const val KEY_SOUND = "key_sound_enabled"
     const val KEY_LONG_PRESS_MS = "long_press_ms"
+    const val KEY_INCOGNITO = "incognito_enabled"
+    const val KEY_DEVELOPER_OPTIONS = "developer_options_enabled"
 
     fun useCustomEngine(context: Context): Boolean =
         prefs(context).getBoolean(KEY_USE_CUSTOM_ENGINE, true)
@@ -80,6 +83,23 @@ object KeyboardEnginePreferences {
         prefs(context).edit()
             .putInt(KEY_LONG_PRESS_MS, KeyboardInputSettings.clampLongPressMs(ms))
             .apply()
+    }
+
+    fun incognitoEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_INCOGNITO, false)
+
+    fun setIncognitoEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_INCOGNITO, enabled).apply()
+    }
+
+    /** Learning is on unless the user opts into incognito / no-learn. */
+    fun shouldLearn(context: Context): Boolean = !incognitoEnabled(context)
+
+    fun developerOptionsEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_DEVELOPER_OPTIONS, false)
+
+    fun setDeveloperOptionsEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_DEVELOPER_OPTIONS, enabled).apply()
     }
 
     private fun prefs(context: Context) =

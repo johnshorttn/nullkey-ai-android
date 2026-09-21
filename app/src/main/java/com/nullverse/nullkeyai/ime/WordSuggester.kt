@@ -31,8 +31,13 @@ class WordSuggester private constructor(
     fun suggestGesture(path: String, max: Int = 3): List<String> =
         GestureWordRanker.rank(path, counts, max)
 
-    /** Record that [word] was used, increasing its future suggestion priority. */
-    fun learn(word: String) {
+    /**
+     * Record that [word] was used, increasing its future suggestion priority.
+     * Pass [enabled] = false for incognito / no-learn sessions so nothing is
+     * persisted. Seeded dictionary suggestions still work.
+     */
+    fun learn(word: String, enabled: Boolean = true) {
+        if (!enabled) return
         val w = word.trim().lowercase()
         if (w.length < MIN_LEARN_LENGTH || !w.all { it.isLetter() }) return
         counts[w] = (counts[w] ?: 0) + 1

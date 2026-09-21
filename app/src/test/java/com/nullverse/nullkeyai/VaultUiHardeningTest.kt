@@ -71,5 +71,9 @@ class VaultUiHardeningTest {
         assertTrue(root.findViewById<View>(R.id.haptics_enabled) != null)
         assertTrue(root.findViewById<View>(R.id.key_sound_enabled) != null)
         assertTrue(root.findViewById<View>(R.id.long_press_seek) != null)
+        assertTrue(root.findViewById<View>(R.id.incognito_enabled) != null)
+        assertTrue(root.findViewById<View>(R.id.developer_options_enabled) != null)
+        assertTrue(root.findViewById<View>(R.id.btn_clipboard_lab) != null)
+        assertEquals(View.GONE, root.findViewById<View>(R.id.btn_clipboard_lab).visibility)
     }
 }

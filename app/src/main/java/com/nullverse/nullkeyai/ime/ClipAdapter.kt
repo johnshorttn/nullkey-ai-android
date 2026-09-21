@@ -60,6 +60,10 @@ class ClipAdapter(
                 ?: ""
             val note = if (clip.notes.isNotBlank() && clip.contentType == "TEXT") " • NOTE" else ""
             meta.text = "$kind$pin$lock$note$source"
+            itemView.contentDescription = itemView.context.getString(
+                R.string.paste_clip,
+                preview.text,
+            )
             itemView.setOnClickListener { onClick(clip) }
         }
     }
