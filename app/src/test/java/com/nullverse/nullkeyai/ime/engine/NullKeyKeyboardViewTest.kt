@@ -73,6 +73,20 @@ class NullKeyKeyboardViewTest {
         tap(view, a.slot.centerX, a.slot.centerY)
         assertEquals(listOf('A'.code), codes)
     }
+
+    @Test
+    fun heightScaleMakesTheKeyboardTaller() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.getSharedPreferences(KeyboardEnginePreferences.PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
+        val defaultHeight = layoutView().measuredHeight
+        KeyboardEnginePreferences.setHeightScale(context, 1.40f)
+        val tallHeight = layoutView().measuredHeight
+        KeyboardEnginePreferences.setHeightScale(context, 1.0f)
+        assertTrue(tallHeight > defaultHeight)
+    }
 }
 
 @RunWith(RobolectricTestRunner::class)

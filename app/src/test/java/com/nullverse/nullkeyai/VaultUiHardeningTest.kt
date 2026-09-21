@@ -50,4 +50,18 @@ class VaultUiHardeningTest {
         (suggestedGroup.getChildAt(0) as Chip).performClick()
         assertTrue(added == "Personal" || added == "Coding")
     }
+
+    @Test
+    fun vaultHomeLayoutIsScrollableSoKeyboardSettingsStayReachable() {
+        val context = RuntimeEnvironment.getApplication()
+        val themed = android.view.ContextThemeWrapper(context, R.style.Theme_NullKey)
+        val root = android.view.LayoutInflater.from(themed).inflate(R.layout.activity_main, null)
+        assertTrue(root is android.widget.ScrollView)
+        assertEquals(R.id.main_scroll, root.id)
+        assertTrue(root.findViewById<View>(R.id.btn_keyboard_theme) != null)
+        assertTrue(root.findViewById<View>(R.id.keyboard_height_seek) != null)
+        assertTrue(root.findViewById<View>(R.id.haptics_enabled) != null)
+        assertTrue(root.findViewById<View>(R.id.key_sound_enabled) != null)
+        assertTrue(root.findViewById<View>(R.id.long_press_seek) != null)
+    }
 }
