@@ -28,7 +28,7 @@ interface ClipDao {
         """
         SELECT * FROM clips
         WHERE trashedAt IS NULL
-          AND (:query = '' OR content LIKE '%' || :query || '%' OR notes LIKE '%' || :query || '%' OR ocrText LIKE '%' || :query || '%' OR sourceAppLabel LIKE '%' || :query || '%' OR sourcePackage LIKE '%' || :query || '%' OR tag LIKE '%' || :query || '%')
+          AND (:query = '' OR content LIKE '%' || :query || '%' OR notes LIKE '%' || :query || '%' OR ocrText LIKE '%' || :query || '%' OR sourceAppLabel LIKE '%' || :query || '%' OR sourcePackage LIKE '%' || :query || '%' OR tag LIKE '%' || :query || '%' OR EXISTS (SELECT 1 FROM clip_tags ct INNER JOIN tags t ON t.id = ct.tagId WHERE ct.clipId = clips.id AND t.name LIKE '%' || :query || '%'))
           AND (:filesOnly = 0 OR isFile = 1)
         ORDER BY pinned DESC, createdAt DESC
         """
@@ -39,7 +39,7 @@ interface ClipDao {
         """
         SELECT * FROM clips
         WHERE trashedAt IS NULL
-          AND (:query = '' OR content LIKE '%' || :query || '%' OR notes LIKE '%' || :query || '%' OR ocrText LIKE '%' || :query || '%' OR sourceAppLabel LIKE '%' || :query || '%' OR sourcePackage LIKE '%' || :query || '%' OR tag LIKE '%' || :query || '%')
+          AND (:query = '' OR content LIKE '%' || :query || '%' OR notes LIKE '%' || :query || '%' OR ocrText LIKE '%' || :query || '%' OR sourceAppLabel LIKE '%' || :query || '%' OR sourcePackage LIKE '%' || :query || '%' OR tag LIKE '%' || :query || '%' OR EXISTS (SELECT 1 FROM clip_tags ct INNER JOIN tags t ON t.id = ct.tagId WHERE ct.clipId = clips.id AND t.name LIKE '%' || :query || '%'))
           AND (:filesOnly = 0 OR isFile = 1)
         ORDER BY pinned DESC, createdAt DESC
         """
