@@ -15,6 +15,8 @@ class ClipAdapter(
 
     private val items = mutableListOf<Clip>()
 
+    fun clipAt(position: Int): Clip? = items.getOrNull(position)
+
     fun submit(newItems: List<Clip>) {
         val diff = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
             override fun getOldListSize() = items.size
