@@ -2,7 +2,9 @@ package com.nullverse.nullkeyai
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.nullverse.nullkeyai.clipboard.ClipCaptureRequest
 import com.nullverse.nullkeyai.clipboard.ClipRepository
+import com.nullverse.nullkeyai.db.ClipContentType
 import com.nullverse.nullkeyai.db.NullKeyDatabase
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -136,5 +138,25 @@ class ClipRepositoryTest {
         repo.restore(id)
         assertEquals(listOf("Personal"), repo.tagsForClip(id).map { it.name })
         assertEquals(1, repo.searchOnce("bring me back", false).size)
+    }
+
+    @Test
+    fun setOcrText_isSearchableUntilTheClipIsProtected() = runBlocking {
+        val id = repo.capture(
+            ClipCaptureRequest(
+                content = "content://image",
+                contentType = ClipContentType.IMAGE,
+                isFile = true,
+                localAssetPath = "vault/assets/x.png",
+            )
+        )!!
+        repo.setOcrText(id, "boarding pass")
+        assertEquals(1, repo.searchOnce("boarding", false).size)
+        assertEquals("boarding pass", db.clipDao().byId(id)!!.ocrText)
+
+        val locked = db.clipDao().byId(id)!!.copy(protected = true)
+        db.clipDao().update(locked)
+        repo.setOcrText(id, "should not stick")
+        assertEquals("boarding pass", db.clipDao().byId(id)!!.ocrText)
     }
 }

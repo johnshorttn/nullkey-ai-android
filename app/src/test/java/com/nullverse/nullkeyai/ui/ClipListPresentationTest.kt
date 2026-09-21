@@ -62,6 +62,27 @@ class ClipListPresentationTest {
             )
         )
         assertEquals("hello", ClipListPresentation.preview(Clip(content = "hello"), copy))
+        assertEquals(
+            "Gate A4",
+            ClipListPresentation.preview(
+                Clip(
+                    content = "content://x",
+                    contentType = ClipContentType.IMAGE.name,
+                    ocrText = "Gate A4\nseat 12",
+                ),
+                copy,
+            )
+        )
+    }
+
+    @Test
+    fun metaMarksScannedText() {
+        val clip = Clip(
+            content = "content://x",
+            contentType = ClipContentType.IMAGE.name,
+            ocrText = "Gate A4",
+        )
+        assertEquals("Image • Scanned text", ClipListPresentation.meta(clip, copy))
     }
 
     @Test

@@ -92,6 +92,19 @@
             android:importantForAccessibility="yes"
             android:textColor="@color/neon"
             android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/suggestion_check"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/writing_check_a11y"
+            android:gravity="center"
+            android:importantForAccessibility="yes"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:text="@string/writing_check"
+            android:textColor="@color/violet"
+            android:textSize="13sp" />
     </LinearLayout>
 
     <FrameLayout

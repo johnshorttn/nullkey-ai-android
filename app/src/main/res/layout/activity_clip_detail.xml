@@ -14,6 +14,20 @@
             android:layout_height="280dp" android:layout_marginTop="16dp"
             android:adjustViewBounds="true" android:contentDescription="@string/image_preview"
             android:scaleType="centerInside" android:visibility="gone"/>
+        <Button android:id="@+id/detail_extract_text" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="12dp"
+            android:text="@string/extract_text" android:visibility="gone"/>
+        <TextView android:id="@+id/detail_ocr_status" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="8dp"
+            android:textColor="@color/slate" android:visibility="gone"/>
+        <EditText android:id="@+id/detail_ocr" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="8dp"
+            android:gravity="top" android:hint="@string/ocr_text_hint" android:inputType="textMultiLine"
+            android:minLines="3" android:textColor="@color/text_primary"
+            android:textColorHint="@color/slate" android:visibility="gone"/>
+        <Button android:id="@+id/detail_save_ocr_clip" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="@string/save_ocr_as_clip"
+            android:visibility="gone"/>
         <TextView android:id="@+id/detail_asset_status" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:layout_marginTop="8dp"
             android:textColor="@color/slate" android:visibility="gone"/>
@@ -28,6 +42,9 @@
             android:hint="@string/notes" android:minLines="3" android:gravity="top"
             android:inputType="textMultiLine" android:textColor="@color/text_primary"
             android:textColorHint="@color/slate"/>
+        <Button android:id="@+id/detail_check_writing" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="8dp"
+            android:text="@string/writing_check_button" android:visibility="gone"/>
         <TextView android:id="@+id/detail_no_tags" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:layout_marginTop="12dp"
             android:textColor="@color/violet" android:text="@string/no_tags"/>

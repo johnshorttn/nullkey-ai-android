@@ -21,7 +21,7 @@ Deleted clips may be retained in NullKey AI's Trash for up to 30 days so they ca
 
 ## OCR and language assistance
 
-On-device OCR and spelling/grammar assistance are not in this build. If a later version adds them, and if any optional feature uses an external service, that version must be disclosed here and require an explicit user choice before content is transmitted.
+Image text recognition uses a Latin-script model bundled in the app. Spelling and a small set of English writing checks use a word list bundled in the app (about 50,000 words, roughly 456 KB uncompressed). Both run on the device. This build does not request network access, so those features cannot upload images or typed text. If a future optional feature uses an external service, it must be separately disclosed and require an explicit user choice before content is transmitted.
 
 ## Backups and exports
 

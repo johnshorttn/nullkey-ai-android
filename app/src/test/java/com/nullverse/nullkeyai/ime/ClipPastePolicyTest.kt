@@ -1,6 +1,7 @@
 package com.nullverse.nullkeyai.ime
 
 import com.nullverse.nullkeyai.db.Clip
+import com.nullverse.nullkeyai.db.ClipContentType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -17,6 +18,18 @@ class ClipPastePolicyTest {
     fun blocksProtectedClipsSoCiphertextIsNotPasted() {
         val decision = ClipPastePolicy.decide(Clip(content = "nkenc:secret", protected = true))
         assertEquals(ClipPastePolicy.Decision.BlockProtected, decision)
+    }
+
+    @Test
+    fun imageClipPastesExtractedText() {
+        val decision = ClipPastePolicy.decide(
+            Clip(
+                content = "content://media/1",
+                contentType = ClipContentType.IMAGE.name,
+                ocrText = "gate A4",
+            )
+        )
+        assertEquals(ClipPastePolicy.Decision.Commit("gate A4"), decision)
     }
 
     @Test

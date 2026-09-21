@@ -10,6 +10,7 @@ Shipped on `rewrite/v2` (and open focused PRs, unmerged):
 - Vault: search, files filter, pin/protect/tag/trash, encrypted backup/restore
 - Optional clipboard monitor and consent-gated Capture Lab
 - On-device word suggestions and swipe-typing toggle
+- On-device Latin OCR for Vault images (bundled ML Kit model; no network permission) and offline English spelling/grammar hints
 - Sync **foundation** (in-memory transport only; no production hosts)
 
 Play/AAB path:
@@ -21,8 +22,7 @@ Play/AAB path:
 
 ## Not in 1.2 listing
 
-- On-device OCR / image text in Vault
-- Privacy-first spelling/grammar assistance
+- OCR beyond bundled Latin script, and grammar beyond a small offline English rule set (see [PRIVACY.md](PRIVACY.md))
 - Hosted sync, plugins, WebView settings packs
 - On-device confirmation of the minified release IME (CI checks the mapping and dex, not a release install)
 - Promoting `rewrite/v2` to `main` (issue #16)

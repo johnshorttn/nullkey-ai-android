@@ -43,6 +43,10 @@ import com.nullverse.nullkeyai.db.ClipCaptureMethod
 import com.nullverse.nullkeyai.db.ClipContentType
 import com.nullverse.nullkeyai.db.ClipSourceConfidence
 import com.nullverse.nullkeyai.diagnostics.ClipboardLabActivity
+import com.nullverse.nullkeyai.ocr.MlKitOnDeviceTextRecognizer
+import com.nullverse.nullkeyai.ocr.OcrBitmaps
+import com.nullverse.nullkeyai.ocr.OcrExtractResult
+import com.nullverse.nullkeyai.ocr.VaultImageOcr
 import com.nullverse.nullkeyai.security.VaultCrypto
 import com.nullverse.nullkeyai.sync.DeviceIdentity
 import com.nullverse.nullkeyai.ime.ClipAdapter
@@ -99,6 +103,11 @@ class MainActivity : AppCompatActivity() {
             pendingRestorePassword = null
             if (uri != null && password != null) readSecureImport(uri, password)
             else password?.fill('\u0000')
+        }
+
+    private val scanImage =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) importImageAndExtract(uri)
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -208,6 +217,9 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.monitor_stopped, Toast.LENGTH_SHORT).show()
         }
         findViewById<Button>(R.id.btn_capture).setOnClickListener { captureSystemClip() }
+        findViewById<Button>(R.id.btn_scan_image).setOnClickListener {
+            scanImage.launch(arrayOf("image/*"))
+        }
         findViewById<Button>(R.id.btn_about_support).setOnClickListener {
             startActivity(Intent(this, AboutSupportActivity::class.java))
         }
@@ -468,6 +480,70 @@ class MainActivity : AppCompatActivity() {
             if (captured != null) {
                 Toast.makeText(this@MainActivity, R.string.capture_ok, Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    private fun importImageAndExtract(uri: android.net.Uri) {
+        lifecycleScope.launch {
+            val mime = contentResolver.getType(uri) ?: "image/*"
+            if (!mime.startsWith("image/")) {
+                Toast.makeText(this@MainActivity, R.string.scan_not_image, Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            Toast.makeText(this@MainActivity, R.string.extract_text_working, Toast.LENGTH_SHORT).show()
+            val assetPath = withContext(Dispatchers.IO) {
+                runCatching { VaultAssetStore(this@MainActivity).importUri(uri, mime).relativePath }.getOrNull()
+            }
+            if (assetPath == null) {
+                Toast.makeText(this@MainActivity, R.string.capture_asset_failed, Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            val id = repository.capture(
+                ClipCaptureRequest(
+                    content = uri.toString(),
+                    contentType = ClipContentType.IMAGE,
+                    isFile = true,
+                    mimeType = mime,
+                    localAssetPath = assetPath,
+                    sourceUri = uri.toString(),
+                    captureMethod = ClipCaptureMethod.OCR,
+                    sourceConfidence = ClipSourceConfidence.INFERRED,
+                )
+            )
+            if (id == null) {
+                Toast.makeText(this@MainActivity, R.string.capture_failed, Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            val asset = VaultAssetStore(this@MainActivity).resolve(assetPath)
+            val result = if (asset == null) {
+                OcrExtractResult.Failed
+            } else {
+                withContext(Dispatchers.IO) {
+                    val bitmap = OcrBitmaps.decodeFile(asset.absolutePath)
+                    if (bitmap == null) {
+                        OcrExtractResult.Failed
+                    } else {
+                        try {
+                            VaultImageOcr(MlKitOnDeviceTextRecognizer(this@MainActivity)).extract(bitmap)
+                        } finally {
+                            bitmap.recycle()
+                        }
+                    }
+                }
+            }
+            when (result) {
+                is OcrExtractResult.Text -> repository.setOcrText(id, result.text)
+                OcrExtractResult.NoText ->
+                    Toast.makeText(this@MainActivity, R.string.extract_text_empty, Toast.LENGTH_LONG).show()
+                OcrExtractResult.Unavailable ->
+                    Toast.makeText(this@MainActivity, R.string.extract_text_unavailable, Toast.LENGTH_LONG).show()
+                OcrExtractResult.Failed ->
+                    Toast.makeText(this@MainActivity, R.string.extract_text_failed, Toast.LENGTH_LONG).show()
+            }
+            startActivity(
+                Intent(this@MainActivity, ClipDetailActivity::class.java)
+                    .putExtra(ClipDetailActivity.EXTRA_CLIP_ID, id)
+            )
         }
     }
 

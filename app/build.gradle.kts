@@ -158,6 +158,15 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.activity:activity-ktx:1.9.1")
     implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
+    // Bundled Latin OCR model (libmlkit_google_ocr_pipeline.so). The Clearcut
+    // uploader is excluded so ML Kit telemetry has no network backend. The
+    // manifest also strips INTERNET and ACCESS_NETWORK_STATE if a library
+    // tries to merge them. Do not switch this to the unbundled Play Services
+    // model; that path downloads weights at runtime.
+    implementation("com.google.mlkit:text-recognition:16.0.1") {
+        exclude(group = "com.google.android.datatransport", module = "transport-backend-cct")
+    }
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     implementation("androidx.lifecycle:lifecycle-service:2.8.4")
 

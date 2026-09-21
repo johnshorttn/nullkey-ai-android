@@ -9,6 +9,14 @@ import android.text.TextWatcher
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.EditorInfo.TYPE_CLASS_NUMBER
+import android.view.inputmethod.EditorInfo.TYPE_CLASS_TEXT
+import android.view.inputmethod.EditorInfo.TYPE_MASK_CLASS
+import android.view.inputmethod.EditorInfo.TYPE_MASK_VARIATION
+import android.view.inputmethod.EditorInfo.TYPE_NUMBER_VARIATION_PASSWORD
+import android.view.inputmethod.EditorInfo.TYPE_TEXT_VARIATION_PASSWORD
+import android.view.inputmethod.EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+import android.view.inputmethod.EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
@@ -25,6 +33,11 @@ import com.nullverse.nullkeyai.ime.engine.KeyCodes
 import com.nullverse.nullkeyai.ime.engine.NullKeyKeyboardView
 import com.nullverse.nullkeyai.sync.DeviceIdentity
 import com.nullverse.nullkeyai.ui.VaultEmptyCopy
+import com.nullverse.nullkeyai.writing.BundledSpellingDictionary
+import com.nullverse.nullkeyai.writing.SuggestionPlan
+import com.nullverse.nullkeyai.writing.WritingAssistant
+import com.nullverse.nullkeyai.writing.WritingIssue
+import com.nullverse.nullkeyai.writing.WritingReplacement
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -38,7 +51,8 @@ import kotlinx.coroutines.withContext
  * The NullKey IME. Renders a QWERTY keyboard (with a symbols/numbers layer) plus:
  *  - a "clip vault" panel to search captured clips and tap one to paste it
  *    (with a "Files only" filter), and
- *  - a word-suggestion strip backed by an on-device [WordSuggester].
+ *  - a word-suggestion strip backed by an on-device [WordSuggester], with
+ *    offline spelling corrections when the typed token is not a completion.
  *
  * The default renderer is the custom [NullKeyKeyboardView] engine (hit-testing,
  * press/release, long-press, shift/caps, portrait/landscape layouts). The
@@ -64,6 +78,9 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private var refreshClipsJob: Job? = null
 
     private val currentWord = StringBuilder()
+    private var writing: WritingAssistant? = null
+    private var proof: ProofSession? = null
+    private var proofGeneration = 0
     private var caps = false
     private var symbolsMode = false
     private var usingEngine = true
@@ -73,6 +90,10 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         super.onCreate()
         repository = ClipRepository(NullKeyDatabase.get(this).clipDao(), deviceIdentity = DeviceIdentity.from(this))
         suggester = WordSuggester.get(this)
+        scope.launch(Dispatchers.IO) {
+            val assistant = WritingAssistant(BundledSpellingDictionary.get(this@NullKeyImeService))
+            withContext(Dispatchers.Main) { writing = assistant }
+        }
     }
 
     override fun onCreateInputView(): View {
@@ -117,6 +138,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         suggestionViews.forEachIndexed { index, view ->
             view.setOnClickListener { pickSuggestion(index) }
         }
+        root.findViewById<TextView>(R.id.suggestion_check).setOnClickListener { proofread() }
 
         searchBox.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
@@ -190,13 +212,22 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private fun resetComposition() {
         currentWord.setLength(0)
         pendingSwipeCommit = null
+        proof = null
+        proofGeneration++
         if (::suggestionViews.isInitialized) updateSuggestions()
     }
 
     // region suggestions
     private fun updateSuggestions() {
-        if (pendingSwipeCommit != null) return
-        val results = suggester.suggest(currentWord.toString(), suggestionViews.size)
+        if (pendingSwipeCommit != null || proof != null) return
+        val typed = currentWord.toString()
+        val completions = suggester.suggest(typed, suggestionViews.size)
+        val spelling = if (completions.isEmpty()) {
+            writing?.suggestionsFor(typed, suggestionViews.size).orEmpty()
+        } else {
+            emptyList()
+        }
+        val results = SuggestionPlan.forTypedWord(typed, completions, spelling, suggestionViews.size)
         suggestionViews.forEachIndexed { index, view ->
             val word = results.getOrNull(index).orEmpty()
             view.text = word
@@ -209,6 +240,12 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     private fun pickSuggestion(index: Int) {
+        val session = proof
+        if (session != null) {
+            val suggestion = session.suggestions.getOrNull(index) ?: return
+            applyProof(session, suggestion)
+            return
+        }
         val word = suggestionViews.getOrNull(index)?.text?.toString().orEmpty()
         if (word.isBlank()) return
         val ic = currentInputConnection ?: return
@@ -259,6 +296,110 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private fun learnTyped(word: String) {
         suggester.learn(word, enabled = KeyboardEnginePreferences.shouldLearn(this))
     }
+
+    private fun proofread() {
+        if (isSensitiveField()) {
+            Toast.makeText(this, R.string.writing_skipped_password, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val ic = currentInputConnection
+        if (ic == null) {
+            Toast.makeText(this, R.string.writing_nothing_to_check, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val selected = ic.getSelectedText(0)?.toString()
+        val (source, kind) = when {
+            !selected.isNullOrEmpty() -> selected to ProofKind.SELECTION
+            currentWord.isNotEmpty() -> currentWord.toString() to ProofKind.CURRENT_WORD
+            else -> {
+                val before = ic.getTextBeforeCursor(400, 0)?.toString().orEmpty()
+                if (before.isBlank()) {
+                    Toast.makeText(this, R.string.writing_nothing_to_check, Toast.LENGTH_SHORT).show()
+                    return
+                }
+                before to ProofKind.BEFORE_CURSOR
+            }
+        }
+        val generation = ++proofGeneration
+        scope.launch {
+            val assistant = writing ?: withContext(Dispatchers.IO) {
+                WritingAssistant(BundledSpellingDictionary.get(this@NullKeyImeService))
+            }.also { loaded ->
+                if (generation == proofGeneration) writing = loaded
+            }
+            if (generation != proofGeneration) return@launch
+            val issue = assistant.review(source).firstOrNull { it.suggestions.isNotEmpty() }
+            if (issue == null) {
+                proof = null
+                updateSuggestions()
+                Toast.makeText(this@NullKeyImeService, R.string.writing_no_issues, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            proof = ProofSession(source, issue, issue.suggestions.take(suggestionViews.size), kind)
+            pendingSwipeCommit = null
+            suggestionViews.forEachIndexed { index, view ->
+                val suggestion = proof?.suggestions?.getOrNull(index)
+                val label = when {
+                    suggestion == null -> ""
+                    suggestion.isEmpty() -> getString(R.string.writing_delete_repeat)
+                    else -> suggestion
+                }
+                view.text = label
+                view.contentDescription = if (label.isBlank()) {
+                    getString(R.string.suggestion_empty, index + 1)
+                } else {
+                    getString(R.string.suggestion_word, label)
+                }
+            }
+        }
+    }
+
+    private fun applyProof(session: ProofSession, suggestion: String) {
+        val ic = currentInputConnection ?: return
+        val revised = WritingReplacement.apply(session.source, session.issue, suggestion)
+        when (session.kind) {
+            ProofKind.SELECTION -> {
+                if (ic.getSelectedText(0)?.toString() != session.source) return
+                ic.commitText(revised, 1)
+            }
+            ProofKind.CURRENT_WORD -> {
+                if (currentWord.toString() != session.source) return
+                ic.deleteSurroundingText(currentWord.length, 0)
+                ic.commitText("$revised ", 1)
+                if (revised.isNotBlank()) learnTyped(revised)
+                currentWord.setLength(0)
+            }
+            ProofKind.BEFORE_CURSOR -> {
+                val before = ic.getTextBeforeCursor(session.source.length, 0)?.toString()
+                if (before != session.source) return
+                ic.deleteSurroundingText(session.source.length, 0)
+                ic.commitText(revised, 1)
+            }
+        }
+        proof = null
+        updateSuggestions()
+    }
+
+    private fun isSensitiveField(): Boolean {
+        val type = currentInputEditorInfo?.inputType ?: return false
+        val variation = type and TYPE_MASK_VARIATION
+        return when (type and TYPE_MASK_CLASS) {
+            TYPE_CLASS_TEXT -> variation == TYPE_TEXT_VARIATION_PASSWORD ||
+                variation == TYPE_TEXT_VARIATION_WEB_PASSWORD ||
+                variation == TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+            TYPE_CLASS_NUMBER -> variation == TYPE_NUMBER_VARIATION_PASSWORD
+            else -> false
+        }
+    }
+
+    private data class ProofSession(
+        val source: String,
+        val issue: WritingIssue,
+        val suggestions: List<String>,
+        val kind: ProofKind,
+    )
+
+    private enum class ProofKind { SELECTION, CURRENT_WORD, BEFORE_CURSOR }
     // endregion
 
     // region KeyboardView.OnKeyboardActionListener
@@ -269,6 +410,10 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private fun handleKey(primaryCode: Int, alreadyCased: Boolean) {
         val ic = currentInputConnection ?: return
         pendingSwipeCommit = null
+        val hadProof = proof != null
+        proof = null
+        proofGeneration++
+        if (hadProof) updateSuggestions()
         when (primaryCode) {
             KeyCodes.DELETE -> {
                 ic.deleteSurroundingText(1, 0)

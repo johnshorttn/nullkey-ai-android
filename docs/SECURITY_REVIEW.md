@@ -27,7 +27,7 @@ Compile restore (literal `\n` in vault-swipe Kotlin/XML) is included so this bra
 
 ## Confirmed OK (no code change)
 
-- **No `INTERNET`.** Offline default holds. Sync is an in-memory / provider-agnostic interface with no production host.
+- **No `INTERNET`.** Offline default holds. Sync is an in-memory / provider-agnostic interface with no production host. Latin OCR is the bundled ML Kit pipeline; `INTERNET` and `ACCESS_NETWORK_STATE` are stripped if a library manifest merges them, and the Clearcut transport backend is excluded.
 - **IME** is `exported="true"` only with `BIND_INPUT_METHOD` (system-only bind).
 - **Clipboard monitor** is `exported="false"` with `foregroundServiceType="specialUse"` and a `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` explanation.
 - **Internal activities** (`ClipDetailActivity`, `TrashActivity`, `ClipboardLabActivity`) are `exported="false"`.
@@ -37,7 +37,7 @@ Compile restore (literal `\n` in vault-swipe Kotlin/XML) is included so this bra
 - **POST_NOTIFICATIONS** is declared and requested at runtime before the monitor is useful on API 33+.
 - **`USE_BIOMETRIC` / `USE_FINGERPRINT`** come from `androidx.biometric` for protected-clip unlock. Not network-related.
 - **PendingIntent** for the monitor notification is `FLAG_IMMUTABLE`.
-- **16 KB page size:** no JNI/native libs in this module.
+- **16 KB page size:** OCR adds `libmlkit_google_ocr_pipeline.so`. The bundled arm64 library’s ELF LOAD segments are aligned to 16 KB (`0x4000`). Re-check the shipped AAB before Play upload.
 - **Clipboard Capture Lab** uses generated tokens and restores the previous clip; it does not log existing clipboard text.
 
 ## Deferred (not blocking this slice)
@@ -75,4 +75,4 @@ Compile restore (literal `\n` in vault-swipe Kotlin/XML) is included so this bra
 
 ## Recommended next milestone for #17
 
-Do **not** claim 100%. D1 (release R8) is enabled on this tree with the residual device pass noted above. The public privacy policy URL is **https://johnshorttn.github.io/nullkey-ai-android/privacy.html** (Pages publishes [privacy.md](privacy.md) from `rewrite/v2` `/docs`). OCR/spelling stay deferred unless they can ship with no `INTERNET` permission. Promoting `rewrite/v2` to `main` (#16) stays on hold.
+Do **not** claim 100%. D1 (release R8) is enabled on this tree with the residual device pass noted above. The public privacy policy URL is **https://johnshorttn.github.io/nullkey-ai-android/privacy.html** (Pages publishes [privacy.md](privacy.md) from `rewrite/v2` `/docs`). On-device Latin OCR and offline English spelling are in this tree and still do not request `INTERNET`. Residual gaps: Latin script only, English writing checks are not a full grammar parser, and protected clips do not keep plaintext OCR. Promoting `rewrite/v2` to `main` (#16) stays on hold.

@@ -1,6 +1,7 @@
 package com.nullverse.nullkeyai.ui
 
 import android.os.Bundle
+import android.app.AlertDialog
 import android.content.Intent
 import android.widget.Button
 import android.widget.CheckBox
@@ -16,12 +17,29 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import com.nullverse.nullkeyai.R
+import com.nullverse.nullkeyai.clipboard.ClipCaptureRequest
 import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.clipboard.VaultAssetStore
+import com.nullverse.nullkeyai.db.Clip
+import com.nullverse.nullkeyai.db.ClipCaptureMethod
+import com.nullverse.nullkeyai.db.ClipContentType
+import com.nullverse.nullkeyai.db.ClipSourceConfidence
 import com.nullverse.nullkeyai.db.NullKeyDatabase
+import com.nullverse.nullkeyai.ocr.MlKitOnDeviceTextRecognizer
+import com.nullverse.nullkeyai.ocr.OcrBitmaps
+import com.nullverse.nullkeyai.ocr.OcrBlock
+import com.nullverse.nullkeyai.ocr.OcrEligibility
+import com.nullverse.nullkeyai.ocr.OcrExtractResult
+import com.nullverse.nullkeyai.ocr.VaultImageOcr
 import com.nullverse.nullkeyai.security.VaultCrypto
 import com.nullverse.nullkeyai.sync.DeviceIdentity
+import com.nullverse.nullkeyai.writing.BundledSpellingDictionary
+import com.nullverse.nullkeyai.writing.WritingAssistant
+import com.nullverse.nullkeyai.writing.WritingFixes
+import com.nullverse.nullkeyai.writing.WritingReplacement
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ClipDetailActivity : AppCompatActivity() {
     private lateinit var repository: ClipRepository
@@ -30,6 +48,8 @@ class ClipDetailActivity : AppCompatActivity() {
     private lateinit var vaultCrypto: VaultCrypto
     private var initiallyProtected = false
     private var protectedUnlocked = false
+    private var loadedContentType: String = ClipContentType.TEXT.name
+    private var editedContent: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,6 +116,8 @@ class ClipDetailActivity : AppCompatActivity() {
                 isChecked = clip.protected
                 isEnabled = !clip.protected
             }
+            loadedContentType = clip.contentType
+            bindOcrAndWriting(clip, unlocked = !clip.protected)
             refreshTags()
         }
 
@@ -111,10 +133,14 @@ class ClipDetailActivity : AppCompatActivity() {
                             // Decrypt the row first; only then persist the revealed notes as plaintext.
                             repository.setProtected(clipId, false)
                             repository.setNotes(clipId, notes)
+                            editedContent?.let { repository.setContent(clipId, it) }
+                            persistOcrField()
                         }
                         // If protection remains enabled, never write the revealed notes back to the DB.
                     } else {
                         repository.setNotes(clipId, notes)
+                        editedContent?.let { repository.setContent(clipId, it) }
+                        persistOcrField()
                         repository.setPinned(clipId, pinned)
                         if (wantsProtected) repository.setProtected(clipId, true)
                     }
@@ -185,6 +211,8 @@ class ClipDetailActivity : AppCompatActivity() {
                             isEnabled = false
                         }
                         protectedUnlocked = true
+                        loadedContentType = clip.contentType
+                        bindOcrAndWriting(clip, unlocked = true)
                         findViewById<CheckBox>(R.id.detail_protected).isEnabled = true
                         findViewById<Button>(R.id.detail_unlock).visibility = View.GONE
                         val asset = assetStore.resolve(clip.localAssetPath)
@@ -214,6 +242,174 @@ class ClipDetailActivity : AppCompatActivity() {
                 .setAllowedAuthenticators(authenticators)
                 .build()
         )
+    }
+
+    private fun bindOcrAndWriting(clip: Clip, unlocked: Boolean) {
+        val extract = findViewById<Button>(R.id.detail_extract_text)
+        val status = findViewById<TextView>(R.id.detail_ocr_status)
+        val ocrField = findViewById<EditText>(R.id.detail_ocr)
+        val saveText = findViewById<Button>(R.id.detail_save_ocr_clip)
+        val check = findViewById<Button>(R.id.detail_check_writing)
+        val asset = assetStore.resolve(clip.localAssetPath)
+        val block = OcrEligibility.blockReason(
+            contentType = clip.contentType,
+            hasReadableAsset = asset != null,
+            protected = clip.protected,
+            unlocked = unlocked,
+        )
+        extract.visibility = if (block == null) View.VISIBLE else View.GONE
+        extract.setOnClickListener {
+            if (asset == null) return@setOnClickListener
+            extractText(clip, asset, extract, status, ocrField, saveText)
+        }
+        val stored = clip.ocrText?.takeIf { it.isNotBlank() && !clip.protected }
+        if (stored != null) {
+            ocrField.setText(stored)
+            ocrField.visibility = View.VISIBLE
+            saveText.visibility = View.VISIBLE
+            status.visibility = View.VISIBLE
+            status.setText(R.string.ocr_review_hint)
+        }
+        saveText.setOnClickListener { saveOcrAsTextClip(ocrField.text?.toString().orEmpty()) }
+        val canCheck = when (clip.contentType) {
+            ClipContentType.TEXT.name -> !clip.protected || unlocked
+            ClipContentType.IMAGE.name -> block == null || stored != null || ocrField.visibility == View.VISIBLE
+            else -> false
+        }
+        check.visibility = if (canCheck) View.VISIBLE else View.GONE
+        check.setOnClickListener { checkWriting(ocrField) }
+        if (block == OcrBlock.MISSING_ASSET && clip.contentType == ClipContentType.IMAGE.name) {
+            status.visibility = View.VISIBLE
+            status.setText(R.string.extract_text_missing_asset)
+        }
+    }
+
+    private fun extractText(
+        clip: Clip,
+        asset: java.io.File,
+        extract: Button,
+        status: TextView,
+        ocrField: EditText,
+        saveText: Button,
+    ) {
+        extract.isEnabled = false
+        status.visibility = View.VISIBLE
+        status.setText(R.string.extract_text_working)
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                val bitmap = runCatching {
+                    if (clip.protected && vaultCrypto.isEncryptedFile(asset)) {
+                        OcrBitmaps.decodeBytes(vaultCrypto.decryptFile(asset))
+                    } else {
+                        OcrBitmaps.decodeFile(asset.absolutePath)
+                    }
+                }.getOrNull()
+                if (bitmap == null) {
+                    OcrExtractResult.Failed
+                } else {
+                    try {
+                        VaultImageOcr(MlKitOnDeviceTextRecognizer(this@ClipDetailActivity)).extract(bitmap)
+                    } finally {
+                        bitmap.recycle()
+                    }
+                }
+            }
+            extract.isEnabled = true
+            when (result) {
+                is OcrExtractResult.Text -> {
+                    ocrField.setText(result.text)
+                    ocrField.visibility = View.VISIBLE
+                    saveText.visibility = View.VISIBLE
+                    findViewById<Button>(R.id.detail_check_writing).visibility = View.VISIBLE
+                    if (OcrEligibility.persistExtractedText(clip.protected)) {
+                        repository.setOcrText(clipId, result.text)
+                        status.setText(R.string.ocr_review_hint)
+                    } else {
+                        status.setText(R.string.extract_text_not_saved_protected)
+                    }
+                }
+                OcrExtractResult.NoText -> status.setText(R.string.extract_text_empty)
+                OcrExtractResult.Unavailable -> status.setText(R.string.extract_text_unavailable)
+                OcrExtractResult.Failed -> status.setText(R.string.extract_text_failed)
+            }
+        }
+    }
+
+    private fun saveOcrAsTextClip(raw: String) {
+        val text = raw.trim()
+        if (text.isEmpty()) {
+            Toast.makeText(this, R.string.extract_text_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        lifecycleScope.launch {
+            val id = repository.capture(
+                ClipCaptureRequest(
+                    content = text,
+                    captureMethod = ClipCaptureMethod.OCR,
+                    sourceConfidence = ClipSourceConfidence.INFERRED,
+                )
+            )
+            val message = if (id != null) R.string.ocr_saved_clip else R.string.action_failed
+            Toast.makeText(this@ClipDetailActivity, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private suspend fun persistOcrField() {
+        val ocrField = findViewById<EditText>(R.id.detail_ocr)
+        if (ocrField.visibility != View.VISIBLE) return
+        repository.setOcrText(clipId, ocrField.text?.toString())
+    }
+
+    private fun checkWriting(ocrField: EditText) {
+        val source = when {
+            loadedContentType == ClipContentType.IMAGE.name && ocrField.visibility == View.VISIBLE ->
+                ocrField.text?.toString().orEmpty()
+            loadedContentType == ClipContentType.TEXT.name && (!initiallyProtected || protectedUnlocked) ->
+                editedContent ?: findViewById<TextView>(R.id.detail_content).text?.toString().orEmpty()
+            else -> {
+                Toast.makeText(this, R.string.writing_nothing_to_check, Toast.LENGTH_SHORT).show()
+                return
+            }
+        }
+        if (source.isBlank() || source == getString(R.string.protected_clip)) {
+            Toast.makeText(this, R.string.writing_nothing_to_check, Toast.LENGTH_SHORT).show()
+            return
+        }
+        lifecycleScope.launch {
+            val assistant = withContext(Dispatchers.IO) {
+                WritingAssistant(BundledSpellingDictionary.get(this@ClipDetailActivity))
+            }
+            val fixes = WritingFixes.from(source, assistant.review(source))
+            if (fixes.isEmpty()) {
+                Toast.makeText(this@ClipDetailActivity, R.string.writing_no_issues, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            AlertDialog.Builder(this@ClipDetailActivity)
+                .setTitle(R.string.writing_check_button)
+                .setItems(fixes.map { it.label }.toTypedArray()) { _, which ->
+                    val fix = fixes[which]
+                    val revised = WritingReplacement.apply(source, fix.issue, fix.suggestion)
+                    applyWritingRevision(revised, ocrField)
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+    }
+
+    private fun applyWritingRevision(revised: String, ocrField: EditText) {
+        if (loadedContentType == ClipContentType.IMAGE.name) {
+            ocrField.setText(revised)
+            if (!initiallyProtected) {
+                lifecycleScope.launch { repository.setOcrText(clipId, revised) }
+            }
+        } else {
+            findViewById<TextView>(R.id.detail_content).text = revised
+            editedContent = revised
+            if (!initiallyProtected) {
+                lifecycleScope.launch { repository.setContent(clipId, revised) }
+            }
+        }
+        Toast.makeText(this, R.string.writing_applied, Toast.LENGTH_SHORT).show()
     }
 
     private fun launchExternal(intent: Intent) {
