@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.nullverse.nullkeyai.BuildConfig
 import com.nullverse.nullkeyai.R
 
 class AboutSupportActivity : AppCompatActivity() {
@@ -16,7 +15,14 @@ class AboutSupportActivity : AppCompatActivity() {
         SystemBarInsets.applyToActivity(this)
 
         findViewById<TextView>(R.id.about_version).text =
-            getString(R.string.about_version_format, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)
+            getString(
+                R.string.about_version_format,
+                packageManager.getPackageInfo(packageName, 0).versionName ?: "unknown",
+                if (android.os.Build.VERSION.SDK_INT >= 28)
+                    packageManager.getPackageInfo(packageName, 0).longVersionCode
+                else
+                    @Suppress("DEPRECATION") packageManager.getPackageInfo(packageName, 0).versionCode.toLong()
+            )
 
         bind(R.id.btn_privacy, PRIVACY_URL)
         bind(R.id.btn_support, SUPPORT_URL)
