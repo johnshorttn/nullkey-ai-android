@@ -108,6 +108,13 @@ abstract class NullKeyDatabase : RoomDatabase() {
                 INSTANCE ?: builder(context).build().also { INSTANCE = it }
             }
 
+        internal fun resetInstanceForTests() {
+            synchronized(this) {
+                INSTANCE?.close()
+                INSTANCE = null
+            }
+        }
+
         fun builder(context: Context, name: String = "nullkey.db") =
             Room.databaseBuilder(context.applicationContext, NullKeyDatabase::class.java, name)
                 .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
