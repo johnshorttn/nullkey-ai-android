@@ -245,7 +245,13 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     override fun swipeUp() {}
     // endregion
 
+    override fun onFinishInputView(finishingInput: Boolean) {
+        if (::keyboardEngineView.isInitialized) keyboardEngineView.resetEngine()
+        super.onFinishInputView(finishingInput)
+    }
+
     override fun onDestroy() {
+        if (::keyboardEngineView.isInitialized) keyboardEngineView.resetEngine()
         scope.cancel()
         super.onDestroy()
     }
