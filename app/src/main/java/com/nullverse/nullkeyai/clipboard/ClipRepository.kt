@@ -101,7 +101,10 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
         if (isProtected) {
             clip.localAssetPath?.let { path ->
                 assetStore?.resolve(path)?.let { file ->
-                    if (!vaultCrypto.isEncryptedFile(file)) vaultCrypto.encryptFileInPlace(file)
+                    if (!vaultCrypto.isEncryptedFile(file)) {
+                        val encrypted = vaultCrypto.encryptFileBytes(file.readBytes())
+                        assetStore.replaceAtomically(file, encrypted, ".encpart")
+                    }
                 }
             }
             dao.setProtectionPayload(
@@ -115,12 +118,7 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
                 assetStore?.resolve(path)?.let { file ->
                     if (vaultCrypto.isEncryptedFile(file)) {
                         val plain = vaultCrypto.decryptFile(file)
-                        val temp = java.io.File(file.parentFile, file.name + ".decpart")
-                        temp.writeBytes(plain)
-                        if (!temp.renameTo(file)) {
-                            temp.delete()
-                            throw IllegalStateException("Unable to finalize decrypted Vault asset")
-                        }
+                        assetStore.replaceAtomically(file, plain, ".decpart")
                     }
                 }
             }
