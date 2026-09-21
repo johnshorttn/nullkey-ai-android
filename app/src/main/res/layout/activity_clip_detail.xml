@@ -17,6 +17,9 @@
         <TextView android:id="@+id/detail_asset_status" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:layout_marginTop="8dp"
             android:textColor="@color/slate" android:visibility="gone"/>
+        <Button android:id="@+id/detail_unlock" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="12dp"
+            android:text="@string/unlock_protected" android:visibility="gone"/>
         <TextView android:id="@+id/detail_content" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:layout_marginTop="16dp"
             android:textColor="@color/text_primary" android:textIsSelectable="true" android:textSize="17sp"/>
