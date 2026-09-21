@@ -49,13 +49,17 @@ class VaultAssetStore(private val context: Context) {
         }
     }
 
+    fun resolve(relativePath: String?): File? {
+        if (relativePath.isNullOrBlank()) return null
+        val candidate = File(context.filesDir, relativePath).canonicalFile
+        val allowedRoot = root.canonicalFile
+        if (!candidate.path.startsWith(allowedRoot.path + File.separator)) return null
+        return candidate.takeIf { it.isFile }
+    }
+
     fun delete(relativePath: String?): Boolean {
         if (relativePath.isNullOrBlank()) return false
-        val file = File(context.filesDir, relativePath)
-        val allowedRoot = root.canonicalFile
-        val candidate = file.canonicalFile
-        if (!candidate.path.startsWith(allowedRoot.path + File.separator)) return false
-        return candidate.delete()
+        return resolve(relativePath)?.delete() ?: false
     }
 
     companion object {
