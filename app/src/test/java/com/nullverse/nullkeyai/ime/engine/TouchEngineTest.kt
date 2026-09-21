@@ -20,6 +20,7 @@ class TouchEngineTest {
         val taps = mutableListOf<String>()
         val longPresses = mutableListOf<String>()
         val repeats = mutableListOf<String>()
+        val gestures = mutableListOf<List<String>>()
         var consumeLongPress = false
 
         override fun hitTest(x: Float, y: Float): PlacedKey? = geometry.hitTest(x, y)
@@ -31,6 +32,9 @@ class TouchEngineTest {
             return consumeLongPress
         }
         override fun onRepeat(key: PlacedKey) { repeats += key.spec.label }
+        override fun onGesturePath(keys: List<PlacedKey>) {
+            gestures += keys.map { it.spec.label }
+        }
     }
 
     @Before
@@ -70,7 +74,20 @@ class TouchEngineTest {
         engine.move(1, w.slot.centerX, w.slot.centerY)
         engine.up(1, w.slot.centerX, w.slot.centerY)
         assertEquals(listOf("q", "w"), recorder.presses)
-        assertEquals(listOf("w"), recorder.taps)
+        assertTrue(recorder.taps.isEmpty())
+        assertEquals(listOf(listOf("q", "w")), recorder.gestures)
+    }
+
+    @Test
+    fun gesturePathDoesNotDuplicateSameKeyMoves() {
+        val q = key("q")
+        val w = key("w")
+        engine.down(1, q.slot.centerX, q.slot.centerY)
+        engine.move(1, q.slot.centerX + 1f, q.slot.centerY)
+        engine.move(1, w.slot.centerX, w.slot.centerY)
+        engine.move(1, w.slot.centerX + 1f, w.slot.centerY)
+        engine.up(1, w.slot.centerX, w.slot.centerY)
+        assertEquals(listOf(listOf("q", "w")), recorder.gestures)
     }
 
     @Test
