@@ -55,18 +55,23 @@ class VaultCrypto {
         return cipher.doFinal(Base64.decode(parts[1], Base64.NO_WRAP)).toString(Charsets.UTF_8)
     }
 
-    fun encryptFileInPlace(file: File) {
-        val plain = file.readBytes()
+    fun encryptFileBytes(plain: ByteArray): ByteArray {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, key())
         val encrypted = cipher.doFinal(plain)
-        val temp = File(file.parentFile, file.name + ".encpart")
-        temp.outputStream().use { out ->
+        return java.io.ByteArrayOutputStream().use { out ->
             out.write(FILE_MAGIC)
             out.write(cipher.iv.size)
             out.write(cipher.iv)
             out.write(encrypted)
+            out.toByteArray()
         }
+    }
+
+    fun encryptFileInPlace(file: File) {
+        val encrypted = encryptFileBytes(file.readBytes())
+        val temp = File(file.parentFile, file.name + ".encpart")
+        temp.writeBytes(encrypted)
         if (!temp.renameTo(file)) {
             temp.delete()
             throw IllegalStateException("Unable to finalize encrypted Vault asset")
