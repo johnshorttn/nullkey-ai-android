@@ -120,6 +120,12 @@ class MainActivity : AppCompatActivity() {
                 KeyboardEnginePreferences.setUseCustomEngine(this@MainActivity, checked)
             }
         }
+        findViewById<CheckBox>(R.id.swipe_typing_enabled).apply {
+            isChecked = KeyboardEnginePreferences.swipeTypingEnabled(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                KeyboardEnginePreferences.setSwipeTypingEnabled(this@MainActivity, checked)
+            }
+        }
         findViewById<Button>(R.id.btn_start_monitor).setOnClickListener {
             ClipboardMonitorService.start(this)
             Toast.makeText(this, R.string.monitor_started, Toast.LENGTH_SHORT).show()
