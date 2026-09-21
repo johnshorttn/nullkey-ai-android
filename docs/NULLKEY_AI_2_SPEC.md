@@ -465,7 +465,38 @@ Potential extension points:
 - themes
 - rules/actions
 
-## 15. Suggested Architecture
+## 15. Cross-Device Sync & Web Vault
+
+NullKey remains offline-first: the local Vault works without an account or network connection. Sync is an optional layer over the local repository.
+
+Every synchronizable record uses a stable UUID that is independent of the local Room primary key. Synchronization metadata includes revision, originating device, last modifying device, sync state, and deletion tombstones. Attachments such as images/files are synchronized as managed encrypted assets rather than database BLOBs.
+
+The sync engine is provider-independent. Potential transports include a NullKey-hosted API, user-controlled server/WebDAV-compatible storage, and future direct device integrations.
+
+Security principles:
+
+- encrypt Vault payloads/attachments before remote storage where practical
+- never rely on transport encryption alone for protected Vault content
+- allow sensitive/protected items to be excluded from synchronization
+- support device enrollment and revocation
+- retain tombstones long enough to prevent deleted records being resurrected by an offline device
+- expose conflicts rather than silently destroying competing edits
+
+The web portal is a first-class NullKey client. Subject to authentication, enrollment, and Vault protection rules it can:
+
+- search/browse the Vault
+- copy text
+- preview images and download files
+- edit notes
+- manage tags, pin/protect state, trash and restore
+- create browser-originated clips that synchronize to enrolled devices
+- display capture provenance/device information
+- show sync/device status
+- revoke devices and sessions
+
+The portal/server must not require the Android keyboard to be online for local keyboard or Vault operation.
+
+## 16. Suggested Architecture
 
 Initial logical boundaries:
 
@@ -519,7 +550,7 @@ Features
 
 These may begin as package boundaries and become separate Gradle modules when justified.
 
-## 16. Migration from NullKey 1.x
+## 17. Migration from NullKey 1.x
 
 The existing implementation remains available on `main` while 2.0 is developed on `rewrite/v2`.
 
@@ -545,7 +576,7 @@ Rewrite/refactor targets include:
 
 A migration from the existing `nullkey.db` should preserve existing clips wherever practical.
 
-## 17. Initial Implementation Order
+## 18. Initial Implementation Order
 
 1. Preserve baseline and establish 2.0 architecture/package boundaries.
 2. Inspect and preserve useful existing tests.
@@ -558,6 +589,6 @@ A migration from the existing `nullkey.db` should preserve existing clips wherev
 9. Implement Remote Input and Trackpad prototype according to this spec.
 10. Add glide typing, OCR, AI providers, rules, advanced customization, and plugins incrementally.
 
-## 18. Acceptance Principle
+## 19. Acceptance Principle
 
 A feature is not considered complete merely because its UI exists. Each subsystem must expose real capability/state, degrade cleanly when Android or a remote client does not support an operation, preserve user data, and avoid claiming access that the platform has not actually granted.
