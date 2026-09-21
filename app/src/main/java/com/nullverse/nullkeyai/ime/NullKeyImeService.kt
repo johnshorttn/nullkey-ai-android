@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.db.NullKeyDatabase
+import com.nullverse.nullkeyai.sync.DeviceIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -50,7 +51,10 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     override fun onCreate() {
         super.onCreate()
-        repository = ClipRepository(NullKeyDatabase.get(this).clipDao())
+        repository = ClipRepository(
+            NullKeyDatabase.get(this).clipDao(),
+            deviceIdentity = DeviceIdentity.from(this)
+        )
         suggester = WordSuggester.get(this)
     }
 

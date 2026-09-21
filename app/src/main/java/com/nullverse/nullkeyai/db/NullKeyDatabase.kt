@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [Clip::class, Tag::class, ClipTagCrossRef::class],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class NullKeyDatabase : RoomDatabase() {
@@ -97,6 +97,13 @@ abstract class NullKeyDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Align Room's entity unique index with the index already created in 3→4.
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_clips_syncId ON clips(syncId)")
+            }
+        }
+
         fun get(context: Context): NullKeyDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -104,7 +111,7 @@ abstract class NullKeyDatabase : RoomDatabase() {
                     NullKeyDatabase::class.java,
                     "nullkey.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                     .also { INSTANCE = it }
             }

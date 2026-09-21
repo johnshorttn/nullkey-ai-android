@@ -13,6 +13,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.db.NullKeyDatabase
+import com.nullverse.nullkeyai.sync.DeviceIdentity
 import com.nullverse.nullkeyai.db.ClipCaptureMethod
 import com.nullverse.nullkeyai.db.ClipContentType
 import com.nullverse.nullkeyai.db.ClipSourceConfidence
@@ -44,7 +45,11 @@ class ClipboardMonitorService : Service() {
     override fun onCreate() {
         super.onCreate()
         assetStore = VaultAssetStore(this)
-        repository = ClipRepository(NullKeyDatabase.get(this).clipDao(), assetStore)
+        repository = ClipRepository(
+            NullKeyDatabase.get(this).clipDao(),
+            assetStore,
+            deviceIdentity = DeviceIdentity.from(this)
+        )
         clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.addPrimaryClipChangedListener(listener)
     }
