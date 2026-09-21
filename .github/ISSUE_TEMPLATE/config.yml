@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: NullKey AI Support
+    url: https://github.com/johnshorttn/nullkey-ai-android/blob/rewrite/v2/SUPPORT.md
+    about: Read support and privacy guidance before opening an issue.
+  - name: Security vulnerability
+    url: https://github.com/johnshorttn/nullkey-ai-android/security/advisories/new
+    about: Privately report security vulnerabilities. Do not disclose exploitable issues publicly.
