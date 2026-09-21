@@ -1,6 +1,7 @@
 package com.nullverse.nullkeyai.ui
 
 import android.os.Bundle
+import android.content.Intent
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -11,6 +12,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.core.content.FileProvider
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.clipboard.VaultAssetStore
@@ -48,6 +50,19 @@ class ClipDetailActivity : AppCompatActivity() {
                 assetStatus.visibility = View.VISIBLE
                 assetStatus.text = if (asset != null) getString(R.string.asset_saved_private)
                     else getString(R.string.asset_unavailable)
+            }
+            if (!clip.protected && asset != null) {
+                findViewById<View>(R.id.detail_asset_actions).visibility = View.VISIBLE
+                val uri = FileProvider.getUriForFile(this@ClipDetailActivity, "${packageName}.vault.files", asset)
+                findViewById<Button>(R.id.detail_open_asset).setOnClickListener {
+                    launchExternal(Intent(Intent.ACTION_VIEW).setDataAndType(uri, clip.mimeType ?: "*/*"))
+                }
+                findViewById<Button>(R.id.detail_share_asset).setOnClickListener {
+                    launchExternal(Intent(Intent.ACTION_SEND).apply {
+                        type = clip.mimeType ?: "application/octet-stream"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                    })
+                }
             }
             contentView.text = if (clip.protected) getString(R.string.protected_clip) else clip.content
             findViewById<TextView>(R.id.detail_meta).text = buildString {
@@ -87,6 +102,12 @@ class ClipDetailActivity : AppCompatActivity() {
         findViewById<Button>(R.id.detail_trash).setOnClickListener {
             lifecycleScope.launch { repository.moveToTrash(clipId); finish() }
         }
+    }
+
+    private fun launchExternal(intent: Intent) {
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        runCatching { startActivity(Intent.createChooser(intent, null)) }
+            .onFailure { Toast.makeText(this, R.string.no_app_for_asset, Toast.LENGTH_SHORT).show() }
     }
 
     companion object { const val EXTRA_CLIP_ID = "clip_id" }
