@@ -13,6 +13,9 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import android.text.InputType
+import android.app.AlertDialog
+import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -29,6 +32,7 @@ import com.nullverse.nullkeyai.db.ClipCaptureMethod
 import com.nullverse.nullkeyai.db.ClipContentType
 import com.nullverse.nullkeyai.db.ClipSourceConfidence
 import com.nullverse.nullkeyai.diagnostics.ClipboardLabActivity
+import com.nullverse.nullkeyai.security.VaultCrypto
 import com.nullverse.nullkeyai.ime.ClipAdapter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -49,6 +53,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var filesOnly: CheckBox
     private lateinit var empty: TextView
     private var observeJob: Job? = null
+    private var pendingBackupPassword: CharArray? = null
+    private var pendingRestorePassword: CharArray? = null
 
     private val notifPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
@@ -63,10 +69,25 @@ class MainActivity : AppCompatActivity() {
             uri?.let { readImport(it) }
         }
 
+    private val secureExport =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            val password = pendingBackupPassword
+            pendingBackupPassword = null
+            if (uri != null && password != null) writeSecureExport(uri, password)
+        }
+
+    private val secureImport =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            val password = pendingRestorePassword
+            pendingRestorePassword = null
+            if (uri != null && password != null) readSecureImport(uri, password)
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        repository = ClipRepository(NullKeyDatabase.get(this).clipDao(), VaultAssetStore(this))
+        val db = NullKeyDatabase.get(this)
+        repository = ClipRepository(db.clipDao(), VaultAssetStore(this), db.tagDao(), VaultCrypto())
 
         search = findViewById(R.id.search)
         filesOnly = findViewById(R.id.files_only)
@@ -109,6 +130,18 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.btn_import).setOnClickListener {
             importClips.launch(arrayOf("application/json", "text/*", "*/*"))
+        }
+        findViewById<Button>(R.id.btn_secure_export).setOnClickListener {
+            askBackupPassword(confirm = true) { password ->
+                pendingBackupPassword = password
+                secureExport.launch("nullkey-secure-${System.currentTimeMillis()}.nkbackup")
+            }
+        }
+        findViewById<Button>(R.id.btn_secure_import).setOnClickListener {
+            askBackupPassword(confirm = false) { password ->
+                pendingRestorePassword = password
+                secureImport.launch(arrayOf("*/*"))
+            }
         }
 
         search.addTextChangedListener(SimpleWatcher { observeClips() })
@@ -203,6 +236,75 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this@MainActivity, R.string.import_invalid, Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, R.string.import_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun askBackupPassword(confirm: Boolean, accepted: (CharArray) -> Unit) {
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 8, 48, 0)
+        }
+        val password = EditText(this).apply {
+            hint = getString(R.string.backup_password_hint)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+        box.addView(password)
+        val confirmation = if (confirm) EditText(this).apply {
+            hint = getString(R.string.backup_password_confirm_hint)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            box.addView(this)
+        } else null
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.backup_password_title)
+            .setView(box)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(android.R.string.ok, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val first = password.text.toString()
+                if (first.length < 8 || (confirmation != null && first != confirmation.text.toString())) {
+                    Toast.makeText(this, R.string.backup_password_mismatch, Toast.LENGTH_LONG).show()
+                } else {
+                    dialog.dismiss()
+                    accepted(first.toCharArray())
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun writeSecureExport(uri: android.net.Uri, password: CharArray) {
+        lifecycleScope.launch {
+            try {
+                val encrypted = repository.exportPortableEncrypted(password)
+                withContext(Dispatchers.IO) {
+                    contentResolver.openOutputStream(uri)?.use { it.write(encrypted.toByteArray(Charsets.UTF_8)) }
+                        ?: throw java.io.IOException("Could not open output stream")
+                }
+                Toast.makeText(this@MainActivity, R.string.secure_export_ok, Toast.LENGTH_SHORT).show()
+            } catch (_: Exception) {
+                Toast.makeText(this@MainActivity, R.string.secure_backup_failed, Toast.LENGTH_LONG).show()
+            } finally {
+                password.fill('\u0000')
+            }
+        }
+    }
+
+    private fun readSecureImport(uri: android.net.Uri, password: CharArray) {
+        lifecycleScope.launch {
+            try {
+                val document = withContext(Dispatchers.IO) {
+                    contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+                        ?: throw java.io.IOException("Could not open input stream")
+                }
+                val count = repository.importPortableEncrypted(document, password)
+                Toast.makeText(this@MainActivity, getString(R.string.secure_restore_ok, count), Toast.LENGTH_SHORT).show()
+            } catch (_: Exception) {
+                Toast.makeText(this@MainActivity, R.string.secure_backup_failed, Toast.LENGTH_LONG).show()
+            } finally {
+                password.fill('\u0000')
             }
         }
     }
