@@ -13,6 +13,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.core.content.FileProvider
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.clipboard.VaultAssetStore
@@ -23,12 +26,13 @@ import kotlinx.coroutines.launch
 class ClipDetailActivity : AppCompatActivity() {
     private lateinit var repository: ClipRepository
     private var clipId: Long = 0L
+    private lateinit var assetStore: VaultAssetStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_clip_detail)
         val db = NullKeyDatabase.get(this)
-        val assetStore = VaultAssetStore(this)
+        assetStore = VaultAssetStore(this)
         repository = ClipRepository(db.clipDao(), assetStore, db.tagDao(), VaultCrypto())
         clipId = intent.getLongExtra(EXTRA_CLIP_ID, 0L)
         if (clipId == 0L) { finish(); return }
@@ -66,6 +70,11 @@ class ClipDetailActivity : AppCompatActivity() {
                 }
             }
             contentView.text = if (clip.protected) getString(R.string.protected_clip) else clip.content
+            val unlock = findViewById<Button>(R.id.detail_unlock)
+            if (clip.protected) {
+                unlock.visibility = View.VISIBLE
+                unlock.setOnClickListener { authenticateAndReveal() }
+            }
             findViewById<TextView>(R.id.detail_meta).text = buildString {
                 append(clip.contentType)
                 clip.mimeType?.let { append(" • ").append(it) }
@@ -105,6 +114,48 @@ class ClipDetailActivity : AppCompatActivity() {
         findViewById<Button>(R.id.detail_trash).setOnClickListener {
             lifecycleScope.launch { repository.moveToTrash(clipId); finish() }
         }
+    }
+
+    private fun authenticateAndReveal() {
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or
+            BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        val prompt = BiometricPrompt(
+            this,
+            ContextCompat.getMainExecutor(this),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    lifecycleScope.launch {
+                        val clip = runCatching { repository.revealed(clipId) }.getOrNull()
+                        if (clip == null) {
+                            Toast.makeText(this@ClipDetailActivity, R.string.unlock_failed, Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+                        findViewById<TextView>(R.id.detail_content).apply {
+                            text = clip.content
+                            visibility = View.VISIBLE
+                        }
+                        findViewById<EditText>(R.id.detail_notes).setText(clip.notes)
+                        findViewById<Button>(R.id.detail_unlock).visibility = View.GONE
+                        val asset = assetStore.resolve(clip.localAssetPath)
+                        if (clip.contentType == "IMAGE" && asset != null) {
+                            runCatching { BitmapFactory.decodeFile(asset.absolutePath) }.getOrNull()?.let {
+                                findViewById<ImageView>(R.id.detail_image).apply {
+                                    setImageBitmap(it)
+                                    visibility = View.VISIBLE
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        )
+        prompt.authenticate(
+            BiometricPrompt.PromptInfo.Builder()
+                .setTitle(getString(R.string.unlock_title))
+                .setSubtitle(getString(R.string.unlock_subtitle))
+                .setAllowedAuthenticators(authenticators)
+                .build()
+        )
     }
 
     private fun launchExternal(intent: Intent) {
