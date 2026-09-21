@@ -51,6 +51,15 @@
             android:text="@string/switch_keyboard" />
     </LinearLayout>
 
+    <CheckBox
+        android:id="@+id/use_custom_keyboard_engine"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:buttonTint="@color/neon"
+        android:checked="true"
+        android:text="@string/use_custom_keyboard_engine"
+        android:textColor="@color/text_primary" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

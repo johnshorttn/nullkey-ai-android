@@ -2,7 +2,7 @@ name: NullKey Android Debug
 
 on:
   push:
-    branches: [ "rewrite/v2", "integration/sync-v2" ]
+    branches: [ "rewrite/v2", "integration/keyboard-v2" ]
   workflow_dispatch:
 
 jobs:

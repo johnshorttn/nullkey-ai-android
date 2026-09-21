@@ -35,6 +35,7 @@ import com.nullverse.nullkeyai.diagnostics.ClipboardLabActivity
 import com.nullverse.nullkeyai.security.VaultCrypto
 import com.nullverse.nullkeyai.sync.DeviceIdentity
 import com.nullverse.nullkeyai.ime.ClipAdapter
+import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
@@ -112,6 +113,12 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_switch).setOnClickListener {
             (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
                 .showInputMethodPicker()
+        }
+        findViewById<CheckBox>(R.id.use_custom_keyboard_engine).apply {
+            isChecked = KeyboardEnginePreferences.useCustomEngine(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                KeyboardEnginePreferences.setUseCustomEngine(this@MainActivity, checked)
+            }
         }
         findViewById<Button>(R.id.btn_start_monitor).setOnClickListener {
             ClipboardMonitorService.start(this)
