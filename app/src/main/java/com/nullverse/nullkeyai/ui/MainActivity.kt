@@ -33,6 +33,7 @@ import com.nullverse.nullkeyai.db.ClipContentType
 import com.nullverse.nullkeyai.db.ClipSourceConfidence
 import com.nullverse.nullkeyai.diagnostics.ClipboardLabActivity
 import com.nullverse.nullkeyai.security.VaultCrypto
+import com.nullverse.nullkeyai.sync.DeviceIdentity
 import com.nullverse.nullkeyai.ime.ClipAdapter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -87,7 +88,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         val db = NullKeyDatabase.get(this)
-        repository = ClipRepository(db.clipDao(), VaultAssetStore(this), db.tagDao(), VaultCrypto())
+        repository = ClipRepository(db.clipDao(), VaultAssetStore(this), db.tagDao(), VaultCrypto(), DeviceIdentity.from(this))
 
         search = findViewById(R.id.search)
         filesOnly = findViewById(R.id.files_only)
