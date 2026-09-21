@@ -1,6 +1,6 @@
 package com.nullverse.nullkeyai.clipboard
 
-import android.content.Context
+import android.content.Context\nimport androidx.annotation.StringRes\nimport com.nullverse.nullkeyai.R
 
 enum class ClipSwipeAction {
     PIN, PROTECT, DELETE, TAG;
@@ -31,3 +31,4 @@ object ClipSwipePreferences {
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 }
+\n@get:StringRes\nval ClipSwipeAction.labelRes: Int\n    get() = when (this) {\n        ClipSwipeAction.PIN -> R.string.swipe_action_pin\n        ClipSwipeAction.PROTECT -> R.string.swipe_action_protect\n        ClipSwipeAction.DELETE -> R.string.swipe_action_delete\n        ClipSwipeAction.TAG -> R.string.swipe_action_tag\n    }\n
