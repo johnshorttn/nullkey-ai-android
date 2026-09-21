@@ -228,8 +228,12 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             return
         }
         row.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
-        val x = (key.slot.centerX - row.measuredWidth / 2f).toInt().coerceAtLeast(0)
-        val y = (key.slot.top - row.measuredHeight - 8f * density).toInt().coerceAtLeast(0)
+        val maxX = (width - row.measuredWidth).coerceAtLeast(0)
+        val x = (key.slot.centerX - row.measuredWidth / 2f).toInt().coerceIn(0, maxX)
+        val aboveY = (key.slot.top - row.measuredHeight - 8f * density).toInt()
+        val belowY = (key.slot.bottom + 8f * density).toInt()
+        val maxY = (height - row.measuredHeight).coerceAtLeast(0)
+        val y = (if (aboveY >= 0) aboveY else belowY).coerceIn(0, maxY)
         popup.showAtLocation(this, Gravity.TOP or Gravity.START, x, y)
     }
 
