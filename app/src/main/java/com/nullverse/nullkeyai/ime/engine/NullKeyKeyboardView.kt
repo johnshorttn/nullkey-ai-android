@@ -48,6 +48,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     private var gesturePointerX = 0f
     private var gesturePointerY = 0f
     private var gesturePointerActive = false
+    private var accentPopup: PopupWindow? = null
     private val gesturePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -158,7 +159,16 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         return true
     }
 
+    override fun onDetachedFromWindow() {
+        accentPopup?.dismiss()
+        accentPopup = null
+        controller.cancel()
+        super.onDetachedFromWindow()
+    }
+
     fun resetEngine() {
+        accentPopup?.dismiss()
+        accentPopup = null
         controller.swipeTypingEnabled = KeyboardEnginePreferences.swipeTypingEnabled(context)
         controller.reset()
     }
@@ -173,6 +183,8 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         controller.geometry.placedKeys.first { it.spec.label.equals(label, ignoreCase = true) }
 
     private fun showCharacterPopup(characters: String) {
+        accentPopup?.dismiss()
+        accentPopup = null
         val density = resources.displayMetrics.density
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -182,7 +194,9 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         val popup = PopupWindow(row, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true).apply {
             isOutsideTouchable = true
             elevation = 8f * density
+            setOnDismissListener { if (accentPopup === this) accentPopup = null }
         }
+        accentPopup = popup
         characters.forEach { character ->
             row.addView(TextView(context).apply {
                 text = character.toString()
@@ -194,6 +208,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                 setOnClickListener {
                     controller.commitPopupCharacter(character)
                     popup.dismiss()
+                    accentPopup = null
                 }
             })
         }
