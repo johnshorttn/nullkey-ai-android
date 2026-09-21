@@ -17,6 +17,7 @@ class KeyboardController(
         fun requestRedraw()
         fun onKey(code: Int)
         fun onLongPress(code: Int, popupCharacters: String)
+        fun onPopupCharacter(code: Int) { onKey(code) }
     }
 
     val modifiers = ModifierController()
@@ -114,6 +115,14 @@ class KeyboardController(
             KeyCodes.MODE_CHANGE -> modifiers.layer == KeyboardLayer.SYMBOLS
             else -> false
         }
+    }
+
+    fun commitPopupCharacter(character: Char) {
+        touch.cancel()
+        val code = modifiers.applyToCode(character.code)
+        modifiers.onLetterCommitted()
+        host.onPopupCharacter(code)
+        host.requestRedraw()
     }
 
     fun reset() {
