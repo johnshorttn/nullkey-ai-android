@@ -20,7 +20,7 @@ This is a checklist review with small, safe fixes applied in the same PR. It doe
 | --- | --- | --- | --- |
 | S1 | P1 | `android:allowBackup="true"` would let Auto Backup / `adb backup` copy Vault DB, assets, and prefs. | `allowBackup="false"` plus `fullBackupContent` / `dataExtractionRules` excludes for database, shared prefs, and `vault/` files. |
 | S2 | P1 | API 34+ `startForeground()` should pass `FOREGROUND_SERVICE_TYPE_SPECIAL_USE` to match the manifest. Missing type is a crash risk on `targetSdk` 34–36. | Typed `startForeground` on API 34+; helper covered by unit tests. |
-| S3 | P1 | Android 15+ draws activities edge-to-edge; Android 16 **removed** the opt-out. Untreated, setup/Vault/IME chrome can sit under status/nav bars. | `SystemBarInsets` pads activity content and the IME root. |
+| S3 | P1 | Android 15+ draws activities edge-to-edge; Android 16 **removed** the opt-out. Untreated, setup/Vault/IME chrome can sit under status/nav bars. On the 320x640 CI emulator that also hid search/setup controls. | `SystemBarInsets` pads activity content and the IME root. Vault home is a `ScrollView` so those controls stay reachable. |
 | S4 | P2 | `usesCleartextTraffic` was implicit. | Explicit `android:usesCleartextTraffic="false"`. |
 
 Compile restore (literal `\n` in vault-swipe Kotlin/XML) is included so this branch builds independently. Swipe *behavior* is unchanged; cancel/confirm UX remains PR #18.

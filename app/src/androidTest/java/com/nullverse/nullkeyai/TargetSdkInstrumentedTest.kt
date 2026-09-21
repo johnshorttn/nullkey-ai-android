@@ -10,6 +10,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
@@ -79,7 +80,7 @@ class TargetSdkInstrumentedTest {
     @Test
     fun startMonitorPromotesSpecialUseForegroundService() {
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withId(R.id.btn_start_monitor)).perform(click())
+            onView(withId(R.id.btn_start_monitor)).perform(scrollTo()).perform(click())
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             val running = am.getRunningServices(50)
             assertTrue(
