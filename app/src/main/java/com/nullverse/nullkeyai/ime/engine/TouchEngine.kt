@@ -41,6 +41,7 @@ class TouchEngine(
         private set
 
     private var longPressConsumed: Boolean = false
+    private var longPressFired: Boolean = false
     private var longPressTask: Cancellable? = null
     private var repeatTask: Cancellable? = null
     private val gesturePath = mutableListOf<PlacedKey>()
@@ -67,6 +68,7 @@ class TouchEngine(
         lastY = y
         gestureStartX = x
         gestureStartY = y
+        longPressFired = false
         press(key)
     }
 
@@ -122,13 +124,19 @@ class TouchEngine(
         val current = pressed
         val consumed = longPressConsumed
         val wasRepeatable = current?.spec?.isRepeatable == true
+        val heldLongPress = longPressFired
         cancelTasks()
         listener.onRelease(current)
         val minGestureDistance = current?.let { kotlin.math.min(it.slot.width, it.slot.height) * 0.75f } ?: Float.MAX_VALUE
-        if (gesturePath.size >= 2 && gestureDistancePx >= minGestureDistance && gesturePath.all { it.spec.code.toChar().isLetter() }) {
-            listener.onGesturePath(gesturePath.toList())
-        } else if (current != null && !wasRepeatable && !consumed) {
-            listener.onTap(current)
+        val isSwipe = !heldLongPress &&
+            gesturePath.size >= 2 &&
+            gestureDistancePx >= minGestureDistance &&
+            gesturePath.all { it.spec.code.toChar().isLetter() }
+        when {
+            isSwipe -> listener.onGesturePath(gesturePath.toList())
+            current != null && !wasRepeatable && !consumed && !(heldLongPress && gestureStarted) -> {
+                listener.onTap(current)
+            }
         }
         resetPointer()
     }
@@ -143,8 +151,9 @@ class TouchEngine(
     private fun press(key: PlacedKey) {
         cancelTasks()
         pressed = key
-        longPressConsumed = false
+        if (!longPressFired) longPressConsumed = false
         listener.onPress(key)
+        if (longPressFired) return
         if (key.spec.isRepeatable) {
             listener.onRepeat(key)
             scheduleRepeat(repeatStartMs)
@@ -152,6 +161,7 @@ class TouchEngine(
             longPressTask = scheduler.schedule(longPressMs) {
                 val current = pressed ?: return@schedule
                 if (current.id == key.id && !current.spec.isRepeatable) {
+                    longPressFired = true
                     longPressConsumed = listener.onLongPress(current)
                 }
             }
@@ -178,6 +188,7 @@ class TouchEngine(
         activePointerId = null
         pressed = null
         longPressConsumed = false
+        longPressFired = false
         gesturePath.clear()
         gestureDistancePx = 0f
         gestureStarted = false

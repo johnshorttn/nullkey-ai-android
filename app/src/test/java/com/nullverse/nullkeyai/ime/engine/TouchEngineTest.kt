@@ -146,6 +146,33 @@ class TouchEngineTest {
     }
 
     @Test
+    fun longPressThenMoveDoesNotBecomeASwipe() {
+        recorder.consumeLongPress = true
+        val e = key("e")
+        val r = key("r")
+        engine.down(1, e.slot.centerX, e.slot.centerY)
+        scheduler.advance(400)
+        assertEquals(listOf("e"), recorder.longPresses)
+        engine.move(1, r.slot.centerX, r.slot.centerY)
+        engine.up(1, r.slot.centerX, r.slot.centerY)
+        assertTrue(recorder.gestures.isEmpty())
+        assertTrue(recorder.taps.isEmpty())
+    }
+
+    @Test
+    fun unconsumedLongPressThenMoveDoesNotTapOrSwipe() {
+        val t = key("t")
+        val y = key("y")
+        engine.down(1, t.slot.centerX, t.slot.centerY)
+        scheduler.advance(400)
+        assertEquals(listOf("t"), recorder.longPresses)
+        engine.move(1, y.slot.centerX, y.slot.centerY)
+        engine.up(1, y.slot.centerX, y.slot.centerY)
+        assertTrue(recorder.gestures.isEmpty())
+        assertTrue(recorder.taps.isEmpty())
+    }
+
+    @Test
     fun longPressStillWorksBeforeSwipeBegins() {
         val e = key("e")
         engine.down(1, e.slot.centerX, e.slot.centerY)
