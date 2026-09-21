@@ -178,6 +178,9 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
         return PortableVaultCrypto.encrypt(ClipBackup.toJson(portable), password)
     }
 
+    suspend fun importPortableEncrypted(document: String, password: CharArray): Int =
+        importJson(PortableVaultCrypto.decrypt(document, password))
+
     /**
      * Import clips from a JSON backup. Blank clips and clips whose content already
      * exists in the active vault are skipped. Returns the number actually inserted.
