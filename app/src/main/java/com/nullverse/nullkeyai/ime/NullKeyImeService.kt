@@ -59,6 +59,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private var caps = false
     private var symbolsMode = false
     private var usingEngine = true
+    private var pendingSwipeCommit: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -116,6 +117,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         applyRendererPreference()
         if (usingEngine) keyboardEngineView.resetEngine()
         currentWord.setLength(0)
+        pendingSwipeCommit = null
         updateSuggestions()
         refreshClips()
     }
@@ -154,6 +156,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     // region suggestions
     private fun updateSuggestions() {
+        if (pendingSwipeCommit != null) return
         val results = suggester.suggest(currentWord.toString(), suggestionViews.size)
         suggestionViews.forEachIndexed { index, view ->
             view.text = results.getOrNull(index).orEmpty()
@@ -164,6 +167,16 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         val word = suggestionViews.getOrNull(index)?.text?.toString().orEmpty()
         if (word.isBlank()) return
         val ic = currentInputConnection ?: return
+        val swipeWord = pendingSwipeCommit
+        if (swipeWord != null) {
+            if (word != swipeWord) {
+                ic.deleteSurroundingText(swipeWord.length + 1, 0)
+                ic.commitText("$word ", 1)
+                suggester.learn(word)
+                pendingSwipeCommit = word
+            }
+            return
+        }
         if (currentWord.isNotEmpty()) ic.deleteSurroundingText(currentWord.length, 0)
         ic.commitText("$word ", 1)
         suggester.learn(word)
@@ -172,15 +185,19 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     private fun handleGestureWord(path: String) {
-        val candidates = suggester.suggestGesture(path, 1)
-        val word = candidates.firstOrNull().takeUnless { it.isNullOrBlank() } ?: path
-        currentInputConnection?.commitText("$word ", 1)
-        suggester.learn(word)
+        val ranked = suggester.suggestGesture(path, suggestionViews.size)
+        val resolved = SwipeCommit.resolve(path, ranked) ?: return
+        currentInputConnection?.commitText("${resolved.committed} ", 1)
+        suggester.learn(ranked.first())
         currentWord.setLength(0)
-        updateSuggestions()
+        pendingSwipeCommit = resolved.committed
+        suggestionViews.forEachIndexed { index, view ->
+            view.text = resolved.suggestions.getOrNull(index).orEmpty()
+        }
     }
 
     private fun flushWord() {
+        pendingSwipeCommit = null
         if (currentWord.isNotEmpty()) {
             suggester.learn(currentWord.toString())
             currentWord.setLength(0)
@@ -196,6 +213,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     private fun handleKey(primaryCode: Int, alreadyCased: Boolean) {
         val ic = currentInputConnection ?: return
+        pendingSwipeCommit = null
         when (primaryCode) {
             KeyCodes.DELETE -> {
                 ic.deleteSurroundingText(1, 0)
