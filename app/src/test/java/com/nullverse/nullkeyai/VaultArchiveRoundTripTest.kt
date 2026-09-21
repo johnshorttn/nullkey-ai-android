@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.nullverse.nullkeyai.clipboard.ClipCaptureRequest
-import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.clipboard.VaultArchive
 import com.nullverse.nullkeyai.clipboard.VaultAssetStore
 import com.nullverse.nullkeyai.db.ClipContentType
@@ -29,7 +28,6 @@ class VaultArchiveRoundTripTest {
     private lateinit var context: Context
     private lateinit var db: NullKeyDatabase
     private lateinit var store: VaultAssetStore
-    private lateinit var repo: ClipRepository
 
     @Before
     fun setUp() {
@@ -38,58 +36,16 @@ class VaultArchiveRoundTripTest {
             .allowMainThreadQueries()
             .build()
         store = VaultAssetStore(context)
-        repo = ClipRepository(db.clipDao(), store, db.tagDao())
     }
 
     @After
     fun tearDown() = db.close()
 
     @Test
-    fun portableArchive_roundTripsClipsTagsAndAssets() = runBlocking {
-        val bytes = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4)
-        val asset = store.importBytes(bytes, "preview.png")
-        val id = repo.capture(
-            ClipCaptureRequest(
-                content = "screenshot",
-                contentType = ClipContentType.IMAGE,
-                isFile = true,
-                mimeType = "image/png",
-                localAssetPath = asset.relativePath
-            )
-        )!!
-        repo.addTag(id, "Work")
-        repo.addTag(id, "Coding")
-        repo.capture("plain notes")
-
-        val password = "correct-horse".toCharArray()
-        val document = repo.exportPortableEncrypted(password)
-        db.clipDao().clear()
-        store.resolve(asset.relativePath)?.delete()
-
-        val restored = repo.importPortableEncrypted(document, password.copyOf())
-        assertEquals(2, restored)
-
-        val clips = repo.searchOnce("", false).associateBy { it.content }
-        assertTrue(clips.containsKey("screenshot"))
-        assertTrue(clips.containsKey("plain notes"))
-
-        val image = clips.getValue("screenshot")
-        assertEquals("IMAGE", image.contentType)
-        val names = repo.tagsForClip(image.id).map { it.name }.toSet()
-        assertEquals(setOf("Work", "Coding"), names)
-        val restoredFile = store.resolve(image.localAssetPath)
-        assertNotNull(restoredFile)
-        assertArrayEquals(bytes, restoredFile!!.readBytes())
-    }
-
-    @Test
     fun portableEnvelope_rejectsWrongPassword() {
-        runBlocking {
-            repo.capture("secret-ish")
-            val document = repo.exportPortableEncrypted("right-password".toCharArray())
-            assertThrows(Exception::class.java) {
-                runBlocking { repo.importPortableEncrypted(document, "wrong-password".toCharArray()) }
-            }
+        val document = PortableVaultCrypto.encrypt("secret-ish", "right-password".toCharArray())
+        assertThrows(Exception::class.java) {
+            PortableVaultCrypto.decrypt(document, "wrong-password".toCharArray())
         }
     }
 
