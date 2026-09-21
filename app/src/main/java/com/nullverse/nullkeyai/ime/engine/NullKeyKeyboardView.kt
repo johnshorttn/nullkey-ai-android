@@ -42,6 +42,9 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
     private val renderer = KeyboardRenderer()
     private val gestureTrail = mutableListOf<PlacedKey>()
+    private var gesturePointerX = 0f
+    private var gesturePointerY = 0f
+    private var gesturePointerActive = false
     private val gesturePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -130,16 +133,23 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                 if (pointerId != null) {
                     val index = event.findPointerIndex(pointerId)
                     if (index >= 0) {
-                        controller.move(pointerId, event.getX(index), event.getY(index))
+                        gesturePointerX = event.getX(index)
+                        gesturePointerY = event.getY(index)
+                        gesturePointerActive = true
+                        controller.move(pointerId, gesturePointerX, gesturePointerY)
                     }
                 }
             }
             MotionEvent.ACTION_UP,
             MotionEvent.ACTION_POINTER_UP -> {
                 val index = event.actionIndex
+                gesturePointerActive = false
                 controller.up(event.getPointerId(index), event.getX(index), event.getY(index))
             }
-            MotionEvent.ACTION_CANCEL -> controller.cancel()
+            MotionEvent.ACTION_CANCEL -> {
+                gesturePointerActive = false
+                controller.cancel()
+            }
             else -> return super.onTouchEvent(event)
         }
         return true
@@ -179,6 +189,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             val y = key.slot.centerY
             if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
+        if (gesturePointerActive) path.lineTo(gesturePointerX, gesturePointerY)
         gesturePaint.strokeWidth = 6f * resources.displayMetrics.density
         gesturePaint.color = theme.gestureTrailColor
         gesturePaint.alpha = 150
