@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.MotionEvent
+import android.widget.PopupMenu
 import android.view.View
 import androidx.annotation.VisibleForTesting
 
@@ -52,7 +53,11 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             }
 
             override fun onLongPress(code: Int, popupCharacters: String) {
-                listener?.onLongPress(code, popupCharacters)
+                if (popupCharacters.isBlank()) {
+                    listener?.onLongPress(code, popupCharacters)
+                } else {
+                    showCharacterPopup(popupCharacters)
+                }
             }
         },
     )
@@ -127,6 +132,18 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     @VisibleForTesting
     internal fun keyWithLabel(label: String): PlacedKey =
         controller.geometry.placedKeys.first { it.spec.label.equals(label, ignoreCase = true) }
+
+    private fun showCharacterPopup(characters: String) {
+        val popup = PopupMenu(context, this)
+        characters.forEachIndexed { index, character ->
+            popup.menu.add(0, character.code, index, character.toString())
+        }
+        popup.setOnMenuItemClickListener { item ->
+            controller.commitPopupCharacter(item.itemId.toChar())
+            true
+        }
+        popup.show()
+    }
 
     private fun applySize(width: Int, height: Int) {
         val density = resources.displayMetrics.density
