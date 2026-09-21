@@ -57,6 +57,26 @@ class VaultAssetStore(private val context: Context) {
         return candidate.takeIf { it.isFile }
     }
 
+    fun replaceAtomically(file: File, bytes: ByteArray, suffix: String = ".part") {
+        val allowedRoot = root.canonicalFile
+        val target = file.canonicalFile
+        require(target.path.startsWith(allowedRoot.path + File.separator)) { "Asset outside Vault" }
+        val temp = File(target.parentFile, target.name + suffix)
+        try {
+            temp.outputStream().use { it.write(bytes) }
+            val backup = File(target.parentFile, target.name + ".bak")
+            backup.delete()
+            if (!target.renameTo(backup)) throw IOException("Unable to stage Vault asset replacement")
+            if (!temp.renameTo(target)) {
+                backup.renameTo(target)
+                throw IOException("Unable to finalize Vault asset replacement")
+            }
+            backup.delete()
+        } finally {
+            temp.delete()
+        }
+    }
+
     fun delete(relativePath: String?): Boolean {
         if (relativePath.isNullOrBlank()) return false
         return resolve(relativePath)?.delete() ?: false
