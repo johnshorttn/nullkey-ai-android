@@ -3,6 +3,8 @@ package com.nullverse.nullkeyai.ime.engine
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Path
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.MotionEvent
@@ -39,6 +41,12 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     }
 
     private val renderer = KeyboardRenderer()
+    private val gestureTrail = mutableListOf<PlacedKey>()
+    private val gesturePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
     private var theme: KeyboardTheme = KeyboardTheme.from(context, currentOrientation())
 
     @VisibleForTesting
@@ -55,6 +63,11 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
             override fun onGestureWord(path: String) {
                 listener?.onGestureWord(path)
+            }
+
+            override fun onGestureProgress(keys: List<PlacedKey>) {
+                gestureTrail.clear()
+                gestureTrail.addAll(keys)
             }
 
             override fun onLongPress(code: Int, popupCharacters: String) {
@@ -102,6 +115,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         renderer.draw(canvas, theme, controller)
+        drawGestureTrail(canvas)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -155,6 +169,20 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             true
         }
         popup.show()
+    }
+
+    private fun drawGestureTrail(canvas: Canvas) {
+        if (!controller.swipeTypingEnabled || gestureTrail.size < 2) return
+        val path = Path()
+        gestureTrail.forEachIndexed { index, key ->
+            val x = key.slot.centerX
+            val y = key.slot.centerY
+            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        gesturePaint.strokeWidth = 6f * resources.displayMetrics.density
+        gesturePaint.color = theme.accentColor
+        gesturePaint.alpha = 150
+        canvas.drawPath(path, gesturePaint)
     }
 
     private fun applySize(width: Int, height: Int) {
