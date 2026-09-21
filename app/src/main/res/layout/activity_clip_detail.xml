@@ -18,6 +18,18 @@
             android:hint="@string/notes" android:minLines="3" android:gravity="top"
             android:inputType="textMultiLine" android:textColor="@color/text_primary"
             android:textColorHint="@color/slate"/>
+        <TextView android:id="@+id/detail_tags" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="12dp"
+            android:textColor="@color/violet" android:text="@string/no_tags"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <EditText android:id="@+id/detail_new_tag" android:layout_width="0dp"
+                android:layout_height="wrap_content" android:layout_weight="1"
+                android:hint="@string/add_tag" android:singleLine="true"
+                android:textColor="@color/text_primary" android:textColorHint="@color/slate"/>
+            <Button android:id="@+id/detail_add_tag" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="@string/add"/>
+        </LinearLayout>
         <CheckBox android:id="@+id/detail_pinned" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:text="@string/pinned"
             android:textColor="@color/text_primary" android:buttonTint="@color/neon"/>
