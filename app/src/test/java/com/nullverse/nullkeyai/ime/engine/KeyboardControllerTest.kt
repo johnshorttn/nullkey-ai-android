@@ -15,12 +15,14 @@ class KeyboardControllerTest {
         val keys = mutableListOf<Int>()
         val longPresses = mutableListOf<Pair<Int, String>>()
         val gestures = mutableListOf<String>()
+        var pressFeedback = 0
         override fun requestRedraw() {}
         override fun onKey(code: Int) { keys += code }
         override fun onLongPress(code: Int, popupCharacters: String) {
             longPresses += code to popupCharacters
         }
         override fun onGestureWord(path: String) { gestures += path }
+        override fun onPressFeedback() { pressFeedback += 1 }
     }
 
     @Before
@@ -52,6 +54,7 @@ class KeyboardControllerTest {
         tap("h")
         tap("i")
         assertEquals(listOf('h'.code, 'i'.code), host.keys)
+        assertEquals(2, host.pressFeedback)
     }
 
     @Test
@@ -202,5 +205,19 @@ class KeyboardControllerTest {
         scheduler.advance(500)
         controller.up(0, del.slot.centerX, del.slot.centerY)
         assertTrue(host.keys.count { it == KeyCodes.DELETE } >= 3)
+    }
+
+    @Test
+    fun configurableLongPressDelayIsHonored() {
+        controller.applyTypingSettings(swipeTypingEnabled = true, longPressMs = 200L)
+        val e = key("e")
+        controller.down(0, e.slot.centerX, e.slot.centerY)
+        scheduler.advance(199)
+        assertTrue(host.longPresses.isEmpty())
+        scheduler.advance(1)
+        assertEquals(1, host.longPresses.size)
+        assertEquals('e'.code, host.longPresses[0].first)
+        controller.up(0, e.slot.centerX, e.slot.centerY)
+        assertTrue(host.keys.isEmpty())
     }
 }

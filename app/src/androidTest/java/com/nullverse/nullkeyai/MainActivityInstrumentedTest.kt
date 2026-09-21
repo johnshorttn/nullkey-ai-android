@@ -15,6 +15,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.nullverse.nullkeyai.ui.MainActivity
 import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
+import com.nullverse.nullkeyai.ime.engine.KeyboardThemeId
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -71,6 +72,34 @@ class MainActivityInstrumentedTest {
                 .perform(scrollTo())
                 .check(matches(withText("Right swipe: Pin")))
         }
+    }
+
+    @Test
+    fun keyboardInputSettingsPersistThemeHapticsAndSound() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        KeyboardEnginePreferences.setThemeId(context, KeyboardThemeId.DARK_VAULT)
+        KeyboardEnginePreferences.setHapticsEnabled(context, true)
+        KeyboardEnginePreferences.setSoundEnabled(context, false)
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onView(withId(R.id.btn_keyboard_theme)).perform(scrollTo()).check(matches(isDisplayed()))
+            onView(withId(R.id.haptics_enabled)).perform(scrollTo()).check(matches(isChecked()))
+            onView(withId(R.id.haptics_enabled)).perform(click())
+            onView(withId(R.id.haptics_enabled)).check(matches(isNotChecked()))
+            org.junit.Assert.assertFalse(KeyboardEnginePreferences.hapticsEnabled(context))
+            onView(withId(R.id.key_sound_enabled)).perform(scrollTo()).check(matches(isNotChecked()))
+            onView(withId(R.id.key_sound_enabled)).perform(click())
+            onView(withId(R.id.key_sound_enabled)).check(matches(isChecked()))
+            org.junit.Assert.assertTrue(KeyboardEnginePreferences.soundEnabled(context))
+            onView(withId(R.id.btn_keyboard_theme)).perform(scrollTo()).perform(click())
+            onView(withText("Light")).perform(click())
+            org.junit.Assert.assertEquals(
+                KeyboardThemeId.LIGHT,
+                KeyboardEnginePreferences.themeId(context),
+            )
+        }
+        KeyboardEnginePreferences.setThemeId(context, KeyboardThemeId.DARK_VAULT)
+        KeyboardEnginePreferences.setHapticsEnabled(context, true)
+        KeyboardEnginePreferences.setSoundEnabled(context, false)
     }
 
     @Test

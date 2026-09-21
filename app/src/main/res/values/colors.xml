@@ -15,6 +15,15 @@
     <color name="kb_label">#EEEEEE</color>
     <color name="kb_label_hint">#8A8F98</color>
 
+    <color name="kb_light_background">#F2F2F4</color>
+    <color name="kb_light_key">#FFFFFF</color>
+    <color name="kb_light_key_pressed">#E3E3E8</color>
+    <color name="kb_light_key_modifier">#E8E6F2</color>
+    <color name="kb_light_key_modifier_active">#C8EFD8</color>
+    <color name="kb_light_key_stroke_pressed">#1A8A4A</color>
+    <color name="kb_light_label">#1A1A1A</color>
+    <color name="kb_light_label_hint">#6B7080</color>
+
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
 </resources>

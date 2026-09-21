@@ -66,5 +66,10 @@ class VaultUiHardeningTest {
         assertTrue(root.findViewById<android.view.View>(R.id.swipe_typing_enabled) != null)
         assertTrue(root.findViewById<android.view.View>(R.id.btn_swipe_left_action) != null)
         assertTrue(root.findViewById<android.view.View>(R.id.btn_swipe_right_action) != null)
+        assertTrue(root.findViewById<View>(R.id.btn_keyboard_theme) != null)
+        assertTrue(root.findViewById<View>(R.id.keyboard_height_seek) != null)
+        assertTrue(root.findViewById<View>(R.id.haptics_enabled) != null)
+        assertTrue(root.findViewById<View>(R.id.key_sound_enabled) != null)
+        assertTrue(root.findViewById<View>(R.id.long_press_seek) != null)
     }
 }

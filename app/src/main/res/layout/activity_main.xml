@@ -75,6 +75,74 @@
             android:text="@string/swipe_typing_enabled"
             android:textColor="@color/text_primary" />
 
+        <TextView
+            android:id="@+id/keyboard_settings_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/keyboard_settings_title"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btn_keyboard_theme"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/keyboard_theme_title" />
+
+        <TextView
+            android:id="@+id/keyboard_height_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/keyboard_height"
+            android:textColor="@color/text_primary" />
+
+        <SeekBar
+            android:id="@+id/keyboard_height_seek"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/keyboard_height"
+            android:max="12"
+            android:progress="4"
+            android:progressTint="@color/neon"
+            android:thumbTint="@color/neon" />
+
+        <CheckBox
+            android:id="@+id/haptics_enabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:buttonTint="@color/neon"
+            android:checked="true"
+            android:text="@string/haptics_enabled"
+            android:textColor="@color/text_primary" />
+
+        <CheckBox
+            android:id="@+id/key_sound_enabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:buttonTint="@color/neon"
+            android:checked="false"
+            android:text="@string/key_sound_enabled"
+            android:textColor="@color/text_primary" />
+
+        <TextView
+            android:id="@+id/long_press_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/long_press_duration"
+            android:textColor="@color/text_primary" />
+
+        <SeekBar
+            android:id="@+id/long_press_seek"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/long_press_duration"
+            android:max="12"
+            android:progress="4"
+            android:progressTint="@color/neon"
+            android:thumbTint="@color/neon" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

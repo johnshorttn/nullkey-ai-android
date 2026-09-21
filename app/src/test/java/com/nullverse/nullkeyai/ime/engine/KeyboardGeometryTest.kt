@@ -138,4 +138,15 @@ class KeyboardGeometryTest {
         assertTrue(portrait > landscape)
         assertNotNull(portrait)
     }
+
+    @Test
+    fun preferredHeightHonorsUserScale() {
+        val base = preferredKeyboardHeightPx(3f, LayoutOrientation.PORTRAIT, 4, 1.0f)
+        val tall = preferredKeyboardHeightPx(3f, LayoutOrientation.PORTRAIT, 4, 1.40f)
+        val short = preferredKeyboardHeightPx(3f, LayoutOrientation.PORTRAIT, 4, 0.80f)
+        assertTrue(tall > base)
+        assertTrue(short < base)
+        assertEquals(tall, preferredKeyboardHeightPx(3f, LayoutOrientation.PORTRAIT, 4, 9f))
+        assertEquals(short, preferredKeyboardHeightPx(3f, LayoutOrientation.PORTRAIT, 4, 0.1f))
+    }
 }
