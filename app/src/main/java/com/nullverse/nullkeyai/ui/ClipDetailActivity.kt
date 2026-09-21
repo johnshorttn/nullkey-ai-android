@@ -17,6 +17,7 @@ import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.clipboard.VaultAssetStore
 import com.nullverse.nullkeyai.db.NullKeyDatabase
+import com.nullverse.nullkeyai.security.VaultCrypto
 import kotlinx.coroutines.launch
 
 class ClipDetailActivity : AppCompatActivity() {
@@ -28,7 +29,7 @@ class ClipDetailActivity : AppCompatActivity() {
         setContentView(R.layout.activity_clip_detail)
         val db = NullKeyDatabase.get(this)
         val assetStore = VaultAssetStore(this)
-        repository = ClipRepository(db.clipDao(), assetStore, db.tagDao())
+        repository = ClipRepository(db.clipDao(), assetStore, db.tagDao(), VaultCrypto())
         clipId = intent.getLongExtra(EXTRA_CLIP_ID, 0L)
         if (clipId == 0L) { finish(); return }
 
@@ -72,7 +73,9 @@ class ClipDetailActivity : AppCompatActivity() {
                     ?: clip.sourcePackage?.let { append(" • ").append(it) }
                 append(" • ").append(clip.captureMethod)
             }
-            findViewById<EditText>(R.id.detail_notes).setText(clip.notes)
+            findViewById<EditText>(R.id.detail_notes).setText(
+                if (clip.protected) "" else clip.notes
+            )
             findViewById<CheckBox>(R.id.detail_pinned).isChecked = clip.pinned
             findViewById<CheckBox>(R.id.detail_protected).isChecked = clip.protected
             findViewById<TextView>(R.id.detail_tags).text =
