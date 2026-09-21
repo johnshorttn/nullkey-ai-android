@@ -88,6 +88,10 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
 
     suspend fun setPinned(id: Long, pinned: Boolean) = dao.setPinned(id, pinned)
 
+    suspend fun setNotes(id: Long, notes: String) = dao.setNotes(id, notes)
+
+    suspend fun setProtected(id: Long, isProtected: Boolean) = dao.setProtected(id, isProtected)
+
     /** Serialize all active clips to a portable JSON backup document. */
     suspend fun exportJson(): String = ClipBackup.toJson(dao.allActive())
 
