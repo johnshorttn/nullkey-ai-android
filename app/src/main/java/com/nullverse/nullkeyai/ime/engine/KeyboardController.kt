@@ -83,7 +83,14 @@ class KeyboardController(
                 val path = keys.mapNotNull { key ->
                     key.spec.code.toChar().takeIf { it.isLetter() }
                 }.joinToString(separator = "")
-                if (path.length >= 2) host.onGestureWord(path)
+                if (path.length >= 2) {
+                    val casedPath = if (modifiers.isShifted) {
+                        path.replaceFirstChar { it.uppercaseChar() }
+                    } else path
+                    modifiers.onLetterCommitted()
+                    host.onGestureWord(casedPath)
+                    host.requestRedraw()
+                }
             }
         },
     )
