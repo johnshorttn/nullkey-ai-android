@@ -29,7 +29,7 @@ The voice of your vault. The memory of your mind.
 **Contact email:** set in Play Console (developer account).  
 **Privacy policy URL:** https://johnshorttn.github.io/nullkey-ai-android/privacy.html
 
-Paste that URL into Play Console. It is the GitHub Pages page for [privacy.md](privacy.md). Pages is already enabled (branch `rewrite/v2`, folder `/docs`, HTTPS enforced). The page is public now; the policy text updates when changes to `docs/privacy.md` merge to `rewrite/v2`. If Pages is ever turned off: **Settings → Pages → Deploy from a branch → `rewrite/v2` → `/docs` → Save**.
+That HTTPS page is already live. Paste it into Play Console. Prefer it over the draft page [PRIVACY.md](PRIVACY.md) (`/PRIVACY` on the same site). Source: [privacy.md](privacy.md).
 
 ## Graphics checklist
 

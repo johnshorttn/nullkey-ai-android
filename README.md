@@ -17,7 +17,7 @@ Offline-first clipboard keyboard with a private on-device vault.
 
 Public privacy policy (Play IME listing): **https://johnshorttn.github.io/nullkey-ai-android/privacy.html**
 
-Source: [docs/privacy.md](docs/privacy.md). GitHub Pages already publishes the `docs/` folder from `rewrite/v2`. The URL is HTTPS today; the page text updates when `docs/privacy.md` merges to that branch. If Pages is turned off later: repository **Settings → Pages → Deploy from a branch → `rewrite/v2` → `/docs`**.
+That URL is already live (GitHub Pages, `rewrite/v2` `/docs`). Use it instead of the draft page [docs/PRIVACY.md](docs/PRIVACY.md). Source for the live page: [docs/privacy.md](docs/privacy.md).
 
 ## Build
 

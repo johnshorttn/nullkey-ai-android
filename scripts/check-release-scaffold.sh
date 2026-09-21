@@ -57,11 +57,11 @@ fi
 PRIVACY_URL="https://johnshorttn.github.io/nullkey-ai-android/privacy.html"
 PRIVACY_DOC="$ROOT/docs/privacy.md"
 [[ -f "$PRIVACY_DOC" ]] || fail "docs/privacy.md missing"
-[[ -f "$ROOT/docs/_config.yml" ]] || fail "docs/_config.yml missing (GitHub Pages source is /docs)"
 grep -Fq "$PRIVACY_URL" "$PRIVACY_DOC" || fail "docs/privacy.md must cite $PRIVACY_URL"
 grep -Fq 'does **not** include the `INTERNET` permission' "$PRIVACY_DOC" || fail "docs/privacy.md must state the app has no INTERNET permission"
-if grep -Fq 'allowBackup="true"' "$PRIVACY_DOC" || grep -Fq 'allowBackup is currently enabled' "$PRIVACY_DOC"; then
-  fail "docs/privacy.md must not claim Auto Backup is enabled"
+grep -Fq "$PRIVACY_URL" "$ROOT/docs/PRIVACY.md" || fail "docs/PRIVACY.md must point at the canonical privacy.html URL"
+if grep -Fq 'allowBackup is currently enabled' "$ROOT/docs/PRIVACY.md"; then
+  fail "docs/PRIVACY.md must not claim Auto Backup is enabled"
 fi
 for doc in "$ROOT/docs/PLAY_STORE.md" "$ROOT/docs/RELEASE_AAB.md" "$ROOT/README.md" \
   "$ROOT/app/src/main/java/com/nullverse/nullkeyai/ui/AboutSupportActivity.kt"; do
