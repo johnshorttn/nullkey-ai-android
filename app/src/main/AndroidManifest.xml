@@ -13,6 +13,11 @@
         android:theme="@style/Theme.NullKey">
 
         <activity
+            android:name=".ui.ClipDetailActivity"
+            android:exported="false"
+            android:label="@string/clip_details" />
+
+        <activity
             android:name=".diagnostics.ClipboardLabActivity"
             android:exported="false"
             android:label="@string/clipboard_lab_title" />
