@@ -26,7 +26,7 @@ data class ClipCaptureRequest(
     val sourceConfidence: ClipSourceConfidence = ClipSourceConfidence.UNKNOWN
 )
 
-class ClipRepository(private val dao: ClipDao) {
+class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAssetStore? = null) {
 
     fun search(query: String, filesOnly: Boolean): Flow<List<Clip>> =
         dao.search(query.trim(), filesOnly)
@@ -117,7 +117,10 @@ class ClipRepository(private val dao: ClipDao) {
         now: Long = System.currentTimeMillis()
     ): Int {
         val cutoff = now - TimeUnit.DAYS.toMillis(retentionDays.toLong())
-        return dao.purgeExpired(cutoff)
+        val expired = dao.expiredTrash(cutoff)
+        val deleted = dao.purgeExpired(cutoff)
+        if (deleted > 0) expired.forEach { assetStore?.delete(it.localAssetPath) }
+        return deleted
     }
 
     companion object {
