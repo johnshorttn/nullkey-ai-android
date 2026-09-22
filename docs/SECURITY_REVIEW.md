@@ -27,7 +27,7 @@ Compile restore (literal `\n` in vault-swipe Kotlin/XML) is included so this bra
 
 ## Confirmed OK (no code change)
 
-- **No `INTERNET`.** Offline default holds. Sync is an in-memory / provider-agnostic interface with no production host. Latin OCR is the bundled ML Kit pipeline; `INTERNET` and `ACCESS_NETWORK_STATE` are stripped if a library manifest merges them, and the Clearcut transport backend is excluded.
+- **No `INTERNET`.** Offline default holds. Sync is an in-memory / provider-agnostic interface with no production host. Latin OCR is the bundled ML Kit pipeline. `INTERNET` and `ACCESS_NETWORK_STATE` are stripped if a library manifest merges them. `transport-backend-cct` (the Clearcut HTTP uploader) stays excluded; `CCTDestination` in the app is a linkage stub so the recognizer can be constructed offline.
 - **IME** is `exported="true"` only with `BIND_INPUT_METHOD` (system-only bind).
 - **Clipboard monitor** is `exported="false"` with `foregroundServiceType="specialUse"` and a `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` explanation.
 - **Internal activities** (`ClipDetailActivity`, `TrashActivity`, `ClipboardLabActivity`) are `exported="false"`.

@@ -14,9 +14,11 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 /**
  * Latin-script text recognition using the model bundled in the APK
  * (`libmlkit_google_ocr_pipeline.so` via `text-recognition` 16.0.1).
- * The unbundled Play Services download path is not used. ML Kit's optional
- * Clearcut uploader is excluded from the build, and INTERNET is stripped
- * from the merged manifest, so recognition cannot fall back to the network.
+ * The unbundled Play Services download path is not used. Creating the client
+ * still touches [com.google.android.datatransport.cct.CCTDestination]; that
+ * class is an in-app linkage stub. The Clearcut HTTP uploader is not
+ * packaged, and INTERNET is stripped from the merged manifest, so
+ * recognition cannot fall back to the network.
  *
  * The auto-init provider is removed. [MlKit.initialize] runs on first use so
  * unit tests and ordinary app start do not load the native pipeline.

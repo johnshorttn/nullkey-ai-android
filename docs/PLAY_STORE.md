@@ -45,7 +45,7 @@ Use current dark Vault UI. Do not screenshot other people’s clipboard contents
 
 ## Data safety (Play form)
 
-Google’s “collected” means data sent off the device. This app has **no `INTERNET` or `ACCESS_NETWORK_STATE` permission**. ML Kit Latin OCR is bundled in the APK; its Clearcut uploader is not packaged, and both network permissions are stripped from the merged manifest, so it cannot transmit images, keystrokes, or OCR text. Spelling is a bundled dictionary and edit distance, not a full grammar checker. There is no network AI, camera permission, or cloud sync.
+Google’s “collected” means data sent off the device. This app has **no `INTERNET` or `ACCESS_NETWORK_STATE` permission**. ML Kit Latin OCR is bundled in the APK. The Clearcut HTTP uploader (`transport-backend-cct`) is not packaged; a linkage stub satisfies the recognizer constructor, and both network permissions are stripped from the merged manifest, so it cannot transmit images, keystrokes, or OCR text. Spelling is a bundled dictionary and edit distance, not a full grammar checker. There is no network AI, camera permission, or cloud sync.
 
 | Question | Answer |
 | --- | --- |

@@ -125,6 +125,27 @@ Keep rules in `app/proguard-rules.pro` cover:
 
 Library consumer rules (Room, Kotlin, coroutines, AndroidX) still apply on top of those.
 
+`scripts/check-r8-mapping.sh` also checks the minified release APK for bundled Latin OCR:
+
+- `libmlkit_google_ocr_pipeline.so` for `arm64-v8a` and `armeabi-v7a`
+- `assets/mlkit-google-ocr-models/**` stored uncompressed (`AAsset_getBuffer` cannot read deflated entries)
+- Dynamite `ModuleDescriptor` and `BundledTextRecognizerCreator` still defined
+- `CCTDestination` present only as the in-app linkage stub (`CctTransportBackend` absent)
+- still no `INTERNET`
+
+### Device retest: OCR Scan / Extract
+
+CI does not run the recognizer on a phone. After this change, install a **new** minified release APK (the previous `nullkey-rewrite-v2-release.apk` still shows the unavailable message):
+
+1. `adb install -r app/build/outputs/apk/release/app-release.apk` (or the signed smoke APK). Do not upload it to Play.
+2. `adb shell dumpsys package com.nullverse.nullkeyai | grep permission` and confirm `INTERNET` and `ACCESS_NETWORK_STATE` are absent.
+3. Airplane mode on. Vault → scan an image that contains Latin text (a photo of a short sentence is enough).
+4. The image is saved in the Vault either way. Success is extracted text on the clip, not the toast “On-device text recognition is not available on this device.”
+5. Open that clip and run **Extract text** again. Same result.
+6. An image with no letters should say that no text was found. That is a different message from unavailable.
+
+A device whose ABI is not `arm64-v8a`, `armeabi-v7a`, `x86`, or `x86_64` can still show the unavailable message. A normal phone is one of the first two.
+
 ### Residual risk
 
-CI proves the release AAB/APK build, the mapping file, and that those entry points and enum names are present in the minified dex. It does **not** install the minified release build on a device or run instrumented tests against it (instrumented CI stays on the debug APK). Before the first Play upload, install the minified release build on a phone and exercise: enable the IME, type and swipe, open Vault, pin/protect/trash, and export/import a backup. If that pass fails, ship an unminified AAB with `-Pnullkey.releaseMinify=false` and keep the mapping from the failing build. This does not close issue #17.
+CI proves the release AAB/APK build, the mapping file, and that those entry points, enum names, and bundled OCR files are present in the minified package. It does **not** install the minified release build on a device or run the native recognizer (instrumented CI stays on the debug APK). Before the first Play upload, install the minified release build on a phone and exercise: the OCR steps above, enable the IME, type and swipe, open Vault, pin/protect/trash, and export/import a backup. If that pass fails, ship an unminified AAB with `-Pnullkey.releaseMinify=false` and keep the mapping from the failing build. This does not close issue #17.
