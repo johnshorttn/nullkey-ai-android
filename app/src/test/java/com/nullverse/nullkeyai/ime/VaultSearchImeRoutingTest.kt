@@ -71,6 +71,7 @@ class VaultSearchImeRoutingTest {
         tapKey(keyboard, "a")
         tapKey(keyboard, "b")
         service.onFinishInputView(false)
+        assertEquals(View.VISIBLE, search.rootView.findViewById<View>(R.id.vault_panel).visibility)
         tapDelete(keyboard)
         assertEquals("a", search.text.toString())
         tapKey(keyboard, "c")
@@ -111,6 +112,45 @@ class VaultSearchImeRoutingTest {
         assertEquals("a", search.text.toString())
     }
 
+    @Test
+    fun vaultStaysHiddenUntilToolsOpensItAndCloseStopsSearchKeys() {
+        val (_, search, keyboard) = keyboard()
+        val root = search.rootView
+        val panel = root.findViewById<View>(R.id.vault_panel)
+        val tools = root.findViewById<android.widget.ImageButton>(R.id.keyboard_tools)
+        assertEquals(View.GONE, panel.visibility)
+        tapKey(keyboard, "q")
+        assertEquals("", search.text.toString())
+
+        tools.performClick()
+        assertEquals(View.VISIBLE, panel.visibility)
+        assertEquals(search.context.getString(R.string.keyboard_tools_close), tools.contentDescription.toString())
+
+        tapSearch(search)
+        tapKey(keyboard, "q")
+        tapKey(keyboard, "w")
+        tapDelete(keyboard)
+        assertEquals("q", search.text.toString())
+
+        tools.performClick()
+        assertEquals(View.GONE, panel.visibility)
+        assertEquals(search.context.getString(R.string.keyboard_tools_open), tools.contentDescription.toString())
+        tapKey(keyboard, "e")
+        assertEquals("q", search.text.toString())
+    }
+
+    @Test
+    fun closingTheKeyboardHidesTheVaultPanel() {
+        val (service, search, keyboard) = keyboard()
+        search.rootView.findViewById<View>(R.id.keyboard_tools).performClick()
+        tapSearch(search)
+        tapKey(keyboard, "q")
+        service.onFinishInputView(true)
+        assertEquals(View.GONE, search.rootView.findViewById<View>(R.id.vault_panel).visibility)
+        tapKey(keyboard, "w")
+        assertEquals("q", search.text.toString())
+    }
+
     private fun keyboard(): Triple<NullKeyImeService, EditText, NullKeyKeyboardView> {
         val service = Robolectric.buildService(NullKeyImeService::class.java).create().get()
         val root = service.onCreateInputView()
@@ -132,6 +172,11 @@ class VaultSearchImeRoutingTest {
     }
 
     private fun tapSearch(search: EditText) {
+        val root = search.rootView
+        val panel = root.findViewById<View>(R.id.vault_panel)
+        if (panel.visibility != View.VISIBLE) {
+            root.findViewById<View>(R.id.keyboard_tools).performClick()
+        }
         val downTime = SystemClock.uptimeMillis()
         search.dispatchTouchEvent(
             MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, 8f, 8f, 0),

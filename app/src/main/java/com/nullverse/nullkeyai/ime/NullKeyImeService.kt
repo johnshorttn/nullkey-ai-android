@@ -19,6 +19,7 @@ import android.view.inputmethod.EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
 import android.view.inputmethod.EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -48,11 +49,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * The NullKey IME. Renders a QWERTY keyboard (with a symbols/numbers layer) plus:
- *  - a "clip vault" panel to search captured clips and tap one to paste it
- *    (with a "Files only" filter), and
- *  - a word-suggestion strip backed by an on-device [WordSuggester], with
- *    offline spelling corrections when the typed token is not a completion.
+ * The NullKey IME. Renders a QWERTY keyboard (with a symbols/numbers layer) plus
+ * a word-suggestion strip backed by an on-device [WordSuggester], with offline
+ * spelling corrections when the typed token is not a completion.
+ *
+ * The suggestion strip's Tools button opens the clip vault (search, a "Files
+ * only" filter, and tap-to-paste). That panel stays hidden on the default
+ * keyboard so the IME height is only the strip plus keys until the user asks
+ * for clips.
  *
  * The default renderer is the custom [NullKeyKeyboardView] engine (hit-testing,
  * press/release, long-press, shift/caps, portrait/landscape layouts). The
@@ -70,6 +74,8 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private lateinit var qwerty: Keyboard
     private lateinit var symbols: Keyboard
     private lateinit var searchBox: EditText
+    private lateinit var vaultPanel: View
+    private lateinit var toolsButton: ImageButton
     private lateinit var filesOnly: CheckBox
     private lateinit var clipsList: RecyclerView
     private lateinit var clipsEmpty: TextView
@@ -87,6 +93,8 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private var pendingSwipeCommit: String? = null
     /** True after the user taps the in-keyboard vault search field. */
     private var vaultSearchActive = false
+    /** True while the Tools button is showing the vault panel above the keys. */
+    private var vaultPanelOpen = false
 
     override fun onCreate() {
         super.onCreate()
@@ -133,6 +141,9 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
                 searchBox.isActivated = false
             }
         }
+        vaultPanel = root.findViewById(R.id.vault_panel)
+        toolsButton = root.findViewById(R.id.keyboard_tools)
+        toolsButton.setOnClickListener { setVaultPanelOpen(!vaultPanelOpen) }
         filesOnly = root.findViewById(R.id.files_only)
         clipsList = root.findViewById(R.id.clips_list)
         clipsEmpty = root.findViewById(R.id.clips_empty)
@@ -509,6 +520,28 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
      * [currentInputConnection] commit and delete calls do not. Keys edit that
      * same buffer until Enter or the keyboard closes.
      */
+    /**
+     * Tools toggles the vault above the keys. Opening grows the IME by the
+     * panel height (the host already pads for that inset). Closing returns
+     * key routing to the host field and leaves the query in place.
+     */
+    private fun setVaultPanelOpen(open: Boolean) {
+        if (!::vaultPanel.isInitialized || !::toolsButton.isInitialized) return
+        if (vaultPanelOpen == open) return
+        vaultPanelOpen = open
+        vaultPanel.visibility = if (open) View.VISIBLE else View.GONE
+        if (open) {
+            toolsButton.setImageResource(R.drawable.ic_tools_back)
+            toolsButton.contentDescription = getString(R.string.keyboard_tools_close)
+            refreshClips()
+        } else {
+            toolsButton.setImageResource(R.drawable.ic_tools_grid)
+            toolsButton.contentDescription = getString(R.string.keyboard_tools_open)
+            deactivateVaultSearch()
+        }
+        (vaultPanel.parent as? View)?.requestLayout()
+    }
+
     private fun activateVaultSearch() {
         if (!::searchBox.isInitialized) return
         val firstActivation = !vaultSearchActive
@@ -629,7 +662,9 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         // Focusing the search box restarts input and finishes the previous
         // target with finishingInput=false. Only a real close should drop
         // search routing; focus itself keeps keys on that field.
-        if (finishingInput && ::searchBox.isInitialized) {
+        if (finishingInput && vaultPanelOpen) {
+            setVaultPanelOpen(false)
+        } else if (finishingInput && ::searchBox.isInitialized) {
             vaultSearchActive = false
             searchBox.isActivated = false
         }
