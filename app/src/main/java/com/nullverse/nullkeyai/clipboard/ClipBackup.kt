@@ -65,7 +65,15 @@ object ClipBackup {
      * if the text is not valid NullKey backup JSON.
      */
     fun fromJson(text: String): List<Clip> {
-        val trimmed = text.trim()
+        try {
+            return parse(text)
+        } catch (e: org.json.JSONException) {
+            throw IllegalArgumentException(e.message ?: "Not a NullKey backup file", e)
+        }
+    }
+
+    private fun parse(text: String): List<Clip> {
+        val trimmed = text.trim().removePrefix("\uFEFF")
         if (trimmed.isEmpty()) throw IllegalArgumentException("Empty backup")
         val array: JSONArray = when (trimmed.first()) {
             '[' -> JSONArray(trimmed)

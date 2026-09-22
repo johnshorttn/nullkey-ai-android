@@ -49,6 +49,13 @@ interface ClipDao {
     @Query("SELECT * FROM clips WHERE trashedAt IS NOT NULL AND syncDeletedAt IS NULL ORDER BY trashedAt DESC")
     fun trash(): Flow<List<Clip>>
 
+    /** Snapshot of visible Trash (not tombstones) for a manual empty. */
+    @Query("SELECT * FROM clips WHERE trashedAt IS NOT NULL AND syncDeletedAt IS NULL")
+    suspend fun trashedClips(): List<Clip>
+
+    @Query("DELETE FROM clips WHERE id = :id")
+    suspend fun deleteById(id: Long): Int
+
     /** All active clips, oldest first, for export. */
     @Query("SELECT * FROM clips WHERE trashedAt IS NULL ORDER BY createdAt ASC")
     suspend fun allActive(): List<Clip>
