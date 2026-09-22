@@ -35,6 +35,7 @@ import com.nullverse.nullkeyai.clipboard.ClipSwipePreferences
 import com.nullverse.nullkeyai.clipboard.labelRes
 import com.nullverse.nullkeyai.clipboard.ClipCaptureRequest
 import com.nullverse.nullkeyai.clipboard.DeviceBoundProtectedImportException
+import com.nullverse.nullkeyai.clipboard.ImportFailureText
 import com.nullverse.nullkeyai.clipboard.VaultAssetStore
 import com.nullverse.nullkeyai.clipboard.ClipboardMonitorService
 import com.nullverse.nullkeyai.db.Clip
@@ -101,8 +102,18 @@ class MainActivity : AppCompatActivity() {
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             val password = pendingRestorePassword
             pendingRestorePassword = null
-            if (uri != null && password != null) readSecureImport(uri, password)
-            else password?.fill('\u0000')
+            when {
+                uri != null && password != null -> readSecureImport(uri, password)
+                uri != null -> {
+                    // The document picker can recreate this activity and drop the
+                    // in-memory password. Ask again instead of ignoring the file.
+                    persistReadPermission(uri)
+                    askBackupPassword(confirm = false) { replacement ->
+                        readSecureImport(uri, replacement)
+                    }
+                }
+                else -> password?.fill('\u0000')
+            }
         }
 
     private val scanImage =
@@ -566,22 +577,24 @@ class MainActivity : AppCompatActivity() {
     private fun readImport(uri: android.net.Uri) {
         lifecycleScope.launch {
             try {
-                val json = withContext(Dispatchers.IO) {
-                    contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
-                        ?: throw java.io.IOException("Could not open input stream")
+                persistReadPermission(uri)
+                val count = withContext(Dispatchers.IO) {
+                    val json = contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+                        ?: throw java.io.IOException("Could not open the backup file")
+                    repository.importJson(json)
                 }
-                val count = repository.importJson(json)
-                Toast.makeText(
-                    this@MainActivity,
-                    getString(R.string.import_ok, count),
-                    Toast.LENGTH_SHORT
-                ).show()
+                val message = if (count == 0) {
+                    getString(R.string.import_none_new)
+                } else {
+                    getString(R.string.import_ok, count)
+                }
+                Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
             } catch (e: DeviceBoundProtectedImportException) {
                 Toast.makeText(this@MainActivity, R.string.import_protected_requires_secure, Toast.LENGTH_LONG).show()
             } catch (e: IllegalArgumentException) {
-                Toast.makeText(this@MainActivity, R.string.import_invalid, Toast.LENGTH_LONG).show()
+                showFailureToast(R.string.import_invalid, R.string.import_invalid_detail, e)
             } catch (e: Exception) {
-                Toast.makeText(this@MainActivity, R.string.import_failed, Toast.LENGTH_LONG).show()
+                showFailureToast(R.string.import_failed, R.string.import_failed_detail, e)
             }
         }
     }
@@ -641,18 +654,41 @@ class MainActivity : AppCompatActivity() {
     private fun readSecureImport(uri: android.net.Uri, password: CharArray) {
         lifecycleScope.launch {
             try {
-                val document = withContext(Dispatchers.IO) {
-                    contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
-                        ?: throw java.io.IOException("Could not open input stream")
+                persistReadPermission(uri)
+                val count = withContext(Dispatchers.IO) {
+                    val document = contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+                        ?: throw java.io.IOException("Could not open the backup file")
+                    repository.importPortableEncrypted(document, password)
                 }
-                val count = repository.importPortableEncrypted(document, password)
-                Toast.makeText(this@MainActivity, getString(R.string.secure_restore_ok, count), Toast.LENGTH_SHORT).show()
-            } catch (_: Exception) {
-                Toast.makeText(this@MainActivity, R.string.secure_backup_failed, Toast.LENGTH_LONG).show()
+                val message = if (count == 0) {
+                    getString(R.string.import_none_new)
+                } else {
+                    getString(R.string.secure_restore_ok, count)
+                }
+                Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+            } catch (_: javax.crypto.AEADBadTagException) {
+                Toast.makeText(this@MainActivity, R.string.secure_restore_bad_password, Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                showFailureToast(R.string.secure_backup_failed, R.string.secure_backup_failed_detail, e)
             } finally {
                 password.fill('\u0000')
             }
         }
+    }
+
+    private fun persistReadPermission(uri: android.net.Uri) {
+        runCatching {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        }
+    }
+
+    private fun showFailureToast(fallbackRes: Int, detailRes: Int, error: Throwable) {
+        val detail = ImportFailureText.detail(error)
+        val text = if (detail.isNullOrBlank()) getString(fallbackRes) else getString(detailRes, detail)
+        Toast.makeText(this, text, Toast.LENGTH_LONG).show()
     }
 
     private fun copyToSystemClipboard(text: String) {

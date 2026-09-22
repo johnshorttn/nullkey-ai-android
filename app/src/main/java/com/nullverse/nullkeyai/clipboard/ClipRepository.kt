@@ -207,10 +207,12 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
      * backup password. Plaintext exists only in memory for this operation.
      */
     suspend fun exportPortableEncrypted(password: CharArray): String {
-        val vaultCrypto = crypto ?: throw IllegalStateException("Vault crypto unavailable")
         val store = assetStore ?: throw IllegalStateException("Vault asset store unavailable")
         val clips = dao.allActive()
-        val archive = VaultArchive.build(clips, store, vaultCrypto) { id ->
+        if (clips.any { it.protected } && crypto == null) {
+            throw IllegalStateException("Vault crypto unavailable")
+        }
+        val archive = VaultArchive.build(clips, store, crypto) { id ->
             tagDao?.forClip(id)?.map { it.name }.orEmpty()
         }
         return PortableVaultCrypto.encrypt(archive, password)
@@ -218,24 +220,30 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
 
     suspend fun importPortableEncrypted(document: String, password: CharArray): Int {
         val store = assetStore ?: throw IllegalStateException("Vault asset store unavailable")
-        val vaultCrypto = crypto ?: throw IllegalStateException("Vault crypto unavailable")
         val entries = VaultArchive.parse(PortableVaultCrypto.decrypt(document, password))
-        var inserted = 0
+        var restored = 0
         for (entry in entries) {
-            if (dao.countByContent(entry.clip.content) > 0) continue
+            if (entry.clip.content.isBlank() && entry.assetBytes == null) continue
+            if (entry.restoreProtected && crypto == null) {
+                throw IllegalStateException("Vault crypto unavailable")
+            }
+            // Skip before writing a private asset so a merge no-op cannot orphan bytes.
+            if (isActiveDuplicate(entry.clip)) continue
+            val vaultCrypto = crypto
+            val assetBytes = entry.assetBytes?.let { bytes ->
+                if (entry.restoreProtected) vaultCrypto!!.encryptFileBytes(bytes) else bytes
+            }
+            val asset = assetBytes?.let { store.importBytes(it, entry.clip.localAssetPath) }
             // Re-encrypt protected material before it is persisted on the destination device.
             // This avoids a crash window where restored protected content could exist plaintext
             // in Room or in the private asset store.
-            val assetBytes = entry.assetBytes?.let { bytes ->
-                if (entry.restoreProtected) vaultCrypto.encryptFileBytes(bytes) else bytes
-            }
-            val asset = assetBytes?.let { store.importBytes(it, entry.clip.localAssetPath) }
             val restoredClip = if (entry.restoreProtected) {
                 entry.clip.copy(
                     id = 0,
                     trashedAt = null,
+                    syncDeletedAt = null,
                     protected = true,
-                    content = vaultCrypto.encrypt(entry.clip.content),
+                    content = vaultCrypto!!.encrypt(entry.clip.content),
                     notes = vaultCrypto.encrypt(entry.clip.notes),
                     localAssetPath = asset?.relativePath
                 )
@@ -243,39 +251,111 @@ class ClipRepository(private val dao: ClipDao, private val assetStore: VaultAsse
                 entry.clip.copy(
                     id = 0,
                     trashedAt = null,
+                    syncDeletedAt = null,
                     protected = false,
                     localAssetPath = asset?.relativePath
                 )
             }
-            val rowId = runCatching { dao.insert(restoredClip) }.getOrElse {
-                asset?.let { stored -> store.delete(stored.relativePath) }
-                throw it
+            val rowId = try {
+                mergeImportedClip(restoredClip)
+            } catch (error: Exception) {
+                asset?.let { store.delete(it.relativePath) }
+                throw error
             }
-            if (rowId <= 0) {
+            if (rowId == null) {
                 asset?.let { store.delete(it.relativePath) }
                 continue
             }
             entry.tags.forEach { addTag(rowId, it) }
-            inserted++
+            restored++
         }
-        return inserted
+        return restored
     }
 
     /**
-     * Import clips from a JSON backup. Blank clips and clips whose content already
-     * exists in the active vault are skipped. Returns the number actually inserted.
-     * Throws [IllegalArgumentException] if [json] is not a valid backup document.
+     * Merge clips from a JSON backup into the vault.
+     *
+     * Active clips with the same syncId or the same content are left unchanged.
+     * A trashed row or sync tombstone with the same syncId is restored in place so
+     * the unique syncId index cannot abort the import. Returns the number of clips
+     * inserted or restored. Throws [IllegalArgumentException] if [json] is not a
+     * valid backup document.
      */
     suspend fun importJson(json: String): Int {
         val clips = ClipBackup.fromJson(json)
-        var inserted = 0
+        var restored = 0
         for (clip in clips) {
             if (clip.content.isBlank()) continue
-            if (dao.countByContent(clip.content) > 0) continue
-            dao.insert(clip.copy(id = 0, trashedAt = null))
-            inserted++
+            if (mergeImportedClip(clip.copy(id = 0, trashedAt = null, syncDeletedAt = null)) != null) {
+                restored++
+            }
         }
-        return inserted
+        return restored
+    }
+
+    /**
+     * Permanently delete every clip currently shown in Trash, including private
+     * asset files. Sync tombstones are left in place. Returns the number of rows removed.
+     */
+    suspend fun emptyTrash(): Int {
+        val doomed = dao.trashedClips()
+        var removed = 0
+        for (clip in doomed) {
+            val assetPath = clip.localAssetPath
+            val deleted = dao.deleteById(clip.id)
+            if (deleted > 0) {
+                assetStore?.delete(assetPath)
+                removed += deleted
+            }
+        }
+        return removed
+    }
+
+    /**
+     * Active vault rows win. Trashed and tombstoned identities are restored in place.
+     * Returns the row id that was inserted or restored, or null when nothing changed.
+     */
+    private suspend fun mergeImportedClip(incoming: Clip): Long? {
+        if (incoming.content.isBlank()) return null
+        val existing = incoming.syncId.takeIf { it.isNotBlank() }?.let { dao.bySyncId(it) }
+        if (existing != null) {
+            if (existing.trashedAt == null && existing.syncDeletedAt == null) return null
+            val previousAsset = existing.localAssetPath
+            val deviceId = deviceIdentity?.current()
+            dao.update(
+                incoming.copy(
+                    id = existing.id,
+                    syncId = existing.syncId,
+                    trashedAt = null,
+                    syncDeletedAt = null,
+                    revision = maxOf(existing.revision, incoming.revision) + 1,
+                    originDeviceId = existing.originDeviceId ?: incoming.originDeviceId ?: deviceId,
+                    modifiedByDeviceId = deviceId ?: incoming.modifiedByDeviceId ?: existing.modifiedByDeviceId,
+                    syncState = "PENDING",
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+            if (!previousAsset.isNullOrBlank() && previousAsset != incoming.localAssetPath) {
+                assetStore?.delete(previousAsset)
+            }
+            return existing.id
+        }
+        if (dao.countByContent(incoming.content) > 0) return null
+        val rowId = dao.insert(
+            incoming.copy(id = 0, trashedAt = null, syncDeletedAt = null)
+        )
+        if (rowId <= 0) {
+            throw IllegalStateException("Could not insert restored clip")
+        }
+        return rowId
+    }
+
+    private suspend fun isActiveDuplicate(incoming: Clip): Boolean {
+        val existing = incoming.syncId.takeIf { it.isNotBlank() }?.let { dao.bySyncId(it) }
+        if (existing != null) {
+            return existing.trashedAt == null && existing.syncDeletedAt == null
+        }
+        return incoming.content.isNotBlank() && dao.countByContent(incoming.content) > 0
     }
 
     /**

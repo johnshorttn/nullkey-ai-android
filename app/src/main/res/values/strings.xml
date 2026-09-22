@@ -16,8 +16,11 @@
     <string name="export_ok">Clips exported</string>
     <string name="export_failed">Export failed</string>
     <string name="import_ok">Imported %1$d clip(s)</string>
+    <string name="import_none_new">No new clips. Items already in your Vault were left unchanged.</string>
     <string name="import_invalid">Not a valid NullKey backup file</string>
+    <string name="import_invalid_detail">Not a valid NullKey backup file: %1$s</string>
     <string name="import_failed">Import failed</string>
+    <string name="import_failed_detail">Import failed: %1$s</string>
     <string name="import_protected_requires_secure">Protected clips cannot be restored from plain JSON. Use Secure Restore.</string>
 
     <string name="keyboard_tools_open">Vault tools</string>
@@ -85,8 +88,14 @@
     <string name="add_tag">Add tag…</string>
     <string name="add">Add</string>
     <string name="trash">Trash</string>
-    <string name="trash_help">Tap an item and confirm to restore it. Items are automatically purged after the retention period.</string>
+    <string name="trash_help">Tap an item and confirm to restore it. Empty trash permanently deletes everything listed here. Items you leave are purged automatically after the retention period.</string>
     <string name="trash_empty">Trash is empty</string>
+    <string name="empty_trash">Empty trash</string>
+    <string name="empty_trash_title">Empty trash?</string>
+    <string name="empty_trash_message">Permanently delete everything in Trash. This cannot be undone.</string>
+    <string name="trash_purged">Permanently deleted %1$d item(s) from Trash</string>
+    <string name="trash_purge_failed">Could not empty Trash</string>
+    <string name="trash_purge_failed_detail">Could not empty Trash: %1$s</string>
     <string name="image_preview">Vault image preview</string>
     <string name="asset_saved_private">Saved privately in NullKey Vault</string>
     <string name="asset_unavailable">Original asset is no longer readable</string>
@@ -105,7 +114,9 @@
     <string name="backup_password_mismatch">Passwords must match and contain at least 8 characters</string>
     <string name="secure_export_ok">Encrypted backup created</string>
     <string name="secure_restore_ok">Restored %1$d clips from encrypted backup</string>
+    <string name="secure_restore_bad_password">Wrong backup password, or the file is not an intact NullKey secure backup.</string>
     <string name="secure_backup_failed">Encrypted backup operation failed</string>
+    <string name="secure_backup_failed_detail">Encrypted backup operation failed: %1$s</string>
     <string name="remove_tag">Remove tag</string>
     <string name="remove_tag_title">Remove tag</string>
     <string name="remove_tag_none">No tags to remove</string>

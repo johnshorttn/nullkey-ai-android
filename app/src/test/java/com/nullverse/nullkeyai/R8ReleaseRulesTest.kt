@@ -81,4 +81,47 @@ class R8ReleaseRulesTest {
         val mappingCheck = File(repoRoot(), "scripts/check-r8-mapping.sh").readText()
         assertTrue(mappingCheck.contains("alignmentCost\$State"))
     }
+
+    @Test
+    fun bundledOcrStaysLinkedWithoutTheClearcutUploader() {
+        val root = repoRoot()
+        val gradle = File(root, "app/build.gradle.kts").readText()
+        assertTrue(gradle.contains("com.google.mlkit:text-recognition:16.0.1"))
+        assertTrue(gradle.contains("transport-backend-cct"))
+        assertTrue(gradle.contains("noCompress"))
+        listOf("binarypb", "fb", "bincfg", "conv_model", "lstm_model").forEach { ext ->
+            assertTrue("model files .$ext must be stored uncompressed", gradle.contains("\"$ext\""))
+        }
+
+        val rules = File(root, "app/proguard-rules.pro").readText()
+        listOf(
+            "com.google.android.gms.dynamite.descriptors.com.google.mlkit.dynamite.text.latin.ModuleDescriptor",
+            "MODULE_ID",
+            "MODULE_VERSION",
+            "BundledTextRecognizerCreator",
+            "com.google.android.datatransport.cct.CCTDestination"
+        ).forEach { token ->
+            assertTrue("missing OCR keep token: $token", rules.contains(token))
+        }
+
+        val stub = File(
+            root,
+            "app/src/main/java/com/google/android/datatransport/cct/CCTDestination.java"
+        ).readText()
+        assertTrue(stub.contains("implements EncodedDestination"))
+        assertTrue(stub.contains("Encoding.of(\"proto\")"))
+        assertTrue(stub.contains("Encoding.of(\"json\")"))
+        assertFalse(stub.contains("CctTransportBackend"))
+        assertFalse(stub.contains("HttpURLConnection"))
+
+        val manifest = File(root, "app/src/main/AndroidManifest.xml").readText()
+        assertTrue(manifest.contains("android.permission.INTERNET"))
+        assertTrue(manifest.contains("tools:node=\"remove\""))
+        assertTrue(manifest.contains("android.permission.ACCESS_NETWORK_STATE"))
+
+        val checker = File(root, "scripts/check-r8-mapping.sh").readText()
+        assertTrue(checker.contains("libmlkit_google_ocr_pipeline.so"))
+        assertTrue(checker.contains("CctTransportBackend"))
+        assertTrue(checker.contains("mlkit-google-ocr-models"))
+    }
 }

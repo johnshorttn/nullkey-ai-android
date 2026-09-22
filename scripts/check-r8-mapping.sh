@@ -21,6 +21,9 @@ SEEDS="$MAP_DIR/seeds.txt"
 RESOURCES="$MAP_DIR/resources.txt"
 CONFIG="$MAP_DIR/configuration.txt"
 APK="$ROOT/app/build/outputs/apk/release/app-release.apk"
+if [[ ! -f "$APK" ]]; then
+  APK="$ROOT/app/build/outputs/apk/release/app-release-unsigned.apk"
+fi
 
 [[ -f "$MAPPING" ]] || fail "missing $MAPPING (release minify did not run)"
 [[ -f "$SEEDS" ]] || fail "missing $SEEDS"
@@ -190,9 +193,69 @@ PERMS="$("$AAPT" dump permissions "$APK")"
 if grep -q 'android.permission.INTERNET' <<<"$PERMS"; then
   fail "release APK requests INTERNET"
 fi
+if grep -q 'android.permission.ACCESS_NETWORK_STATE' <<<"$PERMS"; then
+  fail "release APK requests ACCESS_NETWORK_STATE"
+fi
 BADGING="$("$AAPT" dump badging "$APK")"
 grep -q "package: name='com.nullverse.nullkeyai'" <<<"$BADGING" || fail "release APK package name changed"
 grep -q "targetSdkVersion:'36'" <<<"$BADGING" || fail "release APK targetSdk is not 36"
 
 ok "R8 mapping keeps IME, Room, and persisted enum names; app code is obfuscated"
 ok "release APK has no INTERNET permission and targetSdk 36"
+
+# Bundled Latin OCR must be inside the minified APK, stored so AAsset_getBuffer
+# can read it, and must not include the Clearcut HTTP uploader.
+python3 - "$APK" <<'PY'
+import pathlib, sys, zipfile
+apk = pathlib.Path(sys.argv[1])
+with zipfile.ZipFile(apk) as zf:
+    names = set(zf.namelist())
+    for abi in ("arm64-v8a", "armeabi-v7a"):
+        so = f"lib/{abi}/libmlkit_google_ocr_pipeline.so"
+        if so not in names:
+            raise SystemExit(f"FAIL: release APK missing {so}")
+        if zf.getinfo(so).file_size < 1_000_000:
+            raise SystemExit(f"FAIL: {so} is implausibly small")
+    models = [i for i in zf.infolist() if i.filename.startswith("assets/mlkit-google-ocr-models/")]
+    if len(models) < 10:
+        raise SystemExit(f"FAIL: bundled OCR model assets missing ({len(models)})")
+    compressed = [i.filename for i in models if i.compress_type != zipfile.ZIP_STORED]
+    if compressed:
+        raise SystemExit("FAIL: OCR model assets are compressed: " + ", ".join(compressed[:8]))
+    dex = b"".join(zf.read(n) for n in names if n.endswith(".dex"))
+
+def descriptor(class_name: str) -> bytes:
+    return ("L" + class_name.replace(".", "/") + ";").encode()
+
+required = [
+    "com.google.android.gms.dynamite.descriptors.com.google.mlkit.dynamite.text.latin.ModuleDescriptor",
+    "com.google.mlkit.vision.text.bundled.common.BundledTextRecognizerCreator",
+    "com.google.android.datatransport.cct.CCTDestination",
+]
+missing = [name for name in required if descriptor(name) not in dex]
+if missing:
+    raise SystemExit("FAIL: release dex missing OCR linkage classes: " + ", ".join(missing))
+for literal in (b"MODULE_ID", b"MODULE_VERSION", b"com.google.mlkit.dynamite.text.latin"):
+    if literal not in dex:
+        raise SystemExit(f"FAIL: release dex missing {literal.decode()}")
+if b"CctTransportBackend" in dex or b"CctBackendFactory" in dex:
+    raise SystemExit("FAIL: Clearcut HTTP uploader classes are in the release dex")
+print(f"ocr_model_assets={len(models)} stored uncompressed")
+PY
+
+DEXDUMP=""
+if [[ -n "$SDK" && -d "$SDK/build-tools" ]]; then
+  DEXDUMP="$(find "$SDK/build-tools" -name dexdump -type f | sort | tail -1 || true)"
+fi
+if [[ -z "$DEXDUMP" ]]; then
+  fail "dexdump not found; cannot verify OCR classes are defined"
+fi
+DEFINED="$("$DEXDUMP" -f "$APK")"
+grep -q "Class descriptor  : 'Lcom/google/android/datatransport/cct/CCTDestination;'" <<<"$DEFINED" \
+  || fail "CCTDestination linkage stub is not a defined class in the release dex"
+grep -q "Class descriptor  : 'Lcom/google/android/gms/dynamite/descriptors/com/google/mlkit/dynamite/text/latin/ModuleDescriptor;'" <<<"$DEFINED" \
+  || fail "Latin ModuleDescriptor is not a defined class in the release dex"
+if grep -q "CctTransportBackend" <<<"$DEFINED"; then
+  fail "CctTransportBackend is defined in the release dex"
+fi
+ok "bundled OCR native libs, uncompressed models, and Clearcut linkage stub are in the release APK"
