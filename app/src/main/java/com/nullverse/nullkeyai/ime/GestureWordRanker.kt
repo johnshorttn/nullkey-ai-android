@@ -9,6 +9,7 @@ package com.nullverse.nullkeyai.ime
 object GestureWordRanker {
     const val SKIP_PATH_COST = 1
     const val MISS_WORD_COST = 12
+    private const val UNSEEN = -1
 
     fun rank(path: String, counts: Map<String, Int>, max: Int = 3): List<String> {
         val gesture = lettersOf(path)
@@ -64,33 +65,33 @@ object GestureWordRanker {
     /**
      * Minimum edit cost to consume [gesture] against [word]. Both strings are
      * already collapsed and share first/last letters.
+     *
+     * States are packed ints (path index, word index, misses). A data-class map
+     * key loses [equals]/[hashCode] when R8 shrinks it, so release ranking
+     * stops memoizing. The queue is an index cursor so the dex does not bind
+     * the API 35 List removal call.
      */
     private fun alignmentCost(gesture: String, word: String): Int? {
         val n = gesture.length
         val m = word.length
-        val maxMisses = maxMisses(m)
-        data class State(val i: Int, val j: Int, val misses: Int)
-        val best = HashMap<State, Int>()
-        val queue = ArrayDeque<State>()
-
-        fun offer(state: State, cost: Int) {
-            if (state.misses > maxMisses) return
-            if (state.i > n || state.j > m) return
-            val previous = best[state]
-            if (previous == null || cost < previous) {
-                best[state] = cost
-                queue.add(state)
-            }
-        }
-
-        offer(State(1, 1, 0), 0)
+        val missCap = maxMisses(m)
+        val missStride = missCap + 1
+        val jStride = m + 1
+        val best = IntArray((n + 1) * jStride * missStride) { UNSEEN }
+        val queueKeys = ArrayList<Int>()
+        val queueCosts = ArrayList<Int>()
+        offerState(best, queueKeys, queueCosts, missCap, n, m, missStride, jStride, 1, 1, 0, 0)
+        var head = 0
         var result: Int? = null
-        while (queue.isNotEmpty()) {
-            val state = queue.removeFirst()
-            val cost = best[state] ?: continue
-            val i = state.i
-            val j = state.j
-            val misses = state.misses
+        while (head < queueKeys.size) {
+            val key = queueKeys[head]
+            val cost = queueCosts[head]
+            head++
+            if (cost != best[key]) continue
+            val misses = key % missStride
+            val ij = key / missStride
+            val j = ij % jStride
+            val i = ij / jStride
             if (j == m) {
                 if (i == n) result = minOf(result ?: cost, cost)
                 continue
@@ -99,24 +100,63 @@ object GestureWordRanker {
 
             val lastWord = j == m - 1
             val lastPath = i == n - 1
-            when {
-                lastWord && lastPath -> {
-                    if (gesture[i] == word[j]) offer(State(n, m, misses), cost)
+            if (lastWord && lastPath) {
+                if (gesture[i] == word[j]) {
+                    offerState(best, queueKeys, queueCosts, missCap, n, m, missStride, jStride, n, m, misses, cost)
                 }
-                lastWord -> offer(State(i + 1, j, misses), cost + SKIP_PATH_COST)
-                lastPath -> offer(State(i, j + 1, misses + 1), cost + MISS_WORD_COST)
-                else -> {
-                    if (gesture[i] == word[j]) {
-                        offer(State(i + 1, j + 1, misses), cost)
-                    }
-                    offer(State(i + 1, j, misses), cost + SKIP_PATH_COST)
-                    if (j > 0) {
-                        offer(State(i, j + 1, misses + 1), cost + MISS_WORD_COST)
-                    }
+            } else if (lastWord) {
+                offerState(
+                    best, queueKeys, queueCosts, missCap, n, m, missStride, jStride,
+                    i + 1, j, misses, cost + SKIP_PATH_COST,
+                )
+            } else if (lastPath) {
+                offerState(
+                    best, queueKeys, queueCosts, missCap, n, m, missStride, jStride,
+                    i, j + 1, misses + 1, cost + MISS_WORD_COST,
+                )
+            } else {
+                if (gesture[i] == word[j]) {
+                    offerState(
+                        best, queueKeys, queueCosts, missCap, n, m, missStride, jStride,
+                        i + 1, j + 1, misses, cost,
+                    )
+                }
+                offerState(
+                    best, queueKeys, queueCosts, missCap, n, m, missStride, jStride,
+                    i + 1, j, misses, cost + SKIP_PATH_COST,
+                )
+                if (j > 0) {
+                    offerState(
+                        best, queueKeys, queueCosts, missCap, n, m, missStride, jStride,
+                        i, j + 1, misses + 1, cost + MISS_WORD_COST,
+                    )
                 }
             }
         }
         return result
+    }
+
+    private fun offerState(
+        best: IntArray,
+        queueKeys: ArrayList<Int>,
+        queueCosts: ArrayList<Int>,
+        missCap: Int,
+        n: Int,
+        m: Int,
+        missStride: Int,
+        jStride: Int,
+        i: Int,
+        j: Int,
+        misses: Int,
+        cost: Int,
+    ) {
+        if (misses > missCap || i > n || j > m || cost < 0) return
+        val key = (i * jStride + j) * missStride + misses
+        val previous = best[key]
+        if (previous != UNSEEN && cost >= previous) return
+        best[key] = cost
+        queueKeys.add(key)
+        queueCosts.add(cost)
     }
 }
 

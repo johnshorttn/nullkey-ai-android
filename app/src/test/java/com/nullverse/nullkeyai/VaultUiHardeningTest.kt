@@ -89,5 +89,11 @@ class VaultUiHardeningTest {
             .inflate(R.layout.keyboard, null)
         assertTrue(root.findViewById<android.view.View>(R.id.clips_empty) != null)
         assertTrue(root.findViewById<android.view.View>(R.id.clips_list) != null)
+        assertEquals(View.GONE, root.findViewById<View>(R.id.vault_panel).visibility)
+        assertEquals(View.GONE, root.findViewById<View>(R.id.keyboard_trackpad_surface).visibility)
+        assertTrue(root.findViewById<View>(R.id.keyboard_trackpad) != null)
+        val tools = root.findViewById<android.widget.ImageButton>(R.id.keyboard_tools)
+        assertEquals(View.VISIBLE, tools.visibility)
+        assertEquals(context.getString(R.string.keyboard_tools_open), tools.contentDescription.toString())
     }
 }

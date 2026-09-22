@@ -32,6 +32,7 @@ class TouchEngine(
         fun onRepeat(key: PlacedKey)
         fun onGesturePath(keys: List<PlacedKey>) {}
         fun onGestureProgress(keys: List<PlacedKey>) {}
+        fun onCursorSteps(steps: Int) {}
     }
 
     var activePointerId: Int? = null
@@ -51,6 +52,7 @@ class TouchEngine(
     private var gestureStarted = false
     private var gestureStartX = 0f
     private var gestureStartY = 0f
+    private var cursorDrag: SpaceCursorDrag? = null
 
     fun down(pointerId: Int, x: Float, y: Float) {
         if (activePointerId != null) return
@@ -69,17 +71,64 @@ class TouchEngine(
         gestureStartX = x
         gestureStartY = y
         longPressFired = false
+        cursorDrag = null
         press(key)
+        if (key.spec.code == KeyCodes.SPACE) {
+            cursorDrag = SpaceCursorDrag(SpaceCursorDrag.stepPxFor(key)).also { it.begin(x, y) }
+        }
     }
 
     fun move(pointerId: Int, x: Float, y: Float) {
         if (activePointerId != pointerId) return
-        val dx = x - lastX
-        val dy = y - lastY
-        gestureDistancePx += kotlin.math.sqrt(dx * dx + dy * dy)
+        val originX = lastX
+        val originY = lastY
+        val dx = x - originX
+        val dy = y - originY
+        val segment = kotlin.math.sqrt(dx * dx + dy * dy)
+        val drag = cursorDrag
+        if (drag != null) {
+            when (drag.axis(x, y)) {
+                SpaceCursorDrag.Axis.VERTICAL -> cursorDrag = null
+                SpaceCursorDrag.Axis.UNDECIDED,
+                SpaceCursorDrag.Axis.HORIZONTAL,
+                -> {
+                    val steps = drag.move(x, y)
+                    lastX = x
+                    lastY = y
+                    if (drag.engaged) {
+                        longPressTask?.cancel()
+                        longPressTask = null
+                        if (steps != 0) listener.onCursorSteps(steps)
+                    }
+                    return
+                }
+            }
+        }
+        gestureDistancePx += segment
         lastX = x
         lastY = y
+        // A batched MOVE often jumps several keys. Sample the segment so the
+        // trail contains the letters the finger crossed, including the endpoint.
+        val samples = sampleCount(segment)
+        for (index in 1..samples) {
+            val t = index.toFloat() / samples.toFloat()
+            visit(originX + dx * t, originY + dy * t, endpoint = index == samples)
+        }
+    }
+
+    private fun sampleCount(segment: Float): Int {
+        if (segment <= 0f) return 1
+        val key = pressed ?: gesturePath.lastOrNull() ?: return 1
+        val step = kotlin.math.min(key.slot.width, key.slot.height) * SAMPLE_STEP_FRACTION
+        if (step <= 0f) return 1
+        return kotlin.math.ceil(segment / step).toInt().coerceIn(1, MAX_SWIPE_SAMPLES)
+    }
+
+    private fun visit(x: Float, y: Float, endpoint: Boolean) {
         val key = listener.hitTest(x, y)
+        // A chord can clip a gap between keys. Keep going until the endpoint,
+        // which still releases the pressed key when the finger leaves the board.
+        if (key == null && !endpoint) return
         if (key?.id == pressed?.id) return
         if (key != null && key.spec.code.toChar().isLetter() && gesturePath.firstOrNull()?.spec?.code?.toChar()?.isLetter() == true) {
             val startKey = gesturePath.first()
@@ -115,8 +164,16 @@ class TouchEngine(
 
     fun up(pointerId: Int, x: Float, y: Float) {
         if (activePointerId != pointerId) return
+        if (cursorDrag?.engaged == true) {
+            cancelTasks()
+            listener.onRelease(pressed)
+            resetPointer()
+            return
+        }
+        // A sideways drift that never reached a cursor step is still a space tap.
+        val stickToSpace = cursorDrag != null
         // Allow a small lift-outside-key still to count as the pressed key.
-        val key = listener.hitTest(x, y) ?: pressed
+        val key = if (stickToSpace) pressed else (listener.hitTest(x, y) ?: pressed)
         if (key != null && key.id != pressed?.id) {
             listener.onRelease(pressed)
             press(key)
@@ -194,7 +251,13 @@ class TouchEngine(
         gestureStarted = false
         gestureStartX = 0f
         gestureStartY = 0f
+        cursorDrag = null
         listener.onGestureProgress(emptyList())
+    }
+
+    private companion object {
+        const val SAMPLE_STEP_FRACTION = 0.25f
+        const val MAX_SWIPE_SAMPLES = 48
     }
 }
 

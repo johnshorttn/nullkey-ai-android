@@ -1,60 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/keyboard_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@color/kb_background"
     android:orientation="vertical">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="6dp">
-
-        <EditText
-            android:id="@+id/clip_search"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:background="@color/kb_key"
-            android:hint="@string/search_clips"
-            android:importantForAccessibility="yes"
-            android:inputType="text"
-            android:padding="8dp"
-            android:textColor="@color/neon"
-            android:textColorHint="@color/slate" />
-
-        <CheckBox
-            android:id="@+id/files_only"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:buttonTint="@color/neon"
-            android:text="@string/files_only"
-            android:textColor="@color/neon" />
-    </LinearLayout>
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="96dp"
-        android:background="@color/kb_background">
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/clips_list"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-        <TextView
-            android:id="@+id/clips_empty"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:padding="8dp"
-            android:text="@string/no_clips"
-            android:textColor="@color/slate"
-            android:textSize="12sp"
-            android:visibility="gone" />
-    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/suggestion_strip"
@@ -62,6 +12,19 @@
         android:layout_height="40dp"
         android:background="@color/kb_key"
         android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/keyboard_tools"
+            android:layout_width="40dp"
+            android:layout_height="match_parent"
+            android:background="@color/kb_key"
+            android:clickable="true"
+            android:contentDescription="@string/keyboard_tools_open"
+            android:focusable="false"
+            android:importantForAccessibility="yes"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_tools_grid" />
 
         <TextView
             android:id="@+id/suggestion_0"
@@ -107,6 +70,84 @@
             android:textSize="13sp" />
     </LinearLayout>
 
+    <!-- Hidden until Tools is tapped, so the default keyboard stays a single
+         strip plus keys and does not cover the host field. -->
+    <LinearLayout
+        android:id="@+id/vault_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="6dp">
+
+            <EditText
+                android:id="@+id/clip_search"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@color/kb_key"
+                android:hint="@string/search_clips"
+                android:importantForAccessibility="yes"
+                android:inputType="text"
+                android:padding="8dp"
+                android:textColor="@color/neon"
+                android:textColorHint="@color/slate" />
+
+            <CheckBox
+                android:id="@+id/files_only"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:buttonTint="@color/neon"
+                android:text="@string/files_only"
+                android:textColor="@color/neon" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/keyboard_trackpad"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:layout_marginBottom="6dp"
+            android:background="@color/kb_key"
+            android:clickable="true"
+            android:contentDescription="@string/keyboard_trackpad"
+            android:focusable="false"
+            android:gravity="center"
+            android:importantForAccessibility="yes"
+            android:text="@string/keyboard_trackpad"
+            android:textColor="@color/neon"
+            android:textSize="14sp" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="112dp"
+            android:background="@color/kb_background">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/clips_list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <TextView
+                android:id="@+id/clips_empty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:padding="8dp"
+                android:text="@string/no_clips"
+                android:textColor="@color/slate"
+                android:textSize="12sp"
+                android:visibility="gone" />
+        </FrameLayout>
+    </LinearLayout>
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
@@ -124,6 +165,21 @@
             android:background="@color/kb_background"
             android:keyBackground="@color/kb_key"
             android:keyTextColor="@color/neon"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/keyboard_trackpad_surface"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/kb_background"
+            android:clickable="true"
+            android:contentDescription="@string/keyboard_trackpad_hint"
+            android:focusable="false"
+            android:gravity="center"
+            android:importantForAccessibility="yes"
+            android:text="@string/keyboard_trackpad_hint"
+            android:textColor="@color/slate"
+            android:textSize="14sp"
             android:visibility="gone" />
     </FrameLayout>
 

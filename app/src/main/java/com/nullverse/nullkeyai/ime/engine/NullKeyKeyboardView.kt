@@ -36,6 +36,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         fun onKey(code: Int)
         fun onLongPress(code: Int, popupCharacters: String) {}
         fun onGestureWord(path: String) {}
+        fun onCursorSteps(steps: Int) {}
     }
 
     var listener: Listener? = null
@@ -83,6 +84,12 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
             override fun onGestureWord(path: String) {
                 listener?.onGestureWord(path)
+            }
+
+            override fun onCursorSteps(steps: Int) {
+                listener?.onCursorSteps(steps)
+                val ticks = kotlin.math.abs(steps).coerceAtMost(MAX_CURSOR_TICKS)
+                repeat(ticks) { KeyFeedback.cursorTick(this@NullKeyKeyboardView) }
             }
 
             override fun onGestureProgress(keys: List<PlacedKey>) {
@@ -172,6 +179,16 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                 if (pointerId != null) {
                     val index = event.findPointerIndex(pointerId)
                     if (index >= 0) {
+                        // Historical samples are the real curve between the last
+                        // delivered point and this one. A straight chord misses keys.
+                        val history = event.historySize
+                        for (h in 0 until history) {
+                            controller.move(
+                                pointerId,
+                                event.getHistoricalX(index, h),
+                                event.getHistoricalY(index, h),
+                            )
+                        }
                         gesturePointerX = event.getX(index)
                         gesturePointerY = event.getY(index)
                         gesturePointerActive = true
@@ -397,6 +414,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
     companion object {
         private const val A11Y_POINTER_ID = 99
+        private const val MAX_CURSOR_TICKS = 12
     }
 
     private fun applyTypingSettings() {

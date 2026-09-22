@@ -57,7 +57,10 @@ class KeyboardEngineInstrumentedTest {
             }
         }
         swipe(view, view.keyWithLabel("h"), view.keyWithLabel("e"))
-        assertEquals(listOf("he"), paths)
+        val path = paths.single()
+        assertTrue(path.startsWith("h"))
+        assertTrue(path.endsWith("e"))
+        assertTrue(path.all { it.isLetter() })
         assertTrue(codes.isEmpty())
     }
 }
