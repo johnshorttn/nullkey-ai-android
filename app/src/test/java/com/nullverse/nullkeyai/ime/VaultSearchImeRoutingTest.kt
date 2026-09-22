@@ -10,6 +10,7 @@ import android.view.View
 import android.widget.EditText
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.ime.engine.NullKeyKeyboardView
+import com.nullverse.nullkeyai.ime.engine.TrackpadPointer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -166,6 +167,67 @@ class VaultSearchImeRoutingTest {
     }
 
     @Test
+    fun trackpadReplacesKeysAndBackOrToggleReturnsToKeys() {
+        val (_, search, keyboard) = keyboard()
+        val root = search.rootView
+        val panel = root.findViewById<View>(R.id.vault_panel)
+        val surface = root.findViewById<View>(R.id.keyboard_trackpad_surface)
+        val trackpad = root.findViewById<View>(R.id.keyboard_trackpad)
+        val tools = root.findViewById<View>(R.id.keyboard_tools)
+        assertEquals(View.GONE, panel.visibility)
+        assertEquals(View.GONE, surface.visibility)
+
+        tools.performClick()
+        assertEquals(View.VISIBLE, panel.visibility)
+        assertEquals(View.VISIBLE, keyboard.visibility)
+        trackpad.performClick()
+        assertEquals(View.VISIBLE, surface.visibility)
+        assertEquals(View.GONE, keyboard.visibility)
+        assertEquals(search.context.getString(R.string.keyboard_trackpad_exit), trackpad.contentDescription.toString())
+
+        trackpad.performClick()
+        assertEquals(View.GONE, panel.visibility)
+        assertEquals(View.GONE, surface.visibility)
+        assertEquals(View.VISIBLE, keyboard.visibility)
+
+        tools.performClick()
+        trackpad.performClick()
+        tools.performClick()
+        assertEquals(View.GONE, panel.visibility)
+        assertEquals(View.GONE, surface.visibility)
+        assertEquals(View.VISIBLE, keyboard.visibility)
+        assertEquals(search.context.getString(R.string.keyboard_tools_open), tools.contentDescription.toString())
+    }
+
+    @Test
+    fun trackpadDragMovesTheCursorAndDoesNotType() {
+        val (_, search, keyboard) = keyboard()
+        val root = search.rootView
+        tapSearch(search)
+        listOf("h", "e", "l", "l", "o").forEach { tapKey(keyboard, it) }
+        assertEquals("hello", search.text.toString())
+        root.findViewById<View>(R.id.keyboard_trackpad).performClick()
+
+        tapKey(keyboard, "q")
+        tapKey(keyboard, "space")
+        assertEquals("hello", search.text.toString())
+        assertEquals(5, search.selectionStart)
+
+        val step = TrackpadPointer.STEP_X_DP * keyboard.resources.displayMetrics.density
+        dragTrackpad(root.findViewById(R.id.keyboard_trackpad_surface), dx = -2f * step, dy = 0f)
+        assertEquals("hello", search.text.toString())
+        assertEquals(3, search.selectionStart)
+
+        dragTrackpad(root.findViewById(R.id.keyboard_trackpad_surface), dx = 0f, dy = step * 4f)
+        assertEquals("hello", search.text.toString())
+        assertEquals(3, search.selectionStart)
+
+        dragTrackpad(root.findViewById(R.id.keyboard_trackpad_surface), dx = -10f * step, dy = 0f)
+        assertEquals(0, search.selectionStart)
+        assertEquals("hello", search.text.toString())
+    }
+
+    @Test
     fun closingTheKeyboardHidesTheVaultPanel() {
         val (service, search, keyboard) = keyboard()
         search.rootView.findViewById<View>(R.id.keyboard_tools).performClick()
@@ -217,6 +279,19 @@ class VaultSearchImeRoutingTest {
         )
         view.dispatchTouchEvent(
             MotionEvent.obtain(downTime, downTime + 16, MotionEvent.ACTION_UP, key.slot.centerX, key.slot.centerY, 0),
+        )
+    }
+
+    private fun dragTrackpad(surface: View, dx: Float, dy: Float) {
+        val downTime = SystemClock.uptimeMillis()
+        surface.dispatchTouchEvent(
+            MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, 40f, 40f, 0),
+        )
+        surface.dispatchTouchEvent(
+            MotionEvent.obtain(downTime, downTime + 20, MotionEvent.ACTION_MOVE, 40f + dx, 40f + dy, 0),
+        )
+        surface.dispatchTouchEvent(
+            MotionEvent.obtain(downTime, downTime + 40, MotionEvent.ACTION_UP, 40f + dx, 40f + dy, 0),
         )
     }
 

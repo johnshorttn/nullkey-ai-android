@@ -23,6 +23,39 @@ internal object CursorStep {
         return (anchor + delta).coerceIn(0, safeLength)
     }
 
+    /**
+     * Horizontal steps are characters. Vertical steps are lines, keeping the
+     * column when the line is long enough and stopping on a short line.
+     * Positive [dy] moves toward the end of the text.
+     */
+    fun nextPosition(text: String, selectionStart: Int, selectionEnd: Int, dx: Int, dy: Int): Int {
+        val length = text.length
+        val start = if (selectionStart < 0) length else selectionStart.coerceIn(0, length)
+        val end = if (selectionEnd < 0) length else selectionEnd.coerceIn(0, length)
+        val origin = if (dx < 0 || (dx == 0 && dy < 0)) min(start, end) else maxOf(start, end)
+        val horizontal = (origin + dx).coerceIn(0, length)
+        return offsetByLines(text, horizontal, dy)
+    }
+
+    fun offsetByLines(text: String, index: Int, lines: Int): Int {
+        val length = text.length
+        val safe = index.coerceIn(0, length)
+        if (lines == 0 || length == 0) return safe
+        val lineStarts = ArrayList<Int>(4)
+        lineStarts.add(0)
+        text.forEachIndexed { offset, character ->
+            if (character == '\n') lineStarts.add(offset + 1)
+        }
+        var line = lineStarts.indexOfLast { it <= safe }
+        if (line < 0) line = 0
+        val column = safe - lineStarts[line]
+        val target = (line + lines).coerceIn(0, lineStarts.lastIndex)
+        val lineStart = lineStarts[target]
+        val lineEndExclusive = if (target == lineStarts.lastIndex) length else lineStarts[target + 1] - 1
+        val room = (lineEndExclusive - lineStart).coerceAtLeast(0)
+        return lineStart + column.coerceIn(0, room)
+    }
+
     fun apply(connection: CursorConnection, delta: Int) {
         if (delta == 0) return
         val snapshot = runCatching { connection.read() }.getOrNull()
@@ -39,10 +72,31 @@ internal object CursorStep {
         runCatching { connection.setCursor(snapshot.startOffset + relative) }
     }
 
+    fun apply2D(connection: CursorConnection, dx: Int, dy: Int) {
+        if (dx == 0 && dy == 0) return
+        val snapshot = runCatching { connection.read() }.getOrNull()
+        val text = snapshot?.text
+        if (snapshot == null || snapshot.startOffset < 0 || text == null) {
+            nudge(connection, dx)
+            nudgeVertical(connection, dy)
+            return
+        }
+        val index = nextPosition(text, snapshot.selectionStart, snapshot.selectionEnd, dx, dy)
+        runCatching { connection.setCursor(snapshot.startOffset + index) }
+    }
+
     private fun nudge(connection: CursorConnection, delta: Int) {
         val left = delta < 0
         repeat(abs(delta)) {
             if (runCatching { connection.sendArrow(left) }.isFailure) return
+        }
+    }
+
+    private fun nudgeVertical(connection: CursorConnection, lines: Int) {
+        if (lines == 0) return
+        val up = lines < 0
+        repeat(abs(lines)) {
+            if (runCatching { connection.sendLine(up) }.isFailure) return
         }
     }
 }
@@ -52,12 +106,14 @@ internal data class CursorSnapshot(
     val selectionStart: Int,
     val selectionEnd: Int,
     val startOffset: Int = 0,
+    val text: String? = null,
 )
 
 internal interface CursorConnection {
     fun read(): CursorSnapshot?
     fun setCursor(index: Int)
     fun sendArrow(left: Boolean)
+    fun sendLine(up: Boolean) {}
 }
 
 internal class InputConnectionCursor(
@@ -71,11 +127,13 @@ internal class InputConnectionCursor(
         if (before.length >= CursorStep.READ_LIMIT || after.length >= CursorStep.READ_LIMIT) {
             return null
         }
-        val selectedLength = connection.getSelectedText(0)?.length ?: 0
+        val selected = connection.getSelectedText(0)?.toString().orEmpty()
+        val text = before.toString() + selected + after.toString()
         return CursorSnapshot(
-            length = before.length + selectedLength + after.length,
+            length = text.length,
             selectionStart = before.length,
-            selectionEnd = before.length + selectedLength,
+            selectionEnd = before.length + selected.length,
+            text = text,
         )
     }
 
@@ -84,7 +142,14 @@ internal class InputConnectionCursor(
     }
 
     override fun sendArrow(left: Boolean) {
-        val code = if (left) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
+        sendKey(if (left) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT)
+    }
+
+    override fun sendLine(up: Boolean) {
+        sendKey(if (up) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN)
+    }
+
+    private fun sendKey(code: Int) {
         connection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
         connection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
     }

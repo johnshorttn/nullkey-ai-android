@@ -42,6 +42,14 @@ class VaultSearchInputTest {
         assertEquals(VaultSearchInput.Edit("hello", 0), VaultSearchInput.moveCursor("hello", 1, 1, -5))
         assertEquals(VaultSearchInput.Edit("", 0), VaultSearchInput.moveCursor("", -1, -1, -3))
         assertEquals(VaultSearchInput.Edit("", 0), VaultSearchInput.moveCursor("", 0, 0, 2))
+        assertEquals(
+            VaultSearchInput.Edit("ab\ncd", 4),
+            VaultSearchInput.moveCursor("ab\ncd", 1, 1, 0, 1),
+        )
+        assertEquals(
+            VaultSearchInput.Edit("hello", 2),
+            VaultSearchInput.moveCursor("hello", 2, 2, 0, 3),
+        )
     }
 
     @Test

@@ -108,6 +108,23 @@
                 android:textColor="@color/neon" />
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/keyboard_trackpad"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:layout_marginBottom="6dp"
+            android:background="@color/kb_key"
+            android:clickable="true"
+            android:contentDescription="@string/keyboard_trackpad"
+            android:focusable="false"
+            android:gravity="center"
+            android:importantForAccessibility="yes"
+            android:text="@string/keyboard_trackpad"
+            android:textColor="@color/neon"
+            android:textSize="14sp" />
+
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="112dp"
@@ -148,6 +165,21 @@
             android:background="@color/kb_background"
             android:keyBackground="@color/kb_key"
             android:keyTextColor="@color/neon"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/keyboard_trackpad_surface"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/kb_background"
+            android:clickable="true"
+            android:contentDescription="@string/keyboard_trackpad_hint"
+            android:focusable="false"
+            android:gravity="center"
+            android:importantForAccessibility="yes"
+            android:text="@string/keyboard_trackpad_hint"
+            android:textColor="@color/slate"
+            android:textSize="14sp"
             android:visibility="gone" />
     </FrameLayout>
 

@@ -22,6 +22,15 @@ class CursorStepTest {
     }
 
     @Test
+    fun verticalStepsStayOnShortLinesAndKeepTheColumn() {
+        assertEquals(4, CursorStep.nextPosition("ab\ncd", 1, 1, 0, 1))
+        assertEquals(1, CursorStep.nextPosition("ab\ncd", 4, 4, 0, -1))
+        assertEquals(2, CursorStep.nextPosition("hello", 2, 2, 0, 4))
+        assertEquals(0, CursorStep.nextPosition("", 0, 0, -2, -2))
+        assertEquals(3, CursorStep.nextPosition("hello", 5, 5, -2, 0))
+    }
+
+    @Test
     fun readableFieldSetsTheClampedCursor() {
         val field = FakeCursor(CursorSnapshot(length = 4, selectionStart = 4, selectionEnd = 4))
         CursorStep.apply(field, -6)

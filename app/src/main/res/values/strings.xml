@@ -25,6 +25,9 @@
 
     <string name="keyboard_tools_open">Vault tools</string>
     <string name="keyboard_tools_close">Close vault</string>
+    <string name="keyboard_trackpad">Trackpad</string>
+    <string name="keyboard_trackpad_exit">Exit trackpad</string>
+    <string name="keyboard_trackpad_hint">Drag to move the cursor</string>
     <string name="search_clips">Search clips…</string>
     <string name="files_only">Files only</string>
     <string name="no_clips">No clips yet. Copy something or tap “Capture clip”.</string>

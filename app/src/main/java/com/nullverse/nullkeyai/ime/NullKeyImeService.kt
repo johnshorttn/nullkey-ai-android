@@ -31,7 +31,10 @@ import com.nullverse.nullkeyai.db.NullKeyDatabase
 import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
 import com.nullverse.nullkeyai.ime.engine.KeyFeedback
 import com.nullverse.nullkeyai.ime.engine.KeyCodes
+import com.nullverse.nullkeyai.ime.engine.LayoutOrientation
 import com.nullverse.nullkeyai.ime.engine.NullKeyKeyboardView
+import com.nullverse.nullkeyai.ime.engine.TrackpadPointer
+import com.nullverse.nullkeyai.ime.engine.preferredKeyboardHeightPx
 import com.nullverse.nullkeyai.sync.DeviceIdentity
 import com.nullverse.nullkeyai.ui.VaultEmptyCopy
 import com.nullverse.nullkeyai.writing.BundledSpellingDictionary
@@ -76,6 +79,8 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private lateinit var searchBox: EditText
     private lateinit var vaultPanel: View
     private lateinit var toolsButton: ImageButton
+    private lateinit var trackpadButton: TextView
+    private lateinit var trackpadSurface: TextView
     private lateinit var filesOnly: CheckBox
     private lateinit var clipsList: RecyclerView
     private lateinit var clipsEmpty: TextView
@@ -95,6 +100,9 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private var vaultSearchActive = false
     /** True while the Tools button is showing the vault panel above the keys. */
     private var vaultPanelOpen = false
+    /** True while the key area is the trackpad instead of keys. */
+    private var trackpadActive = false
+    private lateinit var trackpadPointer: TrackpadPointer
 
     override fun onCreate() {
         super.onCreate()
@@ -145,6 +153,35 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         vaultPanel = root.findViewById(R.id.vault_panel)
         toolsButton = root.findViewById(R.id.keyboard_tools)
         toolsButton.setOnClickListener { setVaultPanelOpen(!vaultPanelOpen) }
+        trackpadButton = root.findViewById(R.id.keyboard_trackpad)
+        trackpadSurface = root.findViewById(R.id.keyboard_trackpad_surface)
+        trackpadPointer = TrackpadPointer.forDensity(resources.displayMetrics.density)
+        trackpadButton.setOnClickListener {
+            if (trackpadActive) setVaultPanelOpen(false) else enterTrackpad()
+        }
+        trackpadSurface.setOnTouchListener { _, event ->
+            if (!trackpadActive) return@setOnTouchListener false
+            when (event.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN ->
+                    trackpadPointer.down(event.x, event.y)
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    val history = event.historySize
+                    for (index in 0 until history) {
+                        applyTrackpadStep(
+                            trackpadPointer.move(
+                                event.getHistoricalX(index),
+                                event.getHistoricalY(index),
+                            ),
+                        )
+                    }
+                    applyTrackpadStep(trackpadPointer.move(event.x, event.y))
+                }
+                android.view.MotionEvent.ACTION_UP,
+                android.view.MotionEvent.ACTION_CANCEL,
+                -> trackpadPointer.reset()
+            }
+            true
+        }
         filesOnly = root.findViewById(R.id.files_only)
         clipsList = root.findViewById(R.id.clips_list)
         clipsEmpty = root.findViewById(R.id.clips_empty)
@@ -216,6 +253,11 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private fun applyRendererPreference() {
         if (!::keyboardEngineView.isInitialized) return
         usingEngine = KeyboardEnginePreferences.useCustomEngine(this)
+        if (trackpadActive) {
+            keyboardEngineView.visibility = View.GONE
+            keyboardView.visibility = View.GONE
+            return
+        }
         keyboardEngineView.visibility = if (usingEngine) View.VISIBLE else View.GONE
         keyboardView.visibility = if (usingEngine) View.GONE else View.VISIBLE
         if (!usingEngine) {
@@ -301,6 +343,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     private fun handleGestureWord(path: String) {
+        if (trackpadActive) return
         val ranked = suggester.suggestGesture(path, suggestionViews.size)
         val resolved = SwipeCommit.resolve(path, ranked) ?: return
         val sink = keySink() ?: return
@@ -466,6 +509,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     private fun handleKey(primaryCode: Int, alreadyCased: Boolean) {
+        if (trackpadActive) return
         val editingSearch = vaultSearchActive
         val sink = keySink() ?: return
         pendingSwipeCommit = null
@@ -530,11 +574,68 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
             toolsButton.contentDescription = getString(R.string.keyboard_tools_close)
             refreshClips()
         } else {
+            leaveTrackpadSurface()
             toolsButton.setImageResource(R.drawable.ic_tools_grid)
             toolsButton.contentDescription = getString(R.string.keyboard_tools_open)
             deactivateVaultSearch()
         }
         (vaultPanel.parent as? View)?.requestLayout()
+    }
+
+    /**
+     * Trackpad replaces the keys until Trackpad is tapped again or Back closes
+     * the tools panel. Touches on the surface only move the caret.
+     */
+    private fun enterTrackpad() {
+        if (trackpadActive) return
+        if (!vaultPanelOpen) setVaultPanelOpen(true)
+        val height = keyboardAreaHeight()
+        trackpadActive = true
+        trackpadPointer.reset()
+        keyboardEngineView.visibility = View.GONE
+        keyboardView.visibility = View.GONE
+        trackpadSurface.layoutParams = trackpadSurface.layoutParams.apply { this.height = height }
+        trackpadSurface.visibility = View.VISIBLE
+        trackpadButton.setBackgroundColor(getColor(R.color.kb_key_modifier_active))
+        trackpadButton.contentDescription = getString(R.string.keyboard_trackpad_exit)
+        (trackpadSurface.parent as? View)?.requestLayout()
+    }
+
+    private fun leaveTrackpadSurface() {
+        if (!trackpadActive && trackpadSurface.visibility != View.VISIBLE) {
+            styleTrackpadIdle()
+            return
+        }
+        trackpadActive = false
+        if (::trackpadPointer.isInitialized) trackpadPointer.reset()
+        trackpadSurface.visibility = View.GONE
+        styleTrackpadIdle()
+        applyRendererPreference()
+    }
+
+    private fun styleTrackpadIdle() {
+        if (!::trackpadButton.isInitialized) return
+        trackpadButton.setBackgroundColor(getColor(R.color.kb_key))
+        trackpadButton.contentDescription = getString(R.string.keyboard_trackpad)
+    }
+
+    private fun keyboardAreaHeight(): Int {
+        val measured = maxOf(keyboardEngineView.height, keyboardEngineView.measuredHeight, keyboardView.height, keyboardView.measuredHeight)
+        if (measured > 0) return measured
+        val landscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val orientation = if (landscape) LayoutOrientation.LANDSCAPE else LayoutOrientation.PORTRAIT
+        val rows = if (landscape) 5 else 4
+        return preferredKeyboardHeightPx(resources.displayMetrics.density, orientation, rows)
+    }
+
+    private fun applyTrackpadStep(step: Pair<Int, Int>) {
+        val (dx, dy) = step
+        if (dx == 0 && dy == 0) return
+        val sink = keySink() ?: return
+        sink.moveCursor(dx, dy)
+        flushWord()
+        val ticks = (kotlin.math.abs(dx) + kotlin.math.abs(dy)).coerceAtMost(12)
+        repeat(ticks) { KeyFeedback.cursorTick(trackpadSurface) }
     }
 
     /**
@@ -572,7 +673,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     private fun handleCursorSteps(steps: Int) {
-        if (steps == 0) return
+        if (trackpadActive || steps == 0) return
         val sink = keySink() ?: return
         sink.moveCursor(steps)
         flushWord()
@@ -616,6 +717,10 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         }
 
         override fun moveCursor(delta: Int) {
+            moveCursor(delta, 0)
+        }
+
+        override fun moveCursor(dx: Int, dy: Int) {
             if (!::searchBox.isInitialized) return
             val current = searchBox.text?.toString().orEmpty()
             applyVaultSearchEdit(
@@ -623,7 +728,8 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
                     current,
                     searchBox.selectionStart,
                     searchBox.selectionEnd,
-                    delta,
+                    dx,
+                    dy,
                 ),
             )
         }
@@ -661,6 +767,10 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
         override fun moveCursor(delta: Int) {
             CursorStep.apply(InputConnectionCursor(connection, allowRead), delta)
+        }
+
+        override fun moveCursor(dx: Int, dy: Int) {
+            CursorStep.apply2D(InputConnectionCursor(connection, allowRead), dx, dy)
         }
     }
 
