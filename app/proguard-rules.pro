@@ -53,6 +53,23 @@
 -keep enum com.nullverse.nullkeyai.** { *; }
 
 # Bundled ML Kit Latin OCR. The AAR consumer rules keep proto fields and
-# native method names for libmlkit_google_ocr_pipeline.so. Clearcut
-# (transport-backend-cct) is excluded in Gradle; ignore optional refs.
+# native method names for libmlkit_google_ocr_pipeline.so.
+# DynamiteModule.getLocalVersion loads these descriptors by a concatenated
+# class name and then getDeclaredField("MODULE_ID" / "MODULE_VERSION").
+# If the fields are gone, Latin OCR is treated as the Play Services download
+# module and fails offline with MlKitException.UNAVAILABLE.
+-keep class com.google.android.gms.dynamite.descriptors.com.google.mlkit.dynamite.text.latin.ModuleDescriptor {
+    public static java.lang.String MODULE_ID;
+    public static int MODULE_VERSION;
+}
+-keep class com.google.android.gms.dynamite.descriptors.com.google.mlkit.dynamite.text.common.ModuleDescriptor {
+    public static java.lang.String MODULE_ID;
+    public static int MODULE_VERSION;
+}
+-keep class com.google.mlkit.vision.text.bundled.common.BundledTextRecognizerCreator { *; }
+-keep class com.google.mlkit.vision.text.internal.TextRegistrar { *; }
+-keep class com.google.android.libraries.vision.visionkit.pipeline.AndroidAssetUtil { *; }
+-keep class com.google.android.libraries.vision.visionkit.pipeline.alt.NativePipelineImpl { *; }
+# Linkage stub only. The Clearcut HTTP backend stays excluded.
+-keep class com.google.android.datatransport.cct.CCTDestination { *; }
 -dontwarn com.google.android.datatransport.cct.**

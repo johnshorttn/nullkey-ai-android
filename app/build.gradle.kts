@@ -117,6 +117,13 @@ android {
             isIncludeAndroidResources = true
         }
     }
+
+    // The bundled Latin model is opened with AAsset_getBuffer, which only
+    // succeeds for uncompressed APK entries. .tflite is already stored;
+    // the pipeline's other model files are not.
+    androidResources {
+        noCompress += listOf("binarypb", "fb", "bincfg", "pb", "conv_model", "lstm_model")
+    }
 }
 
 tasks.register("printReleaseSigningStatus") {
@@ -159,11 +166,14 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.9.1")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
-    // Bundled Latin OCR model (libmlkit_google_ocr_pipeline.so). The Clearcut
-    // uploader is excluded so ML Kit telemetry has no network backend. The
-    // manifest also strips INTERNET and ACCESS_NETWORK_STATE if a library
-    // tries to merge them. Do not switch this to the unbundled Play Services
-    // model; that path downloads weights at runtime.
+    // Bundled Latin OCR model (libmlkit_google_ocr_pipeline.so). Do not switch
+    // this to the unbundled Play Services model; that path downloads weights
+    // at runtime. transport-backend-cct is excluded so the HTTP Clearcut
+    // uploader is not packaged. ML Kit still constructs
+    // com.google.android.datatransport.cct.CCTDestination while creating the
+    // recognizer; that class is the in-app linkage stub, not the uploader.
+    // The manifest strips INTERNET and ACCESS_NETWORK_STATE if a library
+    // tries to merge them.
     implementation("com.google.mlkit:text-recognition:16.0.1") {
         exclude(group = "com.google.android.datatransport", module = "transport-backend-cct")
     }
