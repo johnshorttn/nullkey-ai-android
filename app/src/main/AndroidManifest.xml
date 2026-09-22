@@ -36,7 +36,8 @@
         <activity
             android:name=".ui.ClipDetailActivity"
             android:exported="false"
-            android:label="@string/clip_details" />
+            android:label="@string/clip_details"
+            android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".diagnostics.ClipboardLabActivity"
@@ -46,7 +47,8 @@
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
-            android:label="@string/app_name">
+            android:label="@string/app_name"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
