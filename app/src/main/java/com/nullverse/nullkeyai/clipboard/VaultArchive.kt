@@ -17,14 +17,19 @@ object VaultArchive {
     suspend fun build(
         clips: List<Clip>,
         assetStore: VaultAssetStore,
-        crypto: VaultCrypto,
+        crypto: VaultCrypto?,
         tagsForClip: suspend (Long) -> List<String>
     ): String {
         val records = JSONArray()
         clips.forEach { clip ->
+            val vaultCrypto = if (clip.protected) {
+                crypto ?: throw IllegalStateException("Vault crypto unavailable")
+            } else {
+                crypto
+            }
             val plainClip = if (clip.protected) clip.copy(
-                content = crypto.decrypt(clip.content),
-                notes = crypto.decrypt(clip.notes),
+                content = vaultCrypto!!.decrypt(clip.content),
+                notes = vaultCrypto.decrypt(clip.notes),
                 protected = false
             ) else clip
             val record = JSONObject(ClipBackup.toJson(listOf(plainClip)))
@@ -32,8 +37,11 @@ object VaultArchive {
             record.put("restoreProtected", clip.protected)
             record.put("tags", JSONArray(tagsForClip(clip.id)))
             assetStore.resolve(clip.localAssetPath)?.let { file ->
-                val bytes = if (clip.protected && crypto.isEncryptedFile(file)) crypto.decryptFile(file)
-                    else file.readBytes()
+                val bytes = if (clip.protected && vaultCrypto!!.isEncryptedFile(file)) {
+                    vaultCrypto.decryptFile(file)
+                } else {
+                    file.readBytes()
+                }
                 record.put("assetName", file.name)
                 record.put("assetBase64", Base64.encodeToString(bytes, Base64.NO_WRAP))
             }
