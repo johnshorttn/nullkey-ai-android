@@ -3,10 +3,11 @@ package com.nullverse.nullkeyai.ime
 /**
  * Edits for the vault search box that lives inside the IME window.
  *
- * That window is not the host editor, so
- * [android.inputmethodservice.InputMethodService.getCurrentInputConnection]
- * still targets the app (or is empty). Key output has to change this buffer
- * directly while search mode is on.
+ * The field can take focus: its own clipboard actions (paste, select-all, cut)
+ * change its buffer. [android.view.inputmethod.InputConnection.commitText] and
+ * [android.view.inputmethod.InputConnection.deleteSurroundingText] from this
+ * IME do not. Key output has to change that same buffer while the field is
+ * the typing target.
  */
 internal interface ImeKeyOutput {
     fun commitText(text: CharSequence)

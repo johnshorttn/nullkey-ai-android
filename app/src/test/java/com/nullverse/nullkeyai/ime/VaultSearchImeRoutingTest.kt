@@ -1,5 +1,9 @@
 package com.nullverse.nullkeyai.ime
 
+import android.app.Activity
+import android.content.ClipboardManager
+import android.content.ClipData
+import android.content.Context
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
@@ -14,22 +18,23 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The vault search box is inside the IME window, so it never becomes the host
- * InputConnection. Tapping it must make later NullKey keys edit that field.
+ * The vault search field accepts clipboard paste and cut on its own buffer.
+ * NullKey commit and backspace must edit that same buffer, including after an
+ * input restart, because InputConnection commit/delete does not reach it.
  */
 @RunWith(RobolectricTestRunner::class)
 class VaultSearchImeRoutingTest {
 
     @Test
     fun keysBeforeSearchStayOutOfTheField() {
-        val (search, keyboard) = keyboard()
+        val (_, search, keyboard) = keyboard()
         tapKey(keyboard, "q")
         assertEquals("", search.text.toString())
     }
 
     @Test
     fun tappingSearchThenTypingUpdatesTheQuery() {
-        val (search, keyboard) = keyboard()
+        val (_, search, keyboard) = keyboard()
         tapSearch(search)
         tapKey(keyboard, "q")
         tapKey(keyboard, "w")
@@ -38,7 +43,7 @@ class VaultSearchImeRoutingTest {
 
     @Test
     fun deleteAndSpaceEditTheQuery() {
-        val (search, keyboard) = keyboard()
+        val (_, search, keyboard) = keyboard()
         tapSearch(search)
         tapKey(keyboard, "q")
         tapKey(keyboard, "w")
@@ -50,7 +55,7 @@ class VaultSearchImeRoutingTest {
 
     @Test
     fun enterLeavesSearchModeSoLaterKeysDoNotChangeTheQuery() {
-        val (search, keyboard) = keyboard()
+        val (_, search, keyboard) = keyboard()
         tapSearch(search)
         tapKey(keyboard, "q")
         tapKey(keyboard, "enter")
@@ -59,12 +64,62 @@ class VaultSearchImeRoutingTest {
         assertTrue(!search.isActivated)
     }
 
-    private fun keyboard(): Pair<EditText, NullKeyKeyboardView> {
+    @Test
+    fun inputRestartWhileSearchIsFocusedStillAcceptsKeysAndBackspace() {
+        val (service, search, keyboard) = keyboard()
+        tapSearch(search)
+        tapKey(keyboard, "a")
+        tapKey(keyboard, "b")
+        service.onFinishInputView(false)
+        tapDelete(keyboard)
+        assertEquals("a", search.text.toString())
+        tapKey(keyboard, "c")
+        assertEquals("ac", search.text.toString())
+    }
+
+    @Test
+    fun focusedSearchStillReceivesKeysWhenTheModeFlagIsCleared() {
+        val (service, search, keyboard) = keyboard()
+        tapSearch(search)
+        assertTrue(search.requestFocus())
+        val flag = NullKeyImeService::class.java.getDeclaredField("vaultSearchActive")
+        flag.isAccessible = true
+        flag.setBoolean(service, false)
+        tapKey(keyboard, "q")
+        tapDelete(keyboard)
+        assertEquals("", search.text.toString())
+    }
+
+    @Test
+    fun backspaceDeletesOnePastedCharacterWithoutSelectAll() {
+        val (_, search, keyboard) = keyboard()
+        tapSearch(search)
+        tapKey(keyboard, "a")
+        tapKey(keyboard, "b")
+        tapDelete(keyboard)
+        assertEquals("a", search.text.toString())
+
+        val clipboard = search.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("paste", "xy"))
+        assertTrue(search.requestFocus())
+        assertTrue(search.onTextContextMenuItem(android.R.id.paste))
+        assertEquals("axy", search.text.toString())
+
+        tapDelete(keyboard)
+        assertEquals("ax", search.text.toString())
+        tapDelete(keyboard)
+        assertEquals("a", search.text.toString())
+    }
+
+    private fun keyboard(): Triple<NullKeyImeService, EditText, NullKeyKeyboardView> {
         val service = Robolectric.buildService(NullKeyImeService::class.java).create().get()
         val root = service.onCreateInputView()
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        activity.setContentView(root)
         val search = root.findViewById<EditText>(R.id.clip_search)
+        search.clearFocus()
         val keyboard = layoutKeyboard(root.findViewById(R.id.keyboard_engine_view))
-        return search to keyboard
+        return Triple(service, search, keyboard)
     }
 
     private fun layoutKeyboard(view: NullKeyKeyboardView): NullKeyKeyboardView {

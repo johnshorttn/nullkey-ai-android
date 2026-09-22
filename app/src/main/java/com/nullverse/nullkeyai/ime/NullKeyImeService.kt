@@ -123,6 +123,16 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
             }
             false
         }
+        searchBox.setOnFocusChangeListener { _, hasFocus ->
+            // Clipboard paste/cut already reach this focused field. Keep key
+            // routing on for as long as that focus lasts, including across the
+            // input restart that focusing an IME-owned EditText triggers.
+            if (hasFocus) activateVaultSearch()
+            else if (vaultSearchActive) {
+                vaultSearchActive = false
+                searchBox.isActivated = false
+            }
+        }
         filesOnly = root.findViewById(R.id.files_only)
         clipsList = root.findViewById(R.id.clips_list)
         clipsEmpty = root.findViewById(R.id.clips_empty)
@@ -166,6 +176,9 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        if (::searchBox.isInitialized && editorIsVaultSearch(info)) {
+            activateVaultSearch()
+        }
         applyRendererPreference()
         if (usingEngine) keyboardEngineView.resetEngine()
         if (!restarting) resetComposition()
@@ -491,16 +504,17 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     /**
-     * Vault search is an [android.widget.EditText] inside this IME. Making the
-     * IME window focusable would drop the host [currentInputConnection], so
-     * search mode is an explicit flag set by tapping the field. Keys then edit
-     * the field buffer. Enter leaves search mode and later keys return to the app.
+     * Vault search is an [android.widget.EditText] inside this IME. Once it is
+     * focused, clipboard paste and cut edit its buffer, but
+     * [currentInputConnection] commit and delete calls do not. Keys edit that
+     * same buffer until Enter or the keyboard closes.
      */
     private fun activateVaultSearch() {
-        if (!::searchBox.isInitialized || vaultSearchActive) return
+        if (!::searchBox.isInitialized) return
+        val firstActivation = !vaultSearchActive
         vaultSearchActive = true
         searchBox.isActivated = true
-        resetComposition()
+        if (firstActivation && ::suggestionViews.isInitialized) resetComposition()
     }
 
     private fun deactivateVaultSearch() {
@@ -508,12 +522,23 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         if (!vaultSearchActive && !searchBox.isActivated) return
         vaultSearchActive = false
         searchBox.isActivated = false
-        searchBox.clearFocus()
+        if (searchBox.isFocused) searchBox.clearFocus()
         resetComposition()
     }
 
+    private fun editorIsVaultSearch(info: EditorInfo?): Boolean {
+        if (info == null || !::searchBox.isInitialized) return false
+        return info.fieldId == searchBox.id
+    }
+
+    private fun vaultSearchIsDirectTarget(): Boolean {
+        if (!::searchBox.isInitialized) return false
+        if (searchBox.isFocused || vaultSearchActive) return true
+        return editorIsVaultSearch(currentInputEditorInfo)
+    }
+
     private fun keySink(): ImeKeyOutput? {
-        if (vaultSearchActive && ::searchBox.isInitialized) return vaultSearchSink
+        if (vaultSearchIsDirectTarget()) return vaultSearchSink
         val ic = currentInputConnection ?: return null
         return InputConnectionKeyOutput(ic)
     }
@@ -551,7 +576,14 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     private fun applyVaultSearchEdit(edit: VaultSearchInput.Edit) {
-        searchBox.setText(edit.text)
+        val editable = searchBox.text
+        if (editable == null) {
+            searchBox.setText(edit.text)
+        } else if (editable.toString() != edit.text) {
+            // Keep the Editable the clipboard and the partial InputConnection
+            // already share. Replacing the whole buffer detaches paste/cut.
+            editable.replace(0, editable.length, edit.text)
+        }
         val cursor = edit.cursor.coerceIn(0, edit.text.length)
         runCatching { searchBox.setSelection(cursor) }
     }
@@ -594,7 +626,13 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     override fun onFinishInputView(finishingInput: Boolean) {
         refreshClipsJob?.cancel()
-        if (::searchBox.isInitialized) deactivateVaultSearch()
+        // Focusing the search box restarts input and finishes the previous
+        // target with finishingInput=false. Only a real close should drop
+        // search routing; focus itself keeps keys on that field.
+        if (finishingInput && ::searchBox.isInitialized) {
+            vaultSearchActive = false
+            searchBox.isActivated = false
+        }
         if (::keyboardEngineView.isInitialized) keyboardEngineView.resetEngine()
         super.onFinishInputView(finishingInput)
     }
