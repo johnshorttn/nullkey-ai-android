@@ -37,6 +37,13 @@ mapping_path, seeds_path, apk_path = map(pathlib.Path, sys.argv[1:4])
 mapping = mapping_path.read_text(encoding="utf-8", errors="replace")
 seeds = seeds_path.read_text(encoding="utf-8", errors="replace")
 
+# A data-class BFS key is shrunk to fields only. HashMap then uses identity
+# equality and release swipe ranking no longer matches debug.
+if "alignmentCost$State" in mapping or "alignmentCost$State" in seeds:
+    raise SystemExit(
+        "FAIL: swipe alignment still uses a data-class BFS state; R8 drops equals/hashCode"
+    )
+
 entry_points = [
     "com.nullverse.nullkeyai.ime.NullKeyImeService",
     "com.nullverse.nullkeyai.clipboard.ClipboardMonitorService",

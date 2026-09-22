@@ -2,6 +2,7 @@ package com.nullverse.nullkeyai.ime.engine
 
 import android.content.Context
 import android.os.SystemClock
+import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
 import androidx.test.core.app.ApplicationProvider
@@ -101,8 +102,83 @@ class NullKeyKeyboardViewTest {
             }
         }
         swipe(view, view.keyWithLabel("h"), view.keyWithLabel("e"))
-        assertEquals(listOf("he"), paths)
+        val path = paths.single()
+        assertTrue(path.startsWith("h"))
+        assertTrue(path.endsWith("e"))
+        assertTrue(path.all { it.isLetter() })
         assertTrue(codes.isEmpty())
+    }
+
+    @Test
+    fun fastRowSwipeIncludesKeysBetweenTheEndpoints() {
+        val view = layoutView()
+        val paths = mutableListOf<String>()
+        view.listener = object : NullKeyKeyboardView.Listener {
+            override fun onKey(code: Int) {}
+            override fun onGestureWord(path: String) {
+                paths += path
+            }
+        }
+        swipe(view, view.keyWithLabel("q"), view.keyWithLabel("r"))
+        val path = paths.single()
+        assertTrue(path.startsWith("q"))
+        assertTrue(path.endsWith("r"))
+        assertTrue(path.contains("w"))
+    }
+
+    @Test
+    fun historicalMoveSamplesStayOnTheGesture() {
+        val view = layoutView()
+        val paths = mutableListOf<String>()
+        view.listener = object : NullKeyKeyboardView.Listener {
+            override fun onKey(code: Int) {}
+            override fun onGestureWord(path: String) {
+                paths += path
+            }
+        }
+        val q = view.keyWithLabel("q")
+        val a = view.keyWithLabel("a")
+        val p = view.keyWithLabel("p")
+        val downTime = SystemClock.uptimeMillis()
+        view.dispatchTouchEvent(
+            MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, q.slot.centerX, q.slot.centerY, 0),
+        )
+        val props = arrayOf(MotionEvent.PointerProperties().apply {
+            id = 0
+            toolType = MotionEvent.TOOL_TYPE_FINGER
+        })
+        val coords = arrayOf(MotionEvent.PointerCoords().apply {
+            x = a.slot.centerX
+            y = a.slot.centerY
+        })
+        val move = MotionEvent.obtain(
+            downTime,
+            downTime + 12,
+            MotionEvent.ACTION_MOVE,
+            1,
+            props,
+            coords,
+            0,
+            0,
+            1f,
+            1f,
+            0,
+            0,
+            InputDevice.SOURCE_TOUCHSCREEN,
+            0,
+        )
+        coords[0].x = p.slot.centerX
+        coords[0].y = p.slot.centerY
+        move.addBatch(downTime + 24, coords, 0)
+        view.dispatchTouchEvent(move)
+        view.dispatchTouchEvent(
+            MotionEvent.obtain(downTime, downTime + 36, MotionEvent.ACTION_UP, p.slot.centerX, p.slot.centerY, 0),
+        )
+        val path = paths.single()
+        assertTrue(path.startsWith("q"))
+        assertTrue(path.endsWith("p"))
+        assertTrue("history through a was dropped: $path", path.contains("a"))
+        move.recycle()
     }
 
     @Test

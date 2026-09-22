@@ -172,6 +172,16 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                 if (pointerId != null) {
                     val index = event.findPointerIndex(pointerId)
                     if (index >= 0) {
+                        // Historical samples are the real curve between the last
+                        // delivered point and this one. A straight chord misses keys.
+                        val history = event.historySize
+                        for (h in 0 until history) {
+                            controller.move(
+                                pointerId,
+                                event.getHistoricalX(index, h),
+                                event.getHistoricalY(index, h),
+                            )
+                        }
                         gesturePointerX = event.getX(index)
                         gesturePointerY = event.getY(index)
                         gesturePointerActive = true

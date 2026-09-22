@@ -126,7 +126,10 @@ class KeyboardControllerTest {
         controller.down(0, h.slot.centerX, h.slot.centerY)
         controller.move(0, e.slot.centerX, e.slot.centerY)
         controller.up(0, e.slot.centerX, e.slot.centerY)
-        assertEquals(listOf("He"), host.gestures)
+        val path = host.gestures.single()
+        assertTrue(path.startsWith("H"))
+        assertTrue(path.endsWith("e"))
+        assertTrue(path.all { it.isLetter() })
         assertEquals(ShiftState.OFF, controller.modifiers.shift)
     }
 
@@ -139,7 +142,10 @@ class KeyboardControllerTest {
         controller.down(0, h.slot.centerX, h.slot.centerY)
         controller.move(0, e.slot.centerX, e.slot.centerY)
         controller.up(0, e.slot.centerX, e.slot.centerY)
-        assertEquals(listOf("He"), host.gestures)
+        val path = host.gestures.single()
+        assertTrue(path.startsWith("H"))
+        assertTrue(path.endsWith("e"))
+        assertTrue(path.all { it.isLetter() })
         assertEquals(ShiftState.LOCKED, controller.modifiers.shift)
     }
 

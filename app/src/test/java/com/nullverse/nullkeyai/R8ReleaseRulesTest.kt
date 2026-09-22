@@ -68,4 +68,17 @@ class R8ReleaseRulesTest {
         assertTrue(smoke.contains("bundleRelease"))
         assertTrue(File(root, "scripts/check-r8-mapping.sh").isFile)
     }
+
+    @Test
+    fun swipeRankerAvoidsDataClassStateAndRemoveFirst() {
+        val source = File(
+            repoRoot(),
+            "app/src/main/java/com/nullverse/nullkeyai/ime/GestureWordRanker.kt",
+        ).readText()
+        assertFalse(source.contains("data class State"))
+        assertFalse(source.contains("removeFirst"))
+        assertFalse(source.contains("ArrayDeque"))
+        val mappingCheck = File(repoRoot(), "scripts/check-r8-mapping.sh").readText()
+        assertTrue(mappingCheck.contains("alignmentCost\$State"))
+    }
 }

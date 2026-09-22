@@ -85,6 +85,8 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private var symbolsMode = false
     private var usingEngine = true
     private var pendingSwipeCommit: String? = null
+    /** True after the user taps the in-keyboard vault search field. */
+    private var vaultSearchActive = false
 
     override fun onCreate() {
         super.onCreate()
@@ -114,6 +116,13 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         applyRendererPreference()
 
         searchBox = root.findViewById(R.id.clip_search)
+        searchBox.showSoftInputOnFocus = false
+        searchBox.setOnTouchListener { _, event ->
+            if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                activateVaultSearch()
+            }
+            false
+        }
         filesOnly = root.findViewById(R.id.files_only)
         clipsList = root.findViewById(R.id.clips_list)
         clipsEmpty = root.findViewById(R.id.clips_empty)
@@ -248,19 +257,19 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         }
         val word = suggestionViews.getOrNull(index)?.text?.toString().orEmpty()
         if (word.isBlank()) return
-        val ic = currentInputConnection ?: return
+        val sink = keySink() ?: return
         val swipeWord = pendingSwipeCommit
         if (swipeWord != null) {
             if (word != swipeWord) {
-                ic.deleteSurroundingText(swipeWord.length + 1, 0)
-                ic.commitText("$word ", 1)
+                sink.deleteBeforeCursor(swipeWord.length + 1)
+                sink.commitText("$word ")
                 learnTyped(word)
                 pendingSwipeCommit = word
             }
             return
         }
-        if (currentWord.isNotEmpty()) ic.deleteSurroundingText(currentWord.length, 0)
-        ic.commitText("$word ", 1)
+        if (currentWord.isNotEmpty()) sink.deleteBeforeCursor(currentWord.length)
+        sink.commitText("$word ")
         learnTyped(word)
         currentWord.setLength(0)
         updateSuggestions()
@@ -269,7 +278,8 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private fun handleGestureWord(path: String) {
         val ranked = suggester.suggestGesture(path, suggestionViews.size)
         val resolved = SwipeCommit.resolve(path, ranked) ?: return
-        currentInputConnection?.commitText("${resolved.committed} ", 1)
+        val sink = keySink() ?: return
+        sink.commitText("${resolved.committed} ")
         learnTyped(ranked.first())
         currentWord.setLength(0)
         pendingSwipeCommit = resolved.committed
@@ -298,6 +308,15 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     private fun proofread() {
+        if (vaultSearchActive) {
+            val source = searchBox.text?.toString().orEmpty()
+            if (source.isBlank()) {
+                Toast.makeText(this, R.string.writing_nothing_to_check, Toast.LENGTH_SHORT).show()
+                return
+            }
+            review(source, ProofKind.VAULT_SEARCH)
+            return
+        }
         if (isSensitiveField()) {
             Toast.makeText(this, R.string.writing_skipped_password, Toast.LENGTH_SHORT).show()
             return
@@ -320,6 +339,10 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
                 before to ProofKind.BEFORE_CURSOR
             }
         }
+        review(source, kind)
+    }
+
+    private fun review(source: String, kind: ProofKind) {
         val generation = ++proofGeneration
         scope.launch {
             val assistant = writing ?: withContext(Dispatchers.IO) {
@@ -355,8 +378,17 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     private fun applyProof(session: ProofSession, suggestion: String) {
-        val ic = currentInputConnection ?: return
         val revised = WritingReplacement.apply(session.source, session.issue, suggestion)
+        if (session.kind == ProofKind.VAULT_SEARCH) {
+            if (!vaultSearchActive) return
+            if (searchBox.text?.toString() != session.source) return
+            applyVaultSearchEdit(VaultSearchInput.Edit(revised, revised.length))
+            proof = null
+            currentWord.setLength(0)
+            updateSuggestions()
+            return
+        }
+        val ic = currentInputConnection ?: return
         when (session.kind) {
             ProofKind.SELECTION -> {
                 if (ic.getSelectedText(0)?.toString() != session.source) return
@@ -375,6 +407,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
                 ic.deleteSurroundingText(session.source.length, 0)
                 ic.commitText(revised, 1)
             }
+            ProofKind.VAULT_SEARCH -> return
         }
         proof = null
         updateSuggestions()
@@ -399,7 +432,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         val kind: ProofKind,
     )
 
-    private enum class ProofKind { SELECTION, CURRENT_WORD, BEFORE_CURSOR }
+    private enum class ProofKind { SELECTION, CURRENT_WORD, BEFORE_CURSOR, VAULT_SEARCH }
     // endregion
 
     // region KeyboardView.OnKeyboardActionListener
@@ -408,7 +441,8 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     private fun handleKey(primaryCode: Int, alreadyCased: Boolean) {
-        val ic = currentInputConnection ?: return
+        val editingSearch = vaultSearchActive
+        val sink = keySink() ?: return
         pendingSwipeCommit = null
         val hadProof = proof != null
         proof = null
@@ -416,7 +450,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         if (hadProof) updateSuggestions()
         when (primaryCode) {
             KeyCodes.DELETE -> {
-                ic.deleteSurroundingText(1, 0)
+                sink.deleteBeforeCursor(1)
                 if (currentWord.isNotEmpty()) currentWord.deleteCharAt(currentWord.length - 1)
                 updateSuggestions()
             }
@@ -434,25 +468,108 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
             }
             KeyCodes.DONE -> {
                 flushWord()
-                ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
-                ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
+                if (editingSearch) deactivateVaultSearch()
+                else sink.enter()
             }
             KeyCodes.SPACE -> {
-                ic.commitText(" ", 1)
+                sink.commitText(" ")
                 flushWord()
             }
             else -> {
                 var code = primaryCode.toChar()
                 if (Character.isLetter(code)) {
                     if (!alreadyCased && caps) code = Character.toUpperCase(code)
-                    ic.commitText(code.toString(), 1)
+                    sink.commitText(code.toString())
                     currentWord.append(code)
                     updateSuggestions()
                 } else {
-                    ic.commitText(code.toString(), 1)
+                    sink.commitText(code.toString())
                     flushWord()
                 }
             }
+        }
+    }
+
+    /**
+     * Vault search is an [android.widget.EditText] inside this IME. Making the
+     * IME window focusable would drop the host [currentInputConnection], so
+     * search mode is an explicit flag set by tapping the field. Keys then edit
+     * the field buffer. Enter leaves search mode and later keys return to the app.
+     */
+    private fun activateVaultSearch() {
+        if (!::searchBox.isInitialized || vaultSearchActive) return
+        vaultSearchActive = true
+        searchBox.isActivated = true
+        resetComposition()
+    }
+
+    private fun deactivateVaultSearch() {
+        if (!::searchBox.isInitialized) return
+        if (!vaultSearchActive && !searchBox.isActivated) return
+        vaultSearchActive = false
+        searchBox.isActivated = false
+        searchBox.clearFocus()
+        resetComposition()
+    }
+
+    private fun keySink(): ImeKeyOutput? {
+        if (vaultSearchActive && ::searchBox.isInitialized) return vaultSearchSink
+        val ic = currentInputConnection ?: return null
+        return InputConnectionKeyOutput(ic)
+    }
+
+    private val vaultSearchSink = object : ImeKeyOutput {
+        override fun commitText(text: CharSequence) {
+            if (!::searchBox.isInitialized) return
+            val current = searchBox.text?.toString().orEmpty()
+            applyVaultSearchEdit(
+                VaultSearchInput.commit(
+                    current,
+                    searchBox.selectionStart,
+                    searchBox.selectionEnd,
+                    text.toString(),
+                ),
+            )
+        }
+
+        override fun deleteBeforeCursor(count: Int) {
+            if (!::searchBox.isInitialized) return
+            val current = searchBox.text?.toString().orEmpty()
+            applyVaultSearchEdit(
+                VaultSearchInput.deleteBefore(
+                    current,
+                    searchBox.selectionStart,
+                    searchBox.selectionEnd,
+                    count,
+                ),
+            )
+        }
+
+        override fun enter() {
+            deactivateVaultSearch()
+        }
+    }
+
+    private fun applyVaultSearchEdit(edit: VaultSearchInput.Edit) {
+        searchBox.setText(edit.text)
+        val cursor = edit.cursor.coerceIn(0, edit.text.length)
+        runCatching { searchBox.setSelection(cursor) }
+    }
+
+    private class InputConnectionKeyOutput(
+        private val connection: android.view.inputmethod.InputConnection,
+    ) : ImeKeyOutput {
+        override fun commitText(text: CharSequence) {
+            connection.commitText(text, 1)
+        }
+
+        override fun deleteBeforeCursor(count: Int) {
+            connection.deleteSurroundingText(count, 0)
+        }
+
+        override fun enter() {
+            connection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+            connection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
         }
     }
 
@@ -467,7 +584,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
     override fun onRelease(primaryCode: Int) {}
     override fun onText(text: CharSequence?) {
-        if (text != null) currentInputConnection?.commitText(text, 1)
+        if (text != null) keySink()?.commitText(text)
     }
     override fun swipeLeft() {}
     override fun swipeRight() {}
@@ -477,6 +594,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     override fun onFinishInputView(finishingInput: Boolean) {
         refreshClipsJob?.cancel()
+        if (::searchBox.isInitialized) deactivateVaultSearch()
         if (::keyboardEngineView.isInitialized) keyboardEngineView.resetEngine()
         super.onFinishInputView(finishingInput)
     }

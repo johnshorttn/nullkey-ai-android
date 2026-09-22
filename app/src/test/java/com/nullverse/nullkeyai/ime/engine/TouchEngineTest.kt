@@ -95,6 +95,21 @@ class TouchEngineTest {
     }
 
     @Test
+    fun jumpAcrossAKeyRecordsTheLettersInBetween() {
+        val q = key("q")
+        val r = key("r")
+        engine.down(1, q.slot.centerX, q.slot.centerY)
+        engine.move(1, r.slot.centerX, r.slot.centerY)
+        engine.up(1, r.slot.centerX, r.slot.centerY)
+        val path = recorder.gestures.single()
+        assertEquals("q", path.first())
+        assertEquals("r", path.last())
+        assertTrue(path.contains("w"))
+        assertTrue(path.contains("e"))
+        assertTrue(recorder.taps.isEmpty())
+    }
+
+    @Test
     fun gesturePathDoesNotDuplicateSameKeyMoves() {
         val q = key("q")
         val w = key("w")
