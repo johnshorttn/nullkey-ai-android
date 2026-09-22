@@ -22,6 +22,7 @@ class TouchEngineTest {
         val repeats = mutableListOf<String>()
         val gestures = mutableListOf<List<String>>()
         val gestureProgress = mutableListOf<List<String>>()
+        val cursorSteps = mutableListOf<Int>()
         var consumeLongPress = false
 
         override fun hitTest(x: Float, y: Float): PlacedKey? = geometry.hitTest(x, y)
@@ -39,6 +40,7 @@ class TouchEngineTest {
         override fun onGestureProgress(keys: List<PlacedKey>) {
             gestureProgress += keys.map { it.spec.label }
         }
+        override fun onCursorSteps(steps: Int) { cursorSteps += steps }
     }
 
     @Before
@@ -255,6 +257,59 @@ class TouchEngineTest {
         engine.down(2, q.slot.centerX, q.slot.centerY)
         engine.up(2, q.slot.centerX, q.slot.centerY)
         assertEquals(listOf("q"), recorder.taps)
+    }
+
+    @Test
+    fun tapSpaceDoesNotMoveTheCursor() {
+        val space = key("space")
+        engine.down(1, space.slot.centerX, space.slot.centerY)
+        engine.up(1, space.slot.centerX, space.slot.centerY)
+        assertEquals(listOf("space"), recorder.taps)
+        assertTrue(recorder.cursorSteps.isEmpty())
+    }
+
+    @Test
+    fun draggingSpaceRightMovesTheCursorAndSkipsTheSpace() {
+        val space = key("space")
+        val step = space.slot.height
+        engine.down(1, space.slot.centerX, space.slot.centerY)
+        engine.move(1, space.slot.centerX + step, space.slot.centerY)
+        engine.move(1, space.slot.centerX + step * 2, space.slot.centerY)
+        engine.up(1, space.slot.centerX + step * 2, space.slot.centerY)
+        assertEquals(listOf(1, 1), recorder.cursorSteps)
+        assertTrue(recorder.taps.isEmpty())
+        assertTrue(recorder.gestures.isEmpty())
+    }
+
+    @Test
+    fun draggingSpaceLeftMovesTheCursorNegative() {
+        val space = key("space")
+        val step = space.slot.height
+        engine.down(1, space.slot.centerX, space.slot.centerY)
+        engine.move(1, space.slot.centerX - step * 2, space.slot.centerY)
+        engine.up(1, space.slot.centerX - step * 2, space.slot.centerY)
+        assertEquals(listOf(-2), recorder.cursorSteps)
+        assertTrue(recorder.taps.isEmpty())
+    }
+
+    @Test
+    fun shortSpaceDragStillInsertsSpace() {
+        val space = key("space")
+        val nudge = space.slot.height * 0.5f
+        engine.down(1, space.slot.centerX, space.slot.centerY)
+        engine.move(1, space.slot.centerX + nudge, space.slot.centerY)
+        engine.up(1, space.slot.centerX + nudge, space.slot.centerY)
+        assertEquals(listOf("space"), recorder.taps)
+        assertTrue(recorder.cursorSteps.isEmpty())
+    }
+
+    @Test
+    fun verticalSlideOffSpaceDoesNotMoveTheCursor() {
+        val space = key("space")
+        engine.down(1, space.slot.centerX, space.slot.centerY)
+        engine.move(1, space.slot.centerX, space.slot.top - 2f)
+        engine.up(1, space.slot.centerX, space.slot.top - 2f)
+        assertTrue(recorder.cursorSteps.isEmpty())
     }
 
     @Test

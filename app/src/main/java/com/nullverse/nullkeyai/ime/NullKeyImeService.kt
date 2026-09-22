@@ -120,6 +120,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         keyboardEngineView.listener = object : NullKeyKeyboardView.Listener {
             override fun onKey(code: Int) = handleKey(code, alreadyCased = true)
             override fun onGestureWord(path: String) = handleGestureWord(path)
+            override fun onCursorSteps(steps: Int) = handleCursorSteps(steps)
         }
         applyRendererPreference()
 
@@ -515,12 +516,6 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     /**
-     * Vault search is an [android.widget.EditText] inside this IME. Once it is
-     * focused, clipboard paste and cut edit its buffer, but
-     * [currentInputConnection] commit and delete calls do not. Keys edit that
-     * same buffer until Enter or the keyboard closes.
-     */
-    /**
      * Tools toggles the vault above the keys. Opening grows the IME by the
      * panel height (the host already pads for that inset). Closing returns
      * key routing to the host field and leaves the query in place.
@@ -542,6 +537,12 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         (vaultPanel.parent as? View)?.requestLayout()
     }
 
+    /**
+     * Vault search is an [android.widget.EditText] inside this IME. Once it is
+     * focused, clipboard paste and cut edit its buffer, but
+     * [currentInputConnection] commit and delete calls do not. Keys edit that
+     * same buffer until Enter or the keyboard closes.
+     */
     private fun activateVaultSearch() {
         if (!::searchBox.isInitialized) return
         val firstActivation = !vaultSearchActive
@@ -570,10 +571,17 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         return editorIsVaultSearch(currentInputEditorInfo)
     }
 
+    private fun handleCursorSteps(steps: Int) {
+        if (steps == 0) return
+        val sink = keySink() ?: return
+        sink.moveCursor(steps)
+        flushWord()
+    }
+
     private fun keySink(): ImeKeyOutput? {
         if (vaultSearchIsDirectTarget()) return vaultSearchSink
         val ic = currentInputConnection ?: return null
-        return InputConnectionKeyOutput(ic)
+        return InputConnectionKeyOutput(ic, allowRead = !isSensitiveField())
     }
 
     private val vaultSearchSink = object : ImeKeyOutput {
@@ -606,6 +614,19 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         override fun enter() {
             deactivateVaultSearch()
         }
+
+        override fun moveCursor(delta: Int) {
+            if (!::searchBox.isInitialized) return
+            val current = searchBox.text?.toString().orEmpty()
+            applyVaultSearchEdit(
+                VaultSearchInput.moveCursor(
+                    current,
+                    searchBox.selectionStart,
+                    searchBox.selectionEnd,
+                    delta,
+                ),
+            )
+        }
     }
 
     private fun applyVaultSearchEdit(edit: VaultSearchInput.Edit) {
@@ -623,6 +644,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     private class InputConnectionKeyOutput(
         private val connection: android.view.inputmethod.InputConnection,
+        private val allowRead: Boolean,
     ) : ImeKeyOutput {
         override fun commitText(text: CharSequence) {
             connection.commitText(text, 1)
@@ -635,6 +657,10 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         override fun enter() {
             connection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
             connection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
+        }
+
+        override fun moveCursor(delta: Int) {
+            CursorStep.apply(InputConnectionCursor(connection, allowRead), delta)
         }
     }
 

@@ -32,4 +32,13 @@ object KeyFeedback {
             }
         }
     }
+
+    /** Soft tick for a cursor step. Silent when haptics are off, and never a key click. */
+    fun cursorTick(view: View) {
+        if (!shouldHaptic(KeyboardEnginePreferences.hapticsEnabled(view.context))) return
+        view.performHapticFeedback(
+            HapticFeedbackConstants.CLOCK_TICK,
+            HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING,
+        )
+    }
 }

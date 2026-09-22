@@ -13,6 +13,7 @@ internal interface ImeKeyOutput {
     fun commitText(text: CharSequence)
     fun deleteBeforeCursor(count: Int)
     fun enter()
+    fun moveCursor(delta: Int)
 }
 
 internal object VaultSearchInput {
@@ -22,6 +23,11 @@ internal object VaultSearchInput {
         val (start, end) = selection(text, selectionStart, selectionEnd)
         val merged = text.substring(0, start) + insert + text.substring(end)
         return Edit(merged, start + insert.length)
+    }
+
+    fun moveCursor(text: String, selectionStart: Int, selectionEnd: Int, delta: Int): Edit {
+        val cursor = CursorStep.nextIndex(text.length, selectionStart, selectionEnd, delta)
+        return Edit(text, cursor)
     }
 
     fun deleteBefore(text: String, selectionStart: Int, selectionEnd: Int, count: Int): Edit {

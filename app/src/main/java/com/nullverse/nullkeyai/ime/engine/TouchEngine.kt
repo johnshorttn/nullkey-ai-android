@@ -32,6 +32,7 @@ class TouchEngine(
         fun onRepeat(key: PlacedKey)
         fun onGesturePath(keys: List<PlacedKey>) {}
         fun onGestureProgress(keys: List<PlacedKey>) {}
+        fun onCursorSteps(steps: Int) {}
     }
 
     var activePointerId: Int? = null
@@ -51,6 +52,7 @@ class TouchEngine(
     private var gestureStarted = false
     private var gestureStartX = 0f
     private var gestureStartY = 0f
+    private var cursorDrag: SpaceCursorDrag? = null
 
     fun down(pointerId: Int, x: Float, y: Float) {
         if (activePointerId != null) return
@@ -69,7 +71,11 @@ class TouchEngine(
         gestureStartX = x
         gestureStartY = y
         longPressFired = false
+        cursorDrag = null
         press(key)
+        if (key.spec.code == KeyCodes.SPACE) {
+            cursorDrag = SpaceCursorDrag(SpaceCursorDrag.stepPxFor(key)).also { it.begin(x, y) }
+        }
     }
 
     fun move(pointerId: Int, x: Float, y: Float) {
@@ -79,6 +85,25 @@ class TouchEngine(
         val dx = x - originX
         val dy = y - originY
         val segment = kotlin.math.sqrt(dx * dx + dy * dy)
+        val drag = cursorDrag
+        if (drag != null) {
+            when (drag.axis(x, y)) {
+                SpaceCursorDrag.Axis.VERTICAL -> cursorDrag = null
+                SpaceCursorDrag.Axis.UNDECIDED,
+                SpaceCursorDrag.Axis.HORIZONTAL,
+                -> {
+                    val steps = drag.move(x, y)
+                    lastX = x
+                    lastY = y
+                    if (drag.engaged) {
+                        longPressTask?.cancel()
+                        longPressTask = null
+                        if (steps != 0) listener.onCursorSteps(steps)
+                    }
+                    return
+                }
+            }
+        }
         gestureDistancePx += segment
         lastX = x
         lastY = y
@@ -139,8 +164,16 @@ class TouchEngine(
 
     fun up(pointerId: Int, x: Float, y: Float) {
         if (activePointerId != pointerId) return
+        if (cursorDrag?.engaged == true) {
+            cancelTasks()
+            listener.onRelease(pressed)
+            resetPointer()
+            return
+        }
+        // A sideways drift that never reached a cursor step is still a space tap.
+        val stickToSpace = cursorDrag != null
         // Allow a small lift-outside-key still to count as the pressed key.
-        val key = listener.hitTest(x, y) ?: pressed
+        val key = if (stickToSpace) pressed else (listener.hitTest(x, y) ?: pressed)
         if (key != null && key.id != pressed?.id) {
             listener.onRelease(pressed)
             press(key)
@@ -218,6 +251,7 @@ class TouchEngine(
         gestureStarted = false
         gestureStartX = 0f
         gestureStartY = 0f
+        cursorDrag = null
         listener.onGestureProgress(emptyList())
     }
 

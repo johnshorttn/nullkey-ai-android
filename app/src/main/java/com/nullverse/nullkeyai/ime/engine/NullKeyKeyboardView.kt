@@ -36,6 +36,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         fun onKey(code: Int)
         fun onLongPress(code: Int, popupCharacters: String) {}
         fun onGestureWord(path: String) {}
+        fun onCursorSteps(steps: Int) {}
     }
 
     var listener: Listener? = null
@@ -83,6 +84,12 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
             override fun onGestureWord(path: String) {
                 listener?.onGestureWord(path)
+            }
+
+            override fun onCursorSteps(steps: Int) {
+                listener?.onCursorSteps(steps)
+                val ticks = kotlin.math.abs(steps).coerceAtMost(MAX_CURSOR_TICKS)
+                repeat(ticks) { KeyFeedback.cursorTick(this@NullKeyKeyboardView) }
             }
 
             override fun onGestureProgress(keys: List<PlacedKey>) {
@@ -407,6 +414,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
     companion object {
         private const val A11Y_POINTER_ID = 99
+        private const val MAX_CURSOR_TICKS = 12
     }
 
     private fun applyTypingSettings() {

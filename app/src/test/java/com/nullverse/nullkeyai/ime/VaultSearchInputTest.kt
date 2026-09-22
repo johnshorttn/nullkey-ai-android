@@ -36,6 +36,15 @@ class VaultSearchInputTest {
     }
 
     @Test
+    fun moveCursorKeepsTheTextAndClamps() {
+        assertEquals(VaultSearchInput.Edit("hello", 3), VaultSearchInput.moveCursor("hello", 5, 5, -2))
+        assertEquals(VaultSearchInput.Edit("hello", 5), VaultSearchInput.moveCursor("hello", 5, 5, 4))
+        assertEquals(VaultSearchInput.Edit("hello", 0), VaultSearchInput.moveCursor("hello", 1, 1, -5))
+        assertEquals(VaultSearchInput.Edit("", 0), VaultSearchInput.moveCursor("", -1, -1, -3))
+        assertEquals(VaultSearchInput.Edit("", 0), VaultSearchInput.moveCursor("", 0, 0, 2))
+    }
+
+    @Test
     fun deleteOnEmptyTextStaysEmpty() {
         val edit = VaultSearchInput.deleteBefore("", -1, -1, 1)
         assertEquals(VaultSearchInput.Edit("", 0), edit)

@@ -15,9 +15,11 @@ class KeyboardControllerTest {
         val keys = mutableListOf<Int>()
         val longPresses = mutableListOf<Pair<Int, String>>()
         val gestures = mutableListOf<String>()
+        val cursorSteps = mutableListOf<Int>()
         var pressFeedback = 0
         override fun requestRedraw() {}
         override fun onKey(code: Int) { keys += code }
+        override fun onCursorSteps(steps: Int) { cursorSteps += steps }
         override fun onLongPress(code: Int, popupCharacters: String) {
             longPresses += code to popupCharacters
         }
@@ -211,6 +213,18 @@ class KeyboardControllerTest {
         scheduler.advance(500)
         controller.up(0, del.slot.centerX, del.slot.centerY)
         assertTrue(host.keys.count { it == KeyCodes.DELETE } >= 3)
+    }
+
+    @Test
+    fun spaceDragReportsCursorStepsAndDoesNotCommitSpace() {
+        val space = key("space")
+        val step = space.slot.height
+        controller.down(0, space.slot.centerX, space.slot.centerY)
+        controller.move(0, space.slot.centerX - step, space.slot.centerY)
+        controller.move(0, space.slot.centerX + step, space.slot.centerY)
+        controller.up(0, space.slot.centerX + step, space.slot.centerY)
+        assertEquals(listOf(-1, 2), host.cursorSteps)
+        assertTrue(host.keys.none { it == KeyCodes.SPACE })
     }
 
     @Test

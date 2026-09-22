@@ -20,6 +20,7 @@ class KeyboardController(
         fun onPopupCharacter(code: Int) { onKey(code) }
         fun onGestureWord(path: String) {}
         fun onGestureProgress(keys: List<PlacedKey>) {}
+        fun onCursorSteps(steps: Int) {}
         fun onPressFeedback() {}
     }
 
@@ -87,6 +88,10 @@ class KeyboardController(
             override fun onGestureProgress(keys: List<PlacedKey>) {
                 host.onGestureProgress(keys)
                 host.requestRedraw()
+            }
+
+            override fun onCursorSteps(steps: Int) {
+                host.onCursorSteps(steps)
             }
 
             override fun onGesturePath(keys: List<PlacedKey>) {

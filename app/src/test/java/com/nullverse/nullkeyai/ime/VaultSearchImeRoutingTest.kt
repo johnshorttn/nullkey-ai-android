@@ -113,6 +113,32 @@ class VaultSearchImeRoutingTest {
     }
 
     @Test
+    fun spaceDragMovesTheVaultSearchCursorAndClamps() {
+        val (_, search, keyboard) = keyboard()
+        tapSearch(search)
+        dragSpace(keyboard, -3)
+        dragSpace(keyboard, 2)
+        assertEquals("", search.text.toString())
+        assertEquals(0, search.selectionStart)
+
+        listOf("h", "e", "l", "l", "o").forEach { tapKey(keyboard, it) }
+        assertEquals("hello", search.text.toString())
+        assertEquals(5, search.selectionStart)
+
+        dragSpace(keyboard, -2)
+        assertEquals("hello", search.text.toString())
+        assertEquals(3, search.selectionStart)
+
+        dragSpace(keyboard, -10)
+        assertEquals(0, search.selectionStart)
+        assertEquals("hello", search.text.toString())
+
+        dragSpace(keyboard, 10)
+        assertEquals(5, search.selectionStart)
+        assertEquals("hello", search.text.toString())
+    }
+
+    @Test
     fun vaultStaysHiddenUntilToolsOpensItAndCloseStopsSearchKeys() {
         val (_, search, keyboard) = keyboard()
         val root = search.rootView
@@ -191,6 +217,24 @@ class VaultSearchImeRoutingTest {
         )
         view.dispatchTouchEvent(
             MotionEvent.obtain(downTime, downTime + 16, MotionEvent.ACTION_UP, key.slot.centerX, key.slot.centerY, 0),
+        )
+    }
+
+    private fun dragSpace(view: NullKeyKeyboardView, steps: Int) {
+        val space = view.keyWithLabel("space")
+        val step = space.slot.height
+        val startX = space.slot.centerX
+        val y = space.slot.centerY
+        val endX = startX + steps * step
+        val downTime = SystemClock.uptimeMillis()
+        view.dispatchTouchEvent(
+            MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, startX, y, 0),
+        )
+        view.dispatchTouchEvent(
+            MotionEvent.obtain(downTime, downTime + 20, MotionEvent.ACTION_MOVE, endX, y, 0),
+        )
+        view.dispatchTouchEvent(
+            MotionEvent.obtain(downTime, downTime + 40, MotionEvent.ACTION_UP, endX, y, 0),
         )
     }
 
