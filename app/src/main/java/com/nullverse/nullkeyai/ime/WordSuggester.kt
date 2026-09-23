@@ -29,8 +29,9 @@ class WordSuggester private constructor(
 
     /**
      * Resolve a swipe-key path. Learned and seeded words win. [fallback] is
-     * consulted only when those words have no match, so a top-row flick can
-     * still commit a dictionary word without outranking "hello" or "the".
+     * consulted only when those words have no match. The keyboard does not
+     * pass the spelling list here: building that map on the UI thread stalls
+     * the gesture. A caller that already has a small map may pass it.
      */
     fun suggestGesture(
         path: String,

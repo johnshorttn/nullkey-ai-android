@@ -36,6 +36,10 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         fun onKey(code: Int)
         fun onLongPress(code: Int, popupCharacters: String) {}
         fun onGestureWord(path: String) {}
+
+        /** Latest trail while the finger is down. Not a commit. */
+        fun onGesturePreview(path: String) {}
+
         fun onCursorSteps(steps: Int) {}
     }
 
@@ -52,6 +56,8 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
     private val renderer = KeyboardRenderer()
     private val gestureTrail = mutableListOf<PlacedKey>()
+    private val trailPath = Path()
+    private var lastPreviewPath: String? = null
     private var gesturePointerX = 0f
     private var gesturePointerY = 0f
     private var gesturePointerActive = false
@@ -72,6 +78,10 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             override fun requestRedraw() {
                 postInvalidateOnAnimation()
                 exploreHelper.invalidateRoot()
+            }
+
+            override fun requestGestureFrame() {
+                postInvalidateOnAnimation()
             }
 
             override fun onKey(code: Int) {
@@ -95,6 +105,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             override fun onGestureProgress(keys: List<PlacedKey>) {
                 gestureTrail.clear()
                 gestureTrail.addAll(keys)
+                if (keys.size < 2) lastPreviewPath = null
                 // The accent popup belongs to a stationary long-press. Once the
                 // finger has crossed into a real trail, that popup must not stay
                 // up over the swipe.
@@ -188,6 +199,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                         gesturePointerY = event.getY(index)
                         gesturePointerActive = true
                         controller.move(pointerId, gesturePointerX, gesturePointerY)
+                        flushGesturePreview()
                     }
                 }
             }
@@ -196,6 +208,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                 val pointerId = event.getPointerId(index)
                 gesturePointerActive = false
                 replayHistoricalPoints(event, index, pointerId)
+                flushGesturePreview()
                 controller.up(pointerId, event.getX(index), event.getY(index))
             }
             MotionEvent.ACTION_POINTER_UP -> {
@@ -204,6 +217,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                 if (pointerId == controller.touch.activePointerId) {
                     gesturePointerActive = false
                     replayHistoricalPoints(event, index, pointerId)
+                    flushGesturePreview()
                     controller.up(pointerId, event.getX(index), event.getY(index))
                 }
             }
@@ -335,17 +349,44 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
     private fun drawGestureTrail(canvas: Canvas) {
         if (!controller.swipeTypingEnabled || gestureTrail.size < 2) return
-        val path = Path()
+        trailPath.rewind()
         gestureTrail.forEachIndexed { index, key ->
             val x = key.slot.centerX
             val y = key.slot.centerY
-            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            if (index == 0) trailPath.moveTo(x, y) else trailPath.lineTo(x, y)
         }
-        if (gesturePointerActive) path.lineTo(gesturePointerX, gesturePointerY)
+        if (gesturePointerActive) trailPath.lineTo(gesturePointerX, gesturePointerY)
         gesturePaint.strokeWidth = 6f * resources.displayMetrics.density
         gesturePaint.color = theme.gestureTrailColor
         gesturePaint.alpha = 150
-        canvas.drawPath(path, gesturePaint)
+        canvas.drawPath(trailPath, gesturePaint)
+    }
+
+    /**
+     * Rank once per delivered MOVE, after every historical sample in that
+     * event has been folded into the trail. Ranking inside each sample would
+     * stall the finger.
+     */
+    private fun flushGesturePreview() {
+        if (!controller.swipeTypingEnabled) return
+        val path = currentGesturePath() ?: return
+        if (path == lastPreviewPath) return
+        lastPreviewPath = path
+        listener?.onGesturePreview(path)
+    }
+
+    private fun currentGesturePath(): String? {
+        if (gestureTrail.size < 2) return null
+        val letters = StringBuilder(gestureTrail.size)
+        for (key in gestureTrail) {
+            val character = key.spec.code.toChar()
+            if (character.isLetter()) letters.append(character)
+        }
+        if (letters.length < 2) return null
+        if (controller.modifiers.isShifted) {
+            letters[0] = letters[0].uppercaseChar()
+        }
+        return letters.toString()
     }
 
     private fun dismissAccentPopup() {

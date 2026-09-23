@@ -96,6 +96,8 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private var symbolsMode = false
     private var usingEngine = true
     private var pendingSwipeCommit: String? = null
+    private var previewPath: String? = null
+    private var previewRank: List<String>? = null
     /** True after the user taps the in-keyboard vault search field. */
     private var vaultSearchActive = false
     /** True while the Tools button is showing the vault panel above the keys. */
@@ -128,6 +130,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         keyboardEngineView.listener = object : NullKeyKeyboardView.Listener {
             override fun onKey(code: Int) = handleKey(code, alreadyCased = true)
             override fun onGestureWord(path: String) = handleGestureWord(path)
+            override fun onGesturePreview(path: String) = previewGestureWord(path)
             override fun onCursorSteps(steps: Int) = handleCursorSteps(steps)
         }
         applyRendererPreference()
@@ -342,17 +345,43 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         updateSuggestions()
     }
 
+    /**
+     * Show the leading candidate while the finger is still down. Uses the
+     * seeded lexicon only: building the spelling-list weight map on this
+     * thread stalls the gesture. The lift commits the same ranking when the
+     * path has not grown.
+     */
+    private fun previewGestureWord(path: String) {
+        if (trackpadActive || !::suggestionViews.isInitialized) return
+        val ranked = suggester.suggestGesture(path, suggestionViews.size)
+        previewPath = path
+        previewRank = ranked
+        val resolved = SwipeCommit.resolve(path, ranked)
+        publishSwipeSuggestions(resolved?.suggestions.orEmpty())
+    }
+
     private fun handleGestureWord(path: String) {
         if (trackpadActive) return
-        val ranked = suggester.suggestGesture(path, suggestionViews.size, gestureFallback())
+        val ranked = if (path == previewPath) {
+            previewRank
+        } else {
+            null
+        } ?: suggester.suggestGesture(path, suggestionViews.size)
+        previewPath = null
+        previewRank = null
         val resolved = SwipeCommit.resolve(path, ranked) ?: return
         val sink = keySink() ?: return
         sink.commitText("${resolved.committed} ")
         learnTyped(ranked.first())
         currentWord.setLength(0)
         pendingSwipeCommit = resolved.committed
+        publishSwipeSuggestions(resolved.suggestions)
+    }
+
+    private fun publishSwipeSuggestions(suggestions: List<String>) {
+        if (!::suggestionViews.isInitialized) return
         suggestionViews.forEachIndexed { index, view ->
-            val word = resolved.suggestions.getOrNull(index).orEmpty()
+            val word = suggestions.getOrNull(index).orEmpty()
             view.text = word
             view.contentDescription = if (word.isBlank()) {
                 getString(R.string.suggestion_empty, index + 1)
@@ -360,11 +389,6 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
                 getString(R.string.suggestion_word, word)
             }
         }
-    }
-
-    private fun gestureFallback(): Map<String, Int> {
-        writing?.gestureLexicon()?.let { return it }
-        return BundledSpellingDictionary.peek()?.gestureWeights().orEmpty()
     }
 
     private fun flushWord() {

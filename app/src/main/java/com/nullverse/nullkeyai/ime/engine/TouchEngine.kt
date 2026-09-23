@@ -25,6 +25,9 @@ class TouchEngine(
 ) {
     interface Listener {
         fun hitTest(x: Float, y: Float): PlacedKey?
+
+        /** True when [x], [y] is still inside [key], so a swipe sample can skip a full scan. */
+        fun containsKey(key: PlacedKey, x: Float, y: Float): Boolean = false
         fun onPress(key: PlacedKey)
         fun onRelease(key: PlacedKey?)
         fun onTap(key: PlacedKey)
@@ -33,6 +36,10 @@ class TouchEngine(
         fun onGesturePath(keys: List<PlacedKey>) {}
         fun onGestureProgress(keys: List<PlacedKey>) {}
         fun onCursorSteps(steps: Int) {}
+
+        /** A move may cross several keys. Hosts should redraw once, after [endGestureFrame]. */
+        fun beginGestureFrame() {}
+        fun endGestureFrame() {}
     }
 
     var activePointerId: Int? = null
@@ -53,6 +60,7 @@ class TouchEngine(
     private var gestureStartX = 0f
     private var gestureStartY = 0f
     private var cursorDrag: SpaceCursorDrag? = null
+    private var gestureFrameDirty = false
 
     fun down(pointerId: Int, x: Float, y: Float) {
         if (activePointerId != null) return
@@ -64,6 +72,7 @@ class TouchEngine(
         }
         gesturePath.clear()
         gesturePath += key
+        gestureFrameDirty = false
         gestureDistancePx = 0f
         gestureStarted = false
         lastX = x
@@ -107,13 +116,19 @@ class TouchEngine(
         gestureDistancePx += segment
         lastX = x
         lastY = y
-        // A batched MOVE often jumps several keys. Sample the segment so the
-        // trail contains the letters the finger crossed, including the endpoint.
+        // One frame for every key this segment enters. Haptics and accessibility
+        // rebuilds stay off the per-key path so the trail can keep up with the finger.
+        listener.beginGestureFrame()
         val samples = sampleCount(segment)
         for (index in 1..samples) {
             val t = index.toFloat() / samples.toFloat()
             visit(originX + dx * t, originY + dy * t, endpoint = index == samples)
         }
+        if (gestureFrameDirty) {
+            gestureFrameDirty = false
+            listener.onGestureProgress(gesturePath.toList())
+        }
+        listener.endGestureFrame()
     }
 
     private fun sampleCount(segment: Float): Int {
@@ -124,8 +139,14 @@ class TouchEngine(
         return kotlin.math.ceil(segment / step).toInt().coerceIn(1, MAX_SWIPE_SAMPLES)
     }
 
+    private fun locate(x: Float, y: Float): PlacedKey? {
+        val current = pressed
+        if (current != null && listener.containsKey(current, x, y)) return current
+        return listener.hitTest(x, y)
+    }
+
     private fun visit(x: Float, y: Float, endpoint: Boolean) {
-        val key = listener.hitTest(x, y)
+        val key = locate(x, y)
         // A chord can clip a gap between keys. Keep going until the endpoint,
         // which still releases the pressed key when the finger leaves the board.
         if (key == null && !endpoint) return
@@ -152,7 +173,7 @@ class TouchEngine(
         } else {
             if (gesturePath.lastOrNull()?.id != key.id) {
                 gesturePath += key
-                listener.onGestureProgress(gesturePath.toList())
+                gestureFrameDirty = true
             }
             press(key)
             if (gestureStarted) {
@@ -178,7 +199,7 @@ class TouchEngine(
             move(pointerId, x, y)
         }
         // Allow a small lift-outside-key still to count as the pressed key.
-        val key = if (stickToSpace) pressed else (listener.hitTest(x, y) ?: pressed)
+        val key = if (stickToSpace) pressed else (locate(x, y) ?: pressed)
         if (key != null && key.id != pressed?.id) {
             listener.onRelease(pressed)
             press(key)
@@ -219,7 +240,9 @@ class TouchEngine(
         pressed = key
         if (!longPressFired) longPressConsumed = false
         listener.onPress(key)
-        if (longPressFired) return
+        // A key entered after the finger is already moving should not arm another
+        // accent timer or the main thread pays a schedule/cancel on every letter.
+        if (longPressFired || gestureStarted) return
         if (key.spec.isRepeatable) {
             listener.onRepeat(key)
             scheduleRepeat(repeatStartMs)
@@ -256,6 +279,7 @@ class TouchEngine(
         longPressConsumed = false
         longPressFired = false
         gesturePath.clear()
+        gestureFrameDirty = false
         gestureDistancePx = 0f
         gestureStarted = false
         gestureStartX = 0f

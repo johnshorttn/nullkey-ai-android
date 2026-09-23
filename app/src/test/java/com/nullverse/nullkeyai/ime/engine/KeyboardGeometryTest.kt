@@ -140,6 +140,41 @@ class KeyboardGeometryTest {
     }
 
     @Test
+    fun hitTestMatchesAFullScanIncludingThePressedKeyFastPath() {
+        val geo = qwertyPortrait()
+        val slop = 45f
+        fun brute(x: Float, y: Float): PlacedKey? {
+            geo.placedKeys.firstOrNull { it.slot.contains(x, y) }?.let { return it }
+            var best: PlacedKey? = null
+            var bestDistance = Float.MAX_VALUE
+            for (key in geo.placedKeys) {
+                val distance = key.slot.distanceTo(x, y)
+                if (distance < bestDistance) {
+                    bestDistance = distance
+                    best = key
+                }
+            }
+            return if (best != null && bestDistance <= slop) best else null
+        }
+        var y = 0f
+        while (y <= geo.heightPx) {
+            var x = 0f
+            while (x <= geo.widthPx) {
+                assertEquals(brute(x, y)?.id, geo.hitTest(x, y, slop)?.id)
+                x += 9f
+            }
+            y += 9f
+        }
+        val h = geo.placedKeys.first { it.spec.label == "h" }
+        assertEquals(h.id, geo.hitTest(h.slot.centerX, h.slot.centerY, slop, h)?.id)
+        val outsideX = h.slot.right + 1f
+        assertEquals(
+            brute(outsideX, h.slot.centerY)?.id,
+            geo.hitTest(outsideX, h.slot.centerY, slop, h)?.id,
+        )
+    }
+
+    @Test
     fun preferredHeightHonorsUserScale() {
         val base = preferredKeyboardHeightPx(3f, LayoutOrientation.PORTRAIT, 4, 1.0f)
         val tall = preferredKeyboardHeightPx(3f, LayoutOrientation.PORTRAIT, 4, 1.40f)

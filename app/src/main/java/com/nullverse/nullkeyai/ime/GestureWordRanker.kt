@@ -12,6 +12,12 @@ object GestureWordRanker {
     const val MISS_WORD_COST = 12
     private const val UNSEEN = -1
 
+    // Reused by [alignmentCost]. Swipe ranking runs on the UI thread; a fresh
+    // array per dictionary word was a multi-kilobyte allocation on every lift.
+    private var scratchBest = IntArray(0)
+    private val scratchKeys = ArrayList<Int>(64)
+    private val scratchCosts = ArrayList<Int>(64)
+
     fun rank(path: String, counts: Map<String, Int>, max: Int = 3): List<String> {
         val gesture = collapseRepeats(lettersOf(path))
         if (gesture.length < 2 || max <= 0) return emptyList()
@@ -69,14 +75,29 @@ object GestureWordRanker {
         return alignmentCost(gesture, target)
     }
 
-    internal fun collapseRepeats(value: String): String = buildString(value.length) {
-        value.forEach { character ->
-            if (isEmpty() || last() != character) append(character)
+    internal fun collapseRepeats(value: String): String {
+        for (index in 1 until value.length) {
+            if (value[index] == value[index - 1]) {
+                return buildString(value.length) {
+                    append(value[0])
+                    for (cursor in 1 until value.length) {
+                        val character = value[cursor]
+                        if (character != value[cursor - 1]) append(character)
+                    }
+                }
+            }
         }
+        return value
     }
 
-    private fun lettersOf(value: String): String =
-        value.trim().lowercase().filter { it.isLetter() }
+    private fun lettersOf(value: String): String {
+        for (character in value) {
+            if (character !in 'a'..'z') {
+                return value.trim().lowercase().filter { it.isLetter() }
+            }
+        }
+        return value
+    }
 
     /**
      * Endpoints are mandatory. Every interior letter may be missed, which is
@@ -100,9 +121,14 @@ object GestureWordRanker {
         val missCap = maxMisses(m)
         val missStride = missCap + 1
         val jStride = m + 1
-        val best = IntArray((n + 1) * jStride * missStride) { UNSEEN }
-        val queueKeys = ArrayList<Int>()
-        val queueCosts = ArrayList<Int>()
+        val cells = (n + 1) * jStride * missStride
+        if (scratchBest.size < cells) scratchBest = IntArray(cells) { UNSEEN }
+        else java.util.Arrays.fill(scratchBest, 0, cells, UNSEEN)
+        val best = scratchBest
+        val queueKeys = scratchKeys
+        val queueCosts = scratchCosts
+        queueKeys.clear()
+        queueCosts.clear()
         offerState(best, queueKeys, queueCosts, missCap, n, m, missStride, jStride, 1, 1, 0, 0)
         var head = 0
         var resultCost: Int? = null

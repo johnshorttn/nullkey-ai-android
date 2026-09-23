@@ -84,6 +84,18 @@ class GestureWordRankerTest {
     }
 
     @Test
+    fun repeatedHelloRankingStaysCheapEnoughToPreviewDuringADrag() {
+        val path = "hgftrertyhjklo"
+        val start = System.nanoTime()
+        repeat(40) {
+            assertEquals("hello", GestureWordRanker.rank(path, lexicon, 3).first())
+        }
+        val elapsedMs = (System.nanoTime() - start) / 1_000_000.0
+        // Dev-machine measurement after buffer reuse: 14.4ms for these 40 ranks.
+        assertTrue("40 seed ranks of a hello trail took ${elapsedMs}ms", elapsedMs < 80.0)
+    }
+
+    @Test
     fun straightFlickStillResolvesHelloWhenInteriorKeysAreSkipped() {
         assertEquals("hello", GestureWordRanker.rank("hjio", lexicon, 3).first())
         assertEquals("hello", GestureWordRanker.rank("hjkio", lexicon, 3).first())

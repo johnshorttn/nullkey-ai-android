@@ -22,9 +22,6 @@ object BundledSpellingDictionary {
         }
     }
 
-    /** Already-parsed list, if [get] has finished. A swipe does not start asset IO. */
-    fun peek(): SpellingDictionary? = cached
-
     fun load(context: Context): SpellingDictionary {
         val words = context.assets.open(ASSET).bufferedReader().useLines { lines ->
             lines.map { it.trim().lowercase() }

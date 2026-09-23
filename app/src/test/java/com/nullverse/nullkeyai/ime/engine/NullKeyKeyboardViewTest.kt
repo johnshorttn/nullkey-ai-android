@@ -89,6 +89,25 @@ class NullKeyKeyboardViewTest {
     }
 
     @Test
+    fun movePreviewsTheWordOnceBeforeCommit() {
+        val view = layoutView()
+        val previews = mutableListOf<String>()
+        val commits = mutableListOf<String>()
+        view.listener = object : NullKeyKeyboardView.Listener {
+            override fun onKey(code: Int) {}
+            override fun onGesturePreview(path: String) {
+                previews += path
+            }
+            override fun onGestureWord(path: String) {
+                commits += path
+            }
+        }
+        swipe(view, view.keyWithLabel("h"), view.keyWithLabel("o"))
+        assertEquals(listOf("hjio"), previews)
+        assertEquals(previews, commits)
+    }
+
+    @Test
     fun swipeAcrossLetterKeysEmitsGesturePath() {
         val view = layoutView()
         val paths = mutableListOf<String>()
