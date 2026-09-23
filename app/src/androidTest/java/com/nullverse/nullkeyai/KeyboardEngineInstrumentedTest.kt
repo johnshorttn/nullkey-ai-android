@@ -69,6 +69,7 @@ class KeyboardEngineInstrumentedTest {
         val view = layoutView()
         val paths = mutableListOf<String>()
         view.listener = object : NullKeyKeyboardView.Listener {
+            override fun onKey(code: Int) {}
             override fun onGestureWord(path: String) {
                 paths += path
             }
@@ -83,6 +84,7 @@ class KeyboardEngineInstrumentedTest {
         val view = layoutView()
         val paths = mutableListOf<String>()
         view.listener = object : NullKeyKeyboardView.Listener {
+            override fun onKey(code: Int) {}
             override fun onGestureWord(path: String) {
                 paths += path
             }
