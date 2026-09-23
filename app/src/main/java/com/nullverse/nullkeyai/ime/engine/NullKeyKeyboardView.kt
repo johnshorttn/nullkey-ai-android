@@ -95,6 +95,10 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             override fun onGestureProgress(keys: List<PlacedKey>) {
                 gestureTrail.clear()
                 gestureTrail.addAll(keys)
+                // The accent popup belongs to a stationary long-press. Once the
+                // finger has crossed into a real trail, that popup must not stay
+                // up over the swipe.
+                if (keys.size >= 3) dismissAccentPopup()
             }
 
             override fun onLongPress(code: Int, popupCharacters: String) {
@@ -179,16 +183,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                 if (pointerId != null) {
                     val index = event.findPointerIndex(pointerId)
                     if (index >= 0) {
-                        // Historical samples are the real curve between the last
-                        // delivered point and this one. A straight chord misses keys.
-                        val history = event.historySize
-                        for (h in 0 until history) {
-                            controller.move(
-                                pointerId,
-                                event.getHistoricalX(index, h),
-                                event.getHistoricalY(index, h),
-                            )
-                        }
+                        replayHistoricalPoints(event, index, pointerId)
                         gesturePointerX = event.getX(index)
                         gesturePointerY = event.getY(index)
                         gesturePointerActive = true
@@ -198,14 +193,17 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_UP -> {
                 val index = event.actionIndex
+                val pointerId = event.getPointerId(index)
                 gesturePointerActive = false
-                controller.up(event.getPointerId(index), event.getX(index), event.getY(index))
+                replayHistoricalPoints(event, index, pointerId)
+                controller.up(pointerId, event.getX(index), event.getY(index))
             }
             MotionEvent.ACTION_POINTER_UP -> {
                 val index = event.actionIndex
                 val pointerId = event.getPointerId(index)
                 if (pointerId == controller.touch.activePointerId) {
                     gesturePointerActive = false
+                    replayHistoricalPoints(event, index, pointerId)
                     controller.up(pointerId, event.getX(index), event.getY(index))
                 }
             }
@@ -216,6 +214,23 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             else -> return super.onTouchEvent(event)
         }
         return true
+    }
+
+    /**
+     * Batched [MotionEvent] history is the curve since the previous delivery.
+     * ACTION_UP carries that curve too; dropping it makes a flick end on the
+     * wrong letter and the ranker rejects the word.
+     */
+    private fun replayHistoricalPoints(event: MotionEvent, index: Int, pointerId: Int) {
+        if (pointerId != controller.touch.activePointerId) return
+        val history = event.historySize
+        for (h in 0 until history) {
+            controller.move(
+                pointerId,
+                event.getHistoricalX(index, h),
+                event.getHistoricalY(index, h),
+            )
+        }
     }
 
     override fun onDetachedFromWindow() {

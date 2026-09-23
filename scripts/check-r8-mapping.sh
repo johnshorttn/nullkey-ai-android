@@ -47,6 +47,15 @@ if "alignmentCost$State" in mapping or "alignmentCost$State" in seeds:
         "FAIL: swipe alignment still uses a data-class BFS state; R8 drops equals/hashCode"
     )
 
+# Inlined swipe code must still trace back to these methods. A shrink that
+# deletes the ranker or the pointer-up classifier leaves no committed word.
+for needle in (
+    "com.nullverse.nullkeyai.ime.GestureWordRanker.alignmentCost",
+    "com.nullverse.nullkeyai.ime.engine.TouchEngine.up",
+):
+    if needle not in mapping:
+        raise SystemExit(f"FAIL: release mapping dropped {needle}")
+
 entry_points = [
     "com.nullverse.nullkeyai.ime.NullKeyImeService",
     "com.nullverse.nullkeyai.clipboard.ClipboardMonitorService",

@@ -172,6 +172,11 @@ class TouchEngine(
         }
         // A sideways drift that never reached a cursor step is still a space tap.
         val stickToSpace = cursorDrag != null
+        // A flick's last MOVE often stops short of the key under the lift.
+        // Sample that gap so the trail's endpoint is the letter that was released.
+        if (!stickToSpace && (x != lastX || y != lastY)) {
+            move(pointerId, x, y)
+        }
         // Allow a small lift-outside-key still to count as the pressed key.
         val key = if (stickToSpace) pressed else (listener.hitTest(x, y) ?: pressed)
         if (key != null && key.id != pressed?.id) {
@@ -185,10 +190,14 @@ class TouchEngine(
         cancelTasks()
         listener.onRelease(current)
         val minGestureDistance = current?.let { kotlin.math.min(it.slot.width, it.slot.height) * 0.75f } ?: Float.MAX_VALUE
-        val isSwipe = !heldLongPress &&
-            gesturePath.size >= 2 &&
-            gestureDistancePx >= minGestureDistance &&
-            gesturePath.all { it.spec.code.toChar().isLetter() }
+        val letterTrail = gesturePath.size >= 2 && gesturePath.all { it.spec.code.toChar().isLetter() }
+        val farEnough = gestureDistancePx >= minGestureDistance
+        // A finger that rests on the first key long enough for the accent timer
+        // still means to swipe if it then travels across several letters. A
+        // one-key slip after that timer stays a long-press, not a word.
+        val continuedPastHold = gesturePath.size >= CONTINUED_SWIPE_KEYS ||
+            gestureDistancePx >= minGestureDistance * CONTINUED_SWIPE_DISTANCE
+        val isSwipe = letterTrail && farEnough && (!heldLongPress || continuedPastHold)
         when {
             isSwipe -> listener.onGesturePath(gesturePath.toList())
             current != null && !wasRepeatable && !consumed && !(heldLongPress && gestureStarted) -> {
@@ -258,6 +267,8 @@ class TouchEngine(
     private companion object {
         const val SAMPLE_STEP_FRACTION = 0.25f
         const val MAX_SWIPE_SAMPLES = 48
+        const val CONTINUED_SWIPE_KEYS = 3
+        const val CONTINUED_SWIPE_DISTANCE = 2f
     }
 }
 

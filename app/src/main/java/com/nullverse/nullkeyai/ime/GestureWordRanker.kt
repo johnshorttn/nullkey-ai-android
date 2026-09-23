@@ -3,8 +3,9 @@ package com.nullverse.nullkeyai.ime
 /**
  * On-device swipe-word ranking. Matches a visited-key path to dictionary words
  * without network or ML: first/last letters must match, extras on the path are
- * cheap, and a small number of missed interior letters is allowed so a swipe
- * that skips a key can still resolve.
+ * cheap, and missed interior letters are allowed so a flick that only chords
+ * the endpoints can still resolve. When any candidate matches with no misses,
+ * miss-only candidates are dropped so an exact short word beats a longer one.
  */
 object GestureWordRanker {
     const val SKIP_PATH_COST = 1
@@ -12,23 +13,42 @@ object GestureWordRanker {
     private const val UNSEEN = -1
 
     fun rank(path: String, counts: Map<String, Int>, max: Int = 3): List<String> {
-        val gesture = lettersOf(path)
-        if (gesture.length < 2) return emptyList()
-        return counts.asSequence()
-            .mapNotNull { (word, frequency) ->
-                val score = score(gesture, word) ?: return@mapNotNull null
-                Triple(word, score, frequency)
-            }
+        val gesture = collapseRepeats(lettersOf(path))
+        if (gesture.length < 2 || max <= 0) return emptyList()
+        val start = gesture[0]
+        val end = gesture[gesture.length - 1]
+        val matches = ArrayList<Scored>()
+        for ((word, frequency) in counts) {
+            val letters = lettersOf(word)
+            if (letters.length < 2 || letters[0] != start || letters[letters.length - 1] != end) continue
+            val target = collapseRepeats(letters)
+            if (target.length < 2 || target[0] != start || target[target.length - 1] != end) continue
+            val aligned = alignmentCost(gesture, target) ?: continue
+            matches.add(Scored(word, aligned.cost, aligned.misses, frequency))
+        }
+        if (matches.isEmpty()) return emptyList()
+        val pool = if (matches.any { it.misses == 0 }) {
+            matches.filter { it.misses == 0 }
+        } else {
+            matches
+        }
+        return pool
             .sortedWith(
-                compareBy<Triple<String, Int, Int>> { it.second }
-                    .thenByDescending { it.third }
-                    .thenBy { it.first.length }
-                    .thenBy { it.first }
+                compareBy<Scored> { it.cost }
+                    .thenByDescending { it.frequency }
+                    .thenBy { it.word.length }
+                    .thenBy { it.word }
             )
-            .map { it.first }
             .take(max)
-            .toList()
+            .map { it.word }
     }
+
+    private class Scored(
+        val word: String,
+        val cost: Int,
+        val misses: Int,
+        val frequency: Int,
+    )
 
     fun applyCasing(word: String, path: String): String {
         val first = path.trim().firstOrNull { it.isLetter() } ?: return word
@@ -39,7 +59,9 @@ object GestureWordRanker {
         }
     }
 
-    internal fun score(path: String, word: String): Int? {
+    internal fun score(path: String, word: String): Int? = match(path, word)?.cost
+
+    private fun match(path: String, word: String): GestureMatch? {
         val gesture = collapseRepeats(lettersOf(path))
         val target = collapseRepeats(lettersOf(word))
         if (gesture.length < 2 || target.length < 2) return null
@@ -56,11 +78,12 @@ object GestureWordRanker {
     private fun lettersOf(value: String): String =
         value.trim().lowercase().filter { it.isLetter() }
 
-    private fun maxMisses(wordLength: Int): Int = when {
-        wordLength <= 3 -> 0
-        wordLength <= 5 -> 1
-        else -> 2
-    }
+    /**
+     * Endpoints are mandatory. Every interior letter may be missed, which is
+     * what a straight flick needs. [rank] then prefers a zero-miss candidate
+     * whenever one exists.
+     */
+    private fun maxMisses(wordLength: Int): Int = (wordLength - 2).coerceAtLeast(0)
 
     /**
      * Minimum edit cost to consume [gesture] against [word]. Both strings are
@@ -71,7 +94,7 @@ object GestureWordRanker {
      * stops memoizing. The queue is an index cursor so the dex does not bind
      * the API 35 List removal call.
      */
-    private fun alignmentCost(gesture: String, word: String): Int? {
+    private fun alignmentCost(gesture: String, word: String): GestureMatch? {
         val n = gesture.length
         val m = word.length
         val missCap = maxMisses(m)
@@ -82,7 +105,8 @@ object GestureWordRanker {
         val queueCosts = ArrayList<Int>()
         offerState(best, queueKeys, queueCosts, missCap, n, m, missStride, jStride, 1, 1, 0, 0)
         var head = 0
-        var result: Int? = null
+        var resultCost: Int? = null
+        var resultMisses = 0
         while (head < queueKeys.size) {
             val key = queueKeys[head]
             val cost = queueCosts[head]
@@ -93,7 +117,10 @@ object GestureWordRanker {
             val j = ij % jStride
             val i = ij / jStride
             if (j == m) {
-                if (i == n) result = minOf(result ?: cost, cost)
+                if (i == n && (resultCost == null || cost < resultCost || (cost == resultCost && misses < resultMisses))) {
+                    resultCost = cost
+                    resultMisses = misses
+                }
                 continue
             }
             if (i == n) continue
@@ -133,7 +160,8 @@ object GestureWordRanker {
                 }
             }
         }
-        return result
+        val cost = resultCost ?: return null
+        return GestureMatch(cost, resultMisses)
     }
 
     private fun offerState(
@@ -159,6 +187,12 @@ object GestureWordRanker {
         queueCosts.add(cost)
     }
 }
+
+/** Returned alignment. Not a map key: R8 may drop data-class equals/hashCode. */
+internal class GestureMatch(
+    val cost: Int,
+    val misses: Int,
+)
 
 data class SwipeCommitResult(
     val committed: String,

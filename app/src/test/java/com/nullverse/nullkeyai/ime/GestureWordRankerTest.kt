@@ -82,4 +82,36 @@ class GestureWordRankerTest {
     fun unmatchedPathDoesNotGuessAWord() {
         assertTrue(GestureWordRanker.rank("qzx", lexicon, 3).isEmpty())
     }
+
+    @Test
+    fun straightFlickStillResolvesHelloWhenInteriorKeysAreSkipped() {
+        assertEquals("hello", GestureWordRanker.rank("hjio", lexicon, 3).first())
+        assertEquals("hello", GestureWordRanker.rank("hjkio", lexicon, 3).first())
+    }
+
+    @Test
+    fun straightFlickPrefersTheOverLongerEndpointMatches() {
+        val results = GestureWordRanker.rank("tre", lexicon, 3)
+        assertEquals("the", results.first())
+        assertTrue(results.indexOf("the") < results.indexOf("there"))
+    }
+
+    @Test
+    fun chordFromTToSPrefersThisOverThanks() {
+        val withThis = lexicon + ("this" to 9)
+        assertEquals("this", GestureWordRanker.rank("trds", withThis, 3).first())
+    }
+
+    @Test
+    fun topRowFlickResolvesQuipFromTheFallbackLexicon() {
+        val withQuip = lexicon + ("quip" to 1)
+        assertEquals("quip", GestureWordRanker.rank("qwertyuiop", withQuip, 3).first())
+        assertEquals("quip", GestureWordRanker.rank("qp", withQuip, 3).first())
+    }
+
+    @Test
+    fun zeroMissShortWordBeatsAFlickThatOnlyMissesIntoHello() {
+        val withHo = lexicon + ("ho" to 1)
+        assertEquals("ho", GestureWordRanker.rank("hjio", withHo, 3).first())
+    }
 }

@@ -344,7 +344,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     private fun handleGestureWord(path: String) {
         if (trackpadActive) return
-        val ranked = suggester.suggestGesture(path, suggestionViews.size)
+        val ranked = suggester.suggestGesture(path, suggestionViews.size, gestureFallback())
         val resolved = SwipeCommit.resolve(path, ranked) ?: return
         val sink = keySink() ?: return
         sink.commitText("${resolved.committed} ")
@@ -360,6 +360,11 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
                 getString(R.string.suggestion_word, word)
             }
         }
+    }
+
+    private fun gestureFallback(): Map<String, Int> {
+        writing?.gestureLexicon()?.let { return it }
+        return BundledSpellingDictionary.peek()?.gestureWeights().orEmpty()
     }
 
     private fun flushWord() {

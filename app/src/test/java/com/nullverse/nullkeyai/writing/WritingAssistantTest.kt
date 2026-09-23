@@ -16,6 +16,15 @@ class WritingAssistantTest {
     private val assistant = WritingAssistant(dictionary)
 
     @Test
+    fun gestureLexiconRanksEarlierWordsAboveLaterOnes() {
+        val weights = assistant.gestureLexicon()
+        assertTrue(weights.getValue("the") > weights.getValue("hello"))
+        assertTrue(weights.getValue("hello") > weights.getValue("cat"))
+        assertTrue(weights.getValue("dont") > 0)
+        assertTrue(weights.values.all { it < SpellingDictionary.GESTURE_SEED_BIAS })
+    }
+
+    @Test
     fun spellingSuggestsANearDictionaryWord() {
         assertEquals(listOf("receive"), assistant.suggestionsFor("recieve"))
         assertEquals(listOf("the"), assistant.suggestionsFor("teh"))

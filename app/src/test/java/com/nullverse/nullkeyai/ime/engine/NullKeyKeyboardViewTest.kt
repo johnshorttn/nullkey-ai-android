@@ -182,6 +182,58 @@ class NullKeyKeyboardViewTest {
     }
 
     @Test
+    fun upEventHistoryStaysOnTheGesture() {
+        val view = layoutView()
+        val paths = mutableListOf<String>()
+        view.listener = object : NullKeyKeyboardView.Listener {
+            override fun onKey(code: Int) {}
+            override fun onGestureWord(path: String) {
+                paths += path
+            }
+        }
+        val q = view.keyWithLabel("q")
+        val a = view.keyWithLabel("a")
+        val p = view.keyWithLabel("p")
+        val downTime = SystemClock.uptimeMillis()
+        view.dispatchTouchEvent(
+            MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, q.slot.centerX, q.slot.centerY, 0),
+        )
+        val props = arrayOf(MotionEvent.PointerProperties().apply {
+            id = 0
+            toolType = MotionEvent.TOOL_TYPE_FINGER
+        })
+        val coords = arrayOf(MotionEvent.PointerCoords().apply {
+            x = a.slot.centerX
+            y = a.slot.centerY
+        })
+        val up = MotionEvent.obtain(
+            downTime,
+            downTime + 12,
+            MotionEvent.ACTION_UP,
+            1,
+            props,
+            coords,
+            0,
+            0,
+            1f,
+            1f,
+            0,
+            0,
+            InputDevice.SOURCE_TOUCHSCREEN,
+            0,
+        )
+        coords[0].x = p.slot.centerX
+        coords[0].y = p.slot.centerY
+        up.addBatch(downTime + 24, coords, 0)
+        view.dispatchTouchEvent(up)
+        val path = paths.single()
+        assertTrue(path.startsWith("q"))
+        assertTrue(path.endsWith("p"))
+        assertTrue("up history through a was dropped: $path", path.contains("a"))
+        up.recycle()
+    }
+
+    @Test
     fun heightScaleMakesTheKeyboardTaller() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         context.getSharedPreferences(KeyboardEnginePreferences.PREFS, Context.MODE_PRIVATE)

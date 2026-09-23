@@ -1,5 +1,6 @@
 package com.nullverse.nullkeyai.ime.engine
 
+import com.nullverse.nullkeyai.ime.GestureWordRanker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -175,6 +176,61 @@ class KeyboardControllerTest {
         assertEquals(listOf('E'.code), host.keys)
         assertEquals(ShiftState.OFF, controller.modifiers.shift)
     }
+
+    @Test
+    fun slowDragAfterLongPressRanksHello() {
+        val h = key("h")
+        val e = key("e")
+        val l = key("l")
+        val o = key("o")
+        controller.down(0, h.slot.centerX, h.slot.centerY)
+        scheduler.advance(450)
+        controller.move(0, e.slot.centerX, e.slot.centerY)
+        controller.move(0, l.slot.centerX, l.slot.centerY)
+        controller.up(0, o.slot.centerX, o.slot.centerY)
+        val path = host.gestures.single()
+        assertTrue(path.startsWith("h"))
+        assertTrue(path.endsWith("o"))
+        assertEquals("hello", GestureWordRanker.rank(path, seedLexicon(), 3).first())
+        assertTrue(host.keys.isEmpty())
+    }
+
+    @Test
+    fun flickFromHToORanksHello() {
+        val h = key("h")
+        val o = key("o")
+        controller.down(0, h.slot.centerX, h.slot.centerY)
+        controller.move(0, o.slot.centerX, o.slot.centerY)
+        controller.up(0, o.slot.centerX, o.slot.centerY)
+        val path = host.gestures.single()
+        assertEquals("hjio", path)
+        assertEquals("hello", GestureWordRanker.rank(path, seedLexicon(), 3).first())
+    }
+
+    @Test
+    fun flickFromTToERanksThe() {
+        val t = key("t")
+        val e = key("e")
+        controller.down(0, t.slot.centerX, t.slot.centerY)
+        controller.move(0, e.slot.centerX, e.slot.centerY)
+        controller.up(0, e.slot.centerX, e.slot.centerY)
+        assertEquals("the", GestureWordRanker.rank(host.gestures.single(), seedLexicon(), 3).first())
+    }
+
+    @Test
+    fun flickFromTToSRanksThis() {
+        val t = key("t")
+        val s = key("s")
+        controller.down(0, t.slot.centerX, t.slot.centerY)
+        controller.move(0, s.slot.centerX, s.slot.centerY)
+        controller.up(0, s.slot.centerX, s.slot.centerY)
+        assertEquals("this", GestureWordRanker.rank(host.gestures.single(), seedLexicon(), 3).first())
+    }
+
+    private fun seedLexicon(): Map<String, Int> = mapOf(
+        "the" to 1, "there" to 1, "this" to 1, "thanks" to 1, "hello" to 1,
+        "to" to 1, "two" to 1, "time" to 1, "take" to 1, "these" to 1,
+    )
 
     @Test
     fun longPressThenSwipeDoesNotCommitGestureWord() {
