@@ -37,6 +37,9 @@ class WritingAssistant(private val dictionary: SpellingDictionary) {
         return issues
     }
 
+    /** Letter weights from the spelling list. Swipe uses these only after the seed misses. */
+    fun gestureLexicon(): Map<String, Int> = dictionary.gestureWeights()
+
     fun isKnown(word: String): Boolean {
         val token = word.lowercase()
         if (dictionary.contains(token)) return true

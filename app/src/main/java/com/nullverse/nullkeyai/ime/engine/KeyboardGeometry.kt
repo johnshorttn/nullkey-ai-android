@@ -14,8 +14,15 @@ data class KeyboardGeometry(
 ) {
     fun keyById(id: Int): PlacedKey? = placedKeys.firstOrNull { it.id == id }
 
-    fun hitTest(x: Float, y: Float, maxSlopPx: Float = 0f): PlacedKey? {
-        placedKeys.firstOrNull { it.slot.contains(x, y) }?.let { return it }
+    fun hitTest(
+        x: Float,
+        y: Float,
+        maxSlopPx: Float = 0f,
+        preferred: PlacedKey? = null,
+    ): PlacedKey? {
+        // Samples along a swipe are usually still inside the key under the finger.
+        if (preferred != null && preferred.slot.contains(x, y)) return preferred
+        keyContaining(x, y)?.let { return it }
         if (maxSlopPx <= 0f) return null
         var best: PlacedKey? = null
         var bestDistance = Float.MAX_VALUE
@@ -27,6 +34,32 @@ data class KeyboardGeometry(
             }
         }
         return if (best != null && bestDistance <= maxSlopPx) best else null
+    }
+
+    /**
+     * Keys are stored row by row with a shared top edge. A point inside the
+     * board only needs the keys on that row.
+     */
+    private fun keyContaining(x: Float, y: Float): PlacedKey? {
+        val keys = placedKeys
+        var index = 0
+        while (index < keys.size) {
+            val rowTop = keys[index].slot.top
+            val rowBottom = keys[index].slot.bottom
+            if (y >= rowBottom) {
+                val row = rowTop
+                while (index < keys.size && keys[index].slot.top == row) index++
+                continue
+            }
+            if (y < rowTop) return null
+            while (index < keys.size && keys[index].slot.top == rowTop) {
+                val key = keys[index]
+                if (key.slot.contains(x, y)) return key
+                index++
+            }
+            return null
+        }
+        return null
     }
 
     companion object {

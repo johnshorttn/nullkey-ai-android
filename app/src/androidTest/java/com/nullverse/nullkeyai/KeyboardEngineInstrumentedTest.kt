@@ -63,4 +63,57 @@ class KeyboardEngineInstrumentedTest {
         assertTrue(path.all { it.isLetter() })
         assertTrue(codes.isEmpty())
     }
+
+    @Test
+    fun flickFromHToOSamplesInteriorKeys() {
+        val view = layoutView()
+        val paths = mutableListOf<String>()
+        view.listener = object : NullKeyKeyboardView.Listener {
+            override fun onKey(code: Int) {}
+            override fun onGestureWord(path: String) {
+                paths += path
+            }
+        }
+        swipe(view, view.keyWithLabel("h"), view.keyWithLabel("o"))
+        val path = paths.single()
+        assertEquals("hjio", path)
+    }
+
+    @Test
+    fun slowDragThroughHelloEmitsALetterTrail() {
+        val view = layoutView()
+        val paths = mutableListOf<String>()
+        view.listener = object : NullKeyKeyboardView.Listener {
+            override fun onKey(code: Int) {}
+            override fun onGestureWord(path: String) {
+                paths += path
+            }
+        }
+        val downTime = SystemClock.uptimeMillis()
+        val points = listOf("h", "e", "l", "o").map { view.keyWithLabel(it) }
+        view.dispatchTouchEvent(
+            MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, points[0].slot.centerX, points[0].slot.centerY, 0)
+        )
+        points.drop(1).forEachIndexed { index, key ->
+            view.dispatchTouchEvent(
+                MotionEvent.obtain(
+                    downTime,
+                    downTime + 20L * (index + 1),
+                    MotionEvent.ACTION_MOVE,
+                    key.slot.centerX,
+                    key.slot.centerY,
+                    0,
+                )
+            )
+        }
+        val end = points.last()
+        view.dispatchTouchEvent(
+            MotionEvent.obtain(downTime, downTime + 120, MotionEvent.ACTION_UP, end.slot.centerX, end.slot.centerY, 0)
+        )
+        val path = paths.single()
+        assertTrue(path.startsWith("h"))
+        assertTrue(path.endsWith("o"))
+        assertTrue(path.all { it.isLetter() })
+        assertTrue(path.length >= 4)
+    }
 }

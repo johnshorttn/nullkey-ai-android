@@ -15,6 +15,10 @@ class KeyboardController(
 ) {
     interface Host {
         fun requestRedraw()
+
+        /** Trail/highlight update. Must not rebuild the accessibility tree. */
+        fun requestGestureFrame() { requestRedraw() }
+
         fun onKey(code: Int)
         fun onLongPress(code: Int, popupCharacters: String)
         fun onPopupCharacter(code: Int) { onKey(code) }
@@ -46,6 +50,8 @@ class KeyboardController(
     private var paddingVerticalPx: Float = 0f
     private var gapPx: Float = 0f
     private var slopPx: Float = 0f
+    private var batchingGestureFrame = false
+    private var gestureFramePending = false
 
     val touch: TouchEngine = TouchEngine(
         scheduler = scheduler,
@@ -56,13 +62,33 @@ class KeyboardController(
             override fun hitTest(x: Float, y: Float): PlacedKey? =
                 geometry.hitTest(x, y, slopPx)
 
+            override fun containsKey(key: PlacedKey, x: Float, y: Float): Boolean =
+                key.slot.contains(x, y)
+
+            override fun beginGestureFrame() {
+                batchingGestureFrame = true
+            }
+
+            override fun endGestureFrame() {
+                batchingGestureFrame = false
+                if (gestureFramePending) {
+                    gestureFramePending = false
+                    host.requestGestureFrame()
+                }
+            }
+
             override fun onPress(key: PlacedKey) {
+                if (batchingGestureFrame) {
+                    gestureFramePending = true
+                    return
+                }
                 host.onPressFeedback()
                 host.requestRedraw()
             }
 
             override fun onRelease(key: PlacedKey?) {
-                host.requestRedraw()
+                if (batchingGestureFrame) gestureFramePending = true
+                else host.requestRedraw()
             }
 
             override fun onTap(key: PlacedKey) {
@@ -87,7 +113,8 @@ class KeyboardController(
 
             override fun onGestureProgress(keys: List<PlacedKey>) {
                 host.onGestureProgress(keys)
-                host.requestRedraw()
+                if (batchingGestureFrame) gestureFramePending = true
+                else host.requestGestureFrame()
             }
 
             override fun onCursorSteps(steps: Int) {

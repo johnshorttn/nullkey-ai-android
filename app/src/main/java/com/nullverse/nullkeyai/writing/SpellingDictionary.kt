@@ -13,6 +13,33 @@ class SpellingDictionary private constructor(
     fun rankOf(word: String): Int? = rank[normalize(word)]
 
     /**
+     * Letter keys for swipe ranking. Earlier SCOWL entries are more common.
+     * Weights stay below [GESTURE_SEED_BIAS] so a seeded word can outrank them
+     * when the caller merges the two maps itself.
+     */
+    fun gestureWeights(): Map<String, Int> {
+        cachedGestureWeights?.let { return it }
+        val weights = HashMap<String, Int>(rank.size)
+        val span = rank.size
+        for ((word, index) in rank) {
+            val letters = StringBuilder(word.length)
+            for (character in word) {
+                if (character in 'a'..'z') letters.append(character)
+            }
+            if (letters.length < 2) continue
+            val key = letters.toString()
+            val weight = (span - index).coerceAtMost(GESTURE_SEED_BIAS - 1)
+            val existing = weights[key]
+            if (existing == null || weight > existing) weights[key] = weight
+        }
+        cachedGestureWeights = weights
+        return weights
+    }
+
+    @Volatile
+    private var cachedGestureWeights: Map<String, Int>? = null
+
+    /**
      * Lowercase corrections for an unknown token. Distance-1 edits win.
      * Distance-2 is used only when nothing is one edit away, and only for
      * mid-length tokens, so a long paste cannot scan the whole list.
@@ -51,6 +78,9 @@ class SpellingDictionary private constructor(
         candidates.filter { rank.containsKey(it) }
 
     companion object {
+        /** Seeded gesture words stay above this so they can outrank spelling ties. */
+        const val GESTURE_SEED_BIAS = 1_000_000
+
         fun fromFrequencyOrder(words: Sequence<String>): SpellingDictionary {
             val rank = HashMap<String, Int>(4096)
             var index = 0

@@ -80,4 +80,24 @@ class WordSuggesterGestureTest {
     fun unknownPathReturnsNoCandidates() {
         assertTrue(suggester().suggestGesture("qzxv", 3).isEmpty())
     }
+
+    @Test
+    fun spellingFallbackDoesNotOverrideASeededMatch() {
+        val results = suggester().suggestGesture(
+            "hjio",
+            3,
+            mapOf("ho" to 1_000_000, "hero" to 9),
+        )
+        assertEquals("hello", results.first())
+    }
+
+    @Test
+    fun spellingFallbackIsUsedOnlyWhenTheSeedMisses() {
+        val results = suggester().suggestGesture(
+            "qwertyuiop",
+            3,
+            mapOf("quip" to 10, "quote" to 1),
+        )
+        assertEquals("quip", results.first())
+    }
 }

@@ -76,10 +76,15 @@ class R8ReleaseRulesTest {
             "app/src/main/java/com/nullverse/nullkeyai/ime/GestureWordRanker.kt",
         ).readText()
         assertFalse(source.contains("data class State"))
+        assertFalse(source.contains("data class GestureMatch"))
         assertFalse(source.contains("removeFirst"))
         assertFalse(source.contains("ArrayDeque"))
+        assertTrue(source.contains("IntArray"))
+        assertTrue(source.contains("ArrayList"))
         val mappingCheck = File(repoRoot(), "scripts/check-r8-mapping.sh").readText()
         assertTrue(mappingCheck.contains("alignmentCost\$State"))
+        assertTrue(mappingCheck.contains("GestureWordRanker.alignmentCost"))
+        assertTrue(mappingCheck.contains("TouchEngine.up"))
     }
 
     @Test

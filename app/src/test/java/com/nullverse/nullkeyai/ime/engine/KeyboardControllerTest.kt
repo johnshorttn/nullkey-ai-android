@@ -1,5 +1,6 @@
 package com.nullverse.nullkeyai.ime.engine
 
+import com.nullverse.nullkeyai.ime.GestureWordRanker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -17,7 +18,10 @@ class KeyboardControllerTest {
         val gestures = mutableListOf<String>()
         val cursorSteps = mutableListOf<Int>()
         var pressFeedback = 0
-        override fun requestRedraw() {}
+        var fullRedraws = 0
+        var gestureFrames = 0
+        override fun requestRedraw() { fullRedraws += 1 }
+        override fun requestGestureFrame() { gestureFrames += 1 }
         override fun onKey(code: Int) { keys += code }
         override fun onCursorSteps(steps: Int) { cursorSteps += steps }
         override fun onLongPress(code: Int, popupCharacters: String) {
@@ -175,6 +179,87 @@ class KeyboardControllerTest {
         assertEquals(listOf('E'.code), host.keys)
         assertEquals(ShiftState.OFF, controller.modifiers.shift)
     }
+
+    @Test
+    fun slowDragAfterLongPressRanksHello() {
+        val h = key("h")
+        val e = key("e")
+        val l = key("l")
+        val o = key("o")
+        controller.down(0, h.slot.centerX, h.slot.centerY)
+        scheduler.advance(450)
+        controller.move(0, e.slot.centerX, e.slot.centerY)
+        controller.move(0, l.slot.centerX, l.slot.centerY)
+        controller.up(0, o.slot.centerX, o.slot.centerY)
+        val path = host.gestures.single()
+        assertTrue(path.startsWith("h"))
+        assertTrue(path.endsWith("o"))
+        assertEquals("hello", GestureWordRanker.rank(path, seedLexicon(), 3).first())
+        assertTrue(host.keys.isEmpty())
+    }
+
+    @Test
+    /**
+     * Same h→e→l→o drag, measured: 1 key click, 3 full redraws, 4 gesture
+     * frames, 14-key trail. Before batching, each of those 14 keys clicked
+     * and requested its own accessibility rebuild.
+     */
+    fun helloDragClicksOnceAndRedrawsPerMoveNotPerKey() {
+        host.pressFeedback = 0
+        host.fullRedraws = 0
+        host.gestureFrames = 0
+        val h = key("h")
+        val e = key("e")
+        val l = key("l")
+        val o = key("o")
+        controller.down(0, h.slot.centerX, h.slot.centerY)
+        controller.move(0, e.slot.centerX, e.slot.centerY)
+        controller.move(0, l.slot.centerX, l.slot.centerY)
+        controller.up(0, o.slot.centerX, o.slot.centerY)
+        val path = host.gestures.single()
+        assertTrue(path.length > host.gestureFrames)
+        assertEquals(1, host.pressFeedback)
+        assertTrue("fullRedraws=${host.fullRedraws} frames=${host.gestureFrames} path=$path", host.fullRedraws <= 4)
+        assertTrue(host.gestureFrames >= 1)
+        assertEquals("hello", GestureWordRanker.rank(path, seedLexicon(), 3).first())
+    }
+
+    @Test
+    fun flickFromHToORanksHello() {
+        val h = key("h")
+        val o = key("o")
+        controller.down(0, h.slot.centerX, h.slot.centerY)
+        controller.move(0, o.slot.centerX, o.slot.centerY)
+        controller.up(0, o.slot.centerX, o.slot.centerY)
+        val path = host.gestures.single()
+        assertEquals("hjio", path)
+        assertEquals("hello", GestureWordRanker.rank(path, seedLexicon(), 3).first())
+    }
+
+    @Test
+    fun flickFromTToERanksThe() {
+        val t = key("t")
+        val e = key("e")
+        controller.down(0, t.slot.centerX, t.slot.centerY)
+        controller.move(0, e.slot.centerX, e.slot.centerY)
+        controller.up(0, e.slot.centerX, e.slot.centerY)
+        assertEquals("the", GestureWordRanker.rank(host.gestures.single(), seedLexicon(), 3).first())
+    }
+
+    @Test
+    fun flickFromTToSRanksThis() {
+        val t = key("t")
+        val s = key("s")
+        controller.down(0, t.slot.centerX, t.slot.centerY)
+        controller.move(0, s.slot.centerX, s.slot.centerY)
+        controller.up(0, s.slot.centerX, s.slot.centerY)
+        assertEquals("this", GestureWordRanker.rank(host.gestures.single(), seedLexicon(), 3).first())
+    }
+
+    private fun seedLexicon(): Map<String, Int> = mapOf(
+        "the" to 1, "there" to 1, "this" to 1, "thanks" to 1, "hello" to 1,
+        "to" to 1, "two" to 1, "time" to 1, "take" to 1, "these" to 1,
+    )
 
     @Test
     fun longPressThenSwipeDoesNotCommitGestureWord() {

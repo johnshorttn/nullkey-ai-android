@@ -177,6 +177,38 @@ class TouchEngineTest {
     }
 
     @Test
+    fun longPressThenContinuedLetterTrailBecomesASwipe() {
+        val h = key("h")
+        val e = key("e")
+        val l = key("l")
+        val o = key("o")
+        engine.down(1, h.slot.centerX, h.slot.centerY)
+        scheduler.advance(450)
+        assertEquals(listOf("h"), recorder.longPresses)
+        engine.move(1, e.slot.centerX, e.slot.centerY)
+        engine.move(1, l.slot.centerX, l.slot.centerY)
+        engine.up(1, o.slot.centerX, o.slot.centerY)
+        val path = recorder.gestures.single()
+        assertEquals("h", path.first())
+        assertEquals("o", path.last())
+        assertTrue(path.size >= 3)
+        assertTrue(path.all { it.length == 1 && it[0].isLetter() })
+        assertTrue(recorder.taps.isEmpty())
+    }
+
+    @Test
+    fun straightFlickSamplesTheKeysBetweenEndpoints() {
+        val h = key("h")
+        val o = key("o")
+        engine.down(1, h.slot.centerX, h.slot.centerY)
+        engine.move(1, o.slot.centerX, o.slot.centerY)
+        engine.up(1, o.slot.centerX, o.slot.centerY)
+        val path = recorder.gestures.single()
+        assertEquals(listOf("h", "j", "i", "o"), path)
+        assertTrue(recorder.taps.isEmpty())
+    }
+
+    @Test
     fun unconsumedLongPressThenMoveDoesNotTapOrSwipe() {
         val t = key("t")
         val y = key("y")

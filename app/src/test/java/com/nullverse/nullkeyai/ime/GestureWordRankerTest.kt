@@ -82,4 +82,48 @@ class GestureWordRankerTest {
     fun unmatchedPathDoesNotGuessAWord() {
         assertTrue(GestureWordRanker.rank("qzx", lexicon, 3).isEmpty())
     }
+
+    @Test
+    fun repeatedHelloRankingStaysCheapEnoughToPreviewDuringADrag() {
+        val path = "hgftrertyhjklo"
+        val start = System.nanoTime()
+        repeat(40) {
+            assertEquals("hello", GestureWordRanker.rank(path, lexicon, 3).first())
+        }
+        val elapsedMs = (System.nanoTime() - start) / 1_000_000.0
+        // Dev-machine measurement after buffer reuse: 14.4ms for these 40 ranks.
+        assertTrue("40 seed ranks of a hello trail took ${elapsedMs}ms", elapsedMs < 80.0)
+    }
+
+    @Test
+    fun straightFlickStillResolvesHelloWhenInteriorKeysAreSkipped() {
+        assertEquals("hello", GestureWordRanker.rank("hjio", lexicon, 3).first())
+        assertEquals("hello", GestureWordRanker.rank("hjkio", lexicon, 3).first())
+    }
+
+    @Test
+    fun straightFlickPrefersTheOverLongerEndpointMatches() {
+        val results = GestureWordRanker.rank("tre", lexicon, 3)
+        assertEquals("the", results.first())
+        assertTrue(results.indexOf("the") < results.indexOf("there"))
+    }
+
+    @Test
+    fun chordFromTToSPrefersThisOverThanks() {
+        val withThis = lexicon + ("this" to 9)
+        assertEquals("this", GestureWordRanker.rank("trds", withThis, 3).first())
+    }
+
+    @Test
+    fun topRowFlickResolvesQuipFromTheFallbackLexicon() {
+        val withQuip = lexicon + ("quip" to 1)
+        assertEquals("quip", GestureWordRanker.rank("qwertyuiop", withQuip, 3).first())
+        assertEquals("quip", GestureWordRanker.rank("qp", withQuip, 3).first())
+    }
+
+    @Test
+    fun zeroMissShortWordBeatsAFlickThatOnlyMissesIntoHello() {
+        val withHo = lexicon + ("ho" to 1)
+        assertEquals("ho", GestureWordRanker.rank("hjio", withHo, 3).first())
+    }
 }

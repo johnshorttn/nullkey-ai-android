@@ -27,9 +27,21 @@ class WordSuggester private constructor(
             .toList()
     }
 
-    /** Resolve a swipe-key path to the closest known words using ordered key matches. */
-    fun suggestGesture(path: String, max: Int = 3): List<String> =
-        GestureWordRanker.rank(path, counts, max)
+    /**
+     * Resolve a swipe-key path. Learned and seeded words win. [fallback] is
+     * consulted only when those words have no match. The keyboard does not
+     * pass the spelling list here: building that map on the UI thread stalls
+     * the gesture. A caller that already has a small map may pass it.
+     */
+    fun suggestGesture(
+        path: String,
+        max: Int = 3,
+        fallback: Map<String, Int> = emptyMap(),
+    ): List<String> {
+        val primary = GestureWordRanker.rank(path, counts, max)
+        if (primary.isNotEmpty() || fallback.isEmpty()) return primary
+        return GestureWordRanker.rank(path, fallback, max)
+    }
 
     /**
      * Record that [word] was used, increasing its future suggestion priority.

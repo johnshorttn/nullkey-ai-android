@@ -36,6 +36,10 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         fun onKey(code: Int)
         fun onLongPress(code: Int, popupCharacters: String) {}
         fun onGestureWord(path: String) {}
+
+        /** Latest trail while the finger is down. Not a commit. */
+        fun onGesturePreview(path: String) {}
+
         fun onCursorSteps(steps: Int) {}
     }
 
@@ -52,6 +56,8 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
     private val renderer = KeyboardRenderer()
     private val gestureTrail = mutableListOf<PlacedKey>()
+    private val trailPath = Path()
+    private var lastPreviewPath: String? = null
     private var gesturePointerX = 0f
     private var gesturePointerY = 0f
     private var gesturePointerActive = false
@@ -72,6 +78,10 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             override fun requestRedraw() {
                 postInvalidateOnAnimation()
                 exploreHelper.invalidateRoot()
+            }
+
+            override fun requestGestureFrame() {
+                postInvalidateOnAnimation()
             }
 
             override fun onKey(code: Int) {
@@ -95,6 +105,11 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             override fun onGestureProgress(keys: List<PlacedKey>) {
                 gestureTrail.clear()
                 gestureTrail.addAll(keys)
+                if (keys.size < 2) lastPreviewPath = null
+                // The accent popup belongs to a stationary long-press. Once the
+                // finger has crossed into a real trail, that popup must not stay
+                // up over the swipe.
+                if (keys.size >= 3) dismissAccentPopup()
             }
 
             override fun onLongPress(code: Int, popupCharacters: String) {
@@ -179,33 +194,30 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                 if (pointerId != null) {
                     val index = event.findPointerIndex(pointerId)
                     if (index >= 0) {
-                        // Historical samples are the real curve between the last
-                        // delivered point and this one. A straight chord misses keys.
-                        val history = event.historySize
-                        for (h in 0 until history) {
-                            controller.move(
-                                pointerId,
-                                event.getHistoricalX(index, h),
-                                event.getHistoricalY(index, h),
-                            )
-                        }
+                        replayHistoricalPoints(event, index, pointerId)
                         gesturePointerX = event.getX(index)
                         gesturePointerY = event.getY(index)
                         gesturePointerActive = true
                         controller.move(pointerId, gesturePointerX, gesturePointerY)
+                        flushGesturePreview()
                     }
                 }
             }
             MotionEvent.ACTION_UP -> {
                 val index = event.actionIndex
+                val pointerId = event.getPointerId(index)
                 gesturePointerActive = false
-                controller.up(event.getPointerId(index), event.getX(index), event.getY(index))
+                replayHistoricalPoints(event, index, pointerId)
+                flushGesturePreview()
+                controller.up(pointerId, event.getX(index), event.getY(index))
             }
             MotionEvent.ACTION_POINTER_UP -> {
                 val index = event.actionIndex
                 val pointerId = event.getPointerId(index)
                 if (pointerId == controller.touch.activePointerId) {
                     gesturePointerActive = false
+                    replayHistoricalPoints(event, index, pointerId)
+                    flushGesturePreview()
                     controller.up(pointerId, event.getX(index), event.getY(index))
                 }
             }
@@ -216,6 +228,23 @@ class NullKeyKeyboardView @JvmOverloads constructor(
             else -> return super.onTouchEvent(event)
         }
         return true
+    }
+
+    /**
+     * Batched [MotionEvent] history is the curve since the previous delivery.
+     * ACTION_UP carries that curve too; dropping it makes a flick end on the
+     * wrong letter and the ranker rejects the word.
+     */
+    private fun replayHistoricalPoints(event: MotionEvent, index: Int, pointerId: Int) {
+        if (pointerId != controller.touch.activePointerId) return
+        val history = event.historySize
+        for (h in 0 until history) {
+            controller.move(
+                pointerId,
+                event.getHistoricalX(index, h),
+                event.getHistoricalY(index, h),
+            )
+        }
     }
 
     override fun onDetachedFromWindow() {
@@ -320,17 +349,44 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
     private fun drawGestureTrail(canvas: Canvas) {
         if (!controller.swipeTypingEnabled || gestureTrail.size < 2) return
-        val path = Path()
+        trailPath.rewind()
         gestureTrail.forEachIndexed { index, key ->
             val x = key.slot.centerX
             val y = key.slot.centerY
-            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            if (index == 0) trailPath.moveTo(x, y) else trailPath.lineTo(x, y)
         }
-        if (gesturePointerActive) path.lineTo(gesturePointerX, gesturePointerY)
+        if (gesturePointerActive) trailPath.lineTo(gesturePointerX, gesturePointerY)
         gesturePaint.strokeWidth = 6f * resources.displayMetrics.density
         gesturePaint.color = theme.gestureTrailColor
         gesturePaint.alpha = 150
-        canvas.drawPath(path, gesturePaint)
+        canvas.drawPath(trailPath, gesturePaint)
+    }
+
+    /**
+     * Rank once per delivered MOVE, after every historical sample in that
+     * event has been folded into the trail. Ranking inside each sample would
+     * stall the finger.
+     */
+    private fun flushGesturePreview() {
+        if (!controller.swipeTypingEnabled) return
+        val path = currentGesturePath() ?: return
+        if (path == lastPreviewPath) return
+        lastPreviewPath = path
+        listener?.onGesturePreview(path)
+    }
+
+    private fun currentGesturePath(): String? {
+        if (gestureTrail.size < 2) return null
+        val letters = StringBuilder(gestureTrail.size)
+        for (key in gestureTrail) {
+            val character = key.spec.code.toChar()
+            if (character.isLetter()) letters.append(character)
+        }
+        if (letters.length < 2) return null
+        if (controller.modifiers.isShifted) {
+            letters[0] = letters[0].uppercaseChar()
+        }
+        return letters.toString()
     }
 
     private fun dismissAccentPopup() {
