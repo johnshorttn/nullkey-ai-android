@@ -2,22 +2,44 @@ package com.nullverse.nullkeyai.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.Index
+import java.util.UUID
 
-/**
- * A single captured clipboard entry.
- *
- * Text clips store their text in [content]. File/image clips store the content
- * URI string in [content] with [isFile] = true and the resolved [mimeType].
- */
-@Entity(tableName = "clips")
+enum class ClipContentType { TEXT, IMAGE, FILE, URI, RICH }
+enum class ClipCaptureMethod { CLIPBOARD, IME, SHARE, MANUAL, OCR, IMPORT, REMOTE, UNKNOWN }
+enum class ClipSourceConfidence { CONFIRMED, INFERRED, UNKNOWN }
+
+@Entity(tableName = "clips", indices = [Index(value = ["syncId"], unique = true)])
 data class Clip(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val content: String,
     val isFile: Boolean = false,
     val mimeType: String? = null,
+    /** Legacy v1 single-tag field. New code uses clip_tags. */
     val tag: String? = null,
     val pinned: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
-    /** Non-null when the clip has been moved to Trash. */
-    val trashedAt: Long? = null
+    val trashedAt: Long? = null,
+
+    // Vault 2.0 metadata.
+    val contentType: String = ClipContentType.TEXT.name,
+    val notes: String = "",
+    val protected: Boolean = false,
+    val localAssetPath: String? = null,
+    val sourcePackage: String? = null,
+    val sourceAppLabel: String? = null,
+    val sourceUri: String? = null,
+    val captureMethod: String = ClipCaptureMethod.UNKNOWN.name,
+    val sourceConfidence: String = ClipSourceConfidence.UNKNOWN.name,
+    val ocrText: String? = null,
+    val updatedAt: Long = createdAt,
+
+    // Stable sync identity. Local Room id is never used as the cross-device identity.
+    val syncId: String = UUID.randomUUID().toString(),
+    val revision: Long = 1,
+    val originDeviceId: String? = null,
+    val modifiedByDeviceId: String? = null,
+    val syncDeletedAt: Long? = null,
+    val syncState: String = "LOCAL",
+    val syncExcluded: Boolean = false
 )

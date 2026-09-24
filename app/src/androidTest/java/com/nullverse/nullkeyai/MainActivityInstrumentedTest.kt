@@ -7,9 +7,17 @@ import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
+import androidx.test.espresso.matcher.ViewMatchers.isChecked
+import androidx.test.espresso.matcher.ViewMatchers.isNotChecked
+import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.action.ViewActions.scrollTo
+import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
+import androidx.test.espresso.matcher.ViewMatchers.Visibility
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.nullverse.nullkeyai.ui.MainActivity
+import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
+import com.nullverse.nullkeyai.ime.engine.KeyboardThemeId
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,15 +45,95 @@ class MainActivityInstrumentedTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.btn_enable)).check(matches(isDisplayed()))
             onView(withId(R.id.btn_switch)).check(matches(isDisplayed()))
-            onView(withId(R.id.search)).check(matches(isDisplayed()))
-            onView(withId(R.id.files_only)).check(matches(isDisplayed()))
+            onView(withId(R.id.ime_status)).check(matches(isDisplayed()))
+            onView(withId(R.id.swipe_typing_enabled)).perform(scrollTo()).check(matches(isDisplayed()))
+            onView(withId(R.id.search)).perform(scrollTo()).check(matches(isDisplayed()))
+            onView(withId(R.id.files_only)).perform(scrollTo()).check(matches(isDisplayed()))
+            onView(withId(R.id.incognito_enabled)).perform(scrollTo()).check(matches(isDisplayed()))
+            onView(withId(R.id.developer_options_enabled)).perform(scrollTo()).check(matches(isDisplayed()))
+            onView(withId(R.id.btn_clipboard_lab)).check(matches(withEffectiveVisibility(Visibility.GONE)))
         }
     }
 
     @Test
-    fun showsAppTitle() {
+    fun swipeTypingTogglePersistsPreference() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        KeyboardEnginePreferences.setSwipeTypingEnabled(context, true)
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withText("NullKey AI")).check(matches(isDisplayed()))
+            onView(withId(R.id.swipe_typing_enabled)).perform(scrollTo()).check(matches(isChecked()))
+            onView(withId(R.id.swipe_typing_enabled)).perform(scrollTo(), click())
+            onView(withId(R.id.swipe_typing_enabled)).perform(scrollTo()).check(matches(isNotChecked()))
+            org.junit.Assert.assertFalse(KeyboardEnginePreferences.swipeTypingEnabled(context))
+        }
+        KeyboardEnginePreferences.setSwipeTypingEnabled(context, true)
+    }
+
+    @Test
+    fun swipeActionButtonsShowLocalizedDefaults() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onView(withId(R.id.btn_swipe_left_action))
+                .perform(scrollTo())
+                .check(matches(withText("Left swipe: Delete")))
+            onView(withId(R.id.btn_swipe_right_action))
+                .perform(scrollTo())
+                .check(matches(withText("Right swipe: Pin")))
+        }
+    }
+
+    @Test
+    fun keyboardInputSettingsPersistThemeHapticsAndSound() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        KeyboardEnginePreferences.setThemeId(context, KeyboardThemeId.DARK_VAULT)
+        KeyboardEnginePreferences.setHapticsEnabled(context, true)
+        KeyboardEnginePreferences.setSoundEnabled(context, false)
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onView(withId(R.id.btn_keyboard_theme)).perform(scrollTo()).check(matches(isDisplayed()))
+            onView(withId(R.id.haptics_enabled)).perform(scrollTo()).check(matches(isChecked()))
+            onView(withId(R.id.haptics_enabled)).perform(click())
+            onView(withId(R.id.haptics_enabled)).check(matches(isNotChecked()))
+            org.junit.Assert.assertFalse(KeyboardEnginePreferences.hapticsEnabled(context))
+            onView(withId(R.id.key_sound_enabled)).perform(scrollTo()).check(matches(isNotChecked()))
+            onView(withId(R.id.key_sound_enabled)).perform(click())
+            onView(withId(R.id.key_sound_enabled)).check(matches(isChecked()))
+            org.junit.Assert.assertTrue(KeyboardEnginePreferences.soundEnabled(context))
+            onView(withId(R.id.btn_keyboard_theme)).perform(scrollTo()).perform(click())
+            onView(withText("Light")).perform(click())
+            org.junit.Assert.assertEquals(
+                KeyboardThemeId.LIGHT,
+                KeyboardEnginePreferences.themeId(context),
+            )
+        }
+        KeyboardEnginePreferences.setThemeId(context, KeyboardThemeId.DARK_VAULT)
+        KeyboardEnginePreferences.setHapticsEnabled(context, true)
+        KeyboardEnginePreferences.setSoundEnabled(context, false)
+    }
+
+    @Test
+    fun incognitoAndDeveloperOptionsPersistAndRevealClipboardLab() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        KeyboardEnginePreferences.setIncognitoEnabled(context, false)
+        KeyboardEnginePreferences.setDeveloperOptionsEnabled(context, false)
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onView(withId(R.id.incognito_enabled)).perform(scrollTo()).check(matches(isNotChecked()))
+            onView(withId(R.id.incognito_enabled)).perform(click())
+            onView(withId(R.id.incognito_enabled)).check(matches(isChecked()))
+            org.junit.Assert.assertTrue(KeyboardEnginePreferences.incognitoEnabled(context))
+            org.junit.Assert.assertFalse(KeyboardEnginePreferences.shouldLearn(context))
+            onView(withId(R.id.btn_clipboard_lab)).check(matches(withEffectiveVisibility(Visibility.GONE)))
+            onView(withId(R.id.developer_options_enabled)).perform(scrollTo()).perform(click())
+            onView(withId(R.id.developer_options_enabled)).check(matches(isChecked()))
+            onView(withId(R.id.btn_clipboard_lab)).perform(scrollTo()).check(matches(isDisplayed()))
+            org.junit.Assert.assertTrue(KeyboardEnginePreferences.developerOptionsEnabled(context))
+        }
+        KeyboardEnginePreferences.setIncognitoEnabled(context, false)
+        KeyboardEnginePreferences.setDeveloperOptionsEnabled(context, false)
+    }
+
+    @Test
+    fun showsLocalizedTitleAndTagline() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onView(withText(R.string.app_name)).check(matches(isDisplayed()))
+            onView(withId(R.id.tagline)).check(matches(withText(R.string.tagline)))
         }
     }
 }

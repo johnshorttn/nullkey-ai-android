@@ -7,6 +7,8 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.db.Clip
+import com.nullverse.nullkeyai.ui.ClipListCopy
+import com.nullverse.nullkeyai.ui.ClipListPresentation
 
 /** Renders captured clips inside the IME's clip vault and reports taps. */
 class ClipAdapter(
@@ -14,6 +16,8 @@ class ClipAdapter(
 ) : RecyclerView.Adapter<ClipAdapter.ClipViewHolder>() {
 
     private val items = mutableListOf<Clip>()
+
+    fun clipAt(position: Int): Clip? = items.getOrNull(position)
 
     fun submit(newItems: List<Clip>) {
         val diff = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
@@ -44,11 +48,14 @@ class ClipAdapter(
         private val meta: TextView = view.findViewById(R.id.clip_meta)
 
         fun bind(clip: Clip) {
-            preview.text = clip.content
-            val kind = if (clip.isFile) "FILE" else "TEXT"
-            val pin = if (clip.pinned) " • PIN" else ""
-            val tag = clip.tag?.let { " • $it" } ?: ""
-            meta.text = "$kind$pin$tag"
+            val copy = ClipListCopy.from(itemView.context)
+            val previewText = ClipListPresentation.preview(clip, copy)
+            preview.text = previewText
+            meta.text = ClipListPresentation.meta(clip, copy)
+            itemView.contentDescription = itemView.context.getString(
+                R.string.paste_clip,
+                previewText,
+            )
             itemView.setOnClickListener { onClick(clip) }
         }
     }

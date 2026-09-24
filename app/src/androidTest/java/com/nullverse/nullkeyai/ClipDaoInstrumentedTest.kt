@@ -30,7 +30,7 @@ class ClipDaoInstrumentedTest {
             ApplicationProvider.getApplicationContext(),
             NullKeyDatabase::class.java
         ).build()
-        repo = ClipRepository(db.clipDao())
+        repo = ClipRepository(db.clipDao(), tagDao = db.tagDao())
     }
 
     @After
@@ -47,5 +47,17 @@ class ClipDaoInstrumentedTest {
         val filesOnly = repo.searchOnce("", true)
         assertEquals(1, filesOnly.size)
         assertTrue(filesOnly[0].isFile)
+    }
+
+    @Test
+    fun tagsAndTrashRestore_roundTripOnDevice() = runBlocking {
+        val id = repo.capture("instrumented tagged clip")!!
+        repo.addTag(id, "Personal")
+        repo.addTag(id, "Work")
+        assertEquals(listOf("Personal", "Work"), repo.tagsForClip(id).map { it.name })
+        repo.moveToTrash(id)
+        repo.restore(id)
+        assertEquals(1, repo.searchOnce("instrumented tagged", false).size)
+        assertEquals(listOf("Personal", "Work"), repo.tagsForClip(id).map { it.name })
     }
 }
