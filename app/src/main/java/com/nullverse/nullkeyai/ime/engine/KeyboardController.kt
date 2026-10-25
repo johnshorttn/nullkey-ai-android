@@ -129,7 +129,7 @@ class KeyboardController(
                 if (needsKeyStroke(key.spec.code)) {
                     // Keep Ctrl/Shift held for the whole repeat (Shift+arrow
                     // selection, Ctrl+Backspace); clear one-shots on release.
-                    host.onKeyStroke(strokeFor(key.spec.code))
+                    host.onKeyStroke(strokeFor(key.spec))
                     consumeOnRelease = true
                 } else {
                     host.onKey(key.spec.code)
@@ -180,7 +180,7 @@ class KeyboardController(
         this.paddingVerticalPx = paddingVerticalPx
         this.gapPx = gapPx
         this.slopPx = (if (heightPx > 0f) {
-            val rows = layouts.spec(modifiers.layer, orientation).rows.size.coerceAtLeast(1)
+            val rows = layouts.spec(modifiers.layer, orientation).totalRowWeight.coerceAtLeast(1f)
             (heightPx / rows) * 0.45f
         } else 0f)
         rebuildGeometry(widthPx, heightPx)
@@ -217,6 +217,13 @@ class KeyboardController(
         host.requestRedraw()
     }
 
+    /** The layout provider's config changed (layout mode, terminal row). */
+    fun layoutsChanged() {
+        touch.cancel()
+        rebuildGeometry(geometry.widthPx, geometry.heightPx)
+        host.requestRedraw()
+    }
+
     fun reset() {
         touch.cancel()
         modifiers.reset()
@@ -241,13 +248,13 @@ class KeyboardController(
             }
             else -> {
                 if (needsKeyStroke(key.spec.code)) {
-                    host.onKeyStroke(strokeFor(key.spec.code))
+                    host.onKeyStroke(strokeFor(key.spec))
                     modifiers.consumeOneShot()
                     host.requestRedraw()
                     return
                 }
-                val code = modifiers.applyToCode(key.spec.code)
-                if (key.spec.code.toChar().isLetter()) {
+                val code = modifiers.applyToKey(key.spec)
+                if (modifiers.consumesShift(key.spec)) {
                     modifiers.onLetterCommitted()
                     host.requestRedraw()
                 }
@@ -259,8 +266,8 @@ class KeyboardController(
     private fun needsKeyStroke(code: Int): Boolean =
         KeyCodes.isKeyEventKey(code) || modifiers.activeStickyModifiers().isNotEmpty()
 
-    private fun strokeFor(code: Int): KeyStroke = KeyStroke(
-        code = modifiers.applyToCode(code),
+    private fun strokeFor(spec: KeySpec): KeyStroke = KeyStroke(
+        code = modifiers.applyToKey(spec),
         modifiers = modifiers.activeStickyModifiers(),
         shift = modifiers.isShifted,
     )
@@ -268,7 +275,7 @@ class KeyboardController(
     private fun rebuildGeometry(widthPx: Float, heightPx: Float) {
         val spec = layouts.spec(modifiers.layer, orientation)
         if (heightPx > 0f) {
-            slopPx = (heightPx / spec.rows.size.coerceAtLeast(1)) * 0.45f
+            slopPx = (heightPx / spec.totalRowWeight.coerceAtLeast(1f)) * 0.45f
         }
         geometry = KeyboardGeometry.place(
             spec = spec,

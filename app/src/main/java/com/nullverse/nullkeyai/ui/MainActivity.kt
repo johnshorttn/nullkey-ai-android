@@ -53,6 +53,8 @@ import com.nullverse.nullkeyai.sync.DeviceIdentity
 import com.nullverse.nullkeyai.ime.ClipAdapter
 import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
 import com.nullverse.nullkeyai.ime.engine.KeyboardInputSettings
+import com.nullverse.nullkeyai.ime.engine.KeyboardLayoutMode
+import com.nullverse.nullkeyai.ime.engine.LayoutOrientation
 import com.nullverse.nullkeyai.ime.engine.KeyboardThemeId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -310,6 +312,35 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun layoutModeLabel(mode: KeyboardLayoutMode): String = getString(
+        when (mode) {
+            KeyboardLayoutMode.FOUR_ROW -> R.string.layout_mode_four_row
+            KeyboardLayoutMode.FIVE_ROW -> R.string.layout_mode_five_row
+            KeyboardLayoutMode.FULL -> R.string.layout_mode_full
+        },
+    )
+
+    private fun bindLayoutModeButton(buttonId: Int, orientation: LayoutOrientation, labelRes: Int) {
+        val button = findViewById<Button>(buttonId)
+        fun refresh() {
+            val mode = KeyboardEnginePreferences.layoutMode(this, orientation)
+            button.text = getString(labelRes, layoutModeLabel(mode))
+        }
+        button.setOnClickListener {
+            val modes = KeyboardLayoutMode.entries.toTypedArray()
+            val current = modes.indexOf(KeyboardEnginePreferences.layoutMode(this, orientation))
+            AlertDialog.Builder(this)
+                .setTitle(R.string.layout_mode_title)
+                .setSingleChoiceItems(modes.map(::layoutModeLabel).toTypedArray(), current) { dialog, which ->
+                    KeyboardEnginePreferences.setLayoutMode(this, orientation, modes[which])
+                    refresh()
+                    dialog.dismiss()
+                }
+                .show()
+        }
+        refresh()
+    }
+
     private fun bindKeyboardInputSettings() {
         val themeButton = findViewById<Button>(R.id.btn_keyboard_theme)
         fun refreshTheme() {
@@ -323,6 +354,15 @@ class MainActivity : AppCompatActivity() {
                 .setItems(themes.map { getString(it.labelRes) }.toTypedArray()) { _, which ->
                     KeyboardEnginePreferences.setThemeId(this, themes[which])
                     refreshTheme()
+
+        bindLayoutModeButton(R.id.btn_layout_portrait, LayoutOrientation.PORTRAIT, R.string.layout_portrait_label)
+        bindLayoutModeButton(R.id.btn_layout_landscape, LayoutOrientation.LANDSCAPE, R.string.layout_landscape_label)
+        findViewById<CheckBox>(R.id.terminal_row_enabled).apply {
+            isChecked = KeyboardEnginePreferences.terminalRowEnabled(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                KeyboardEnginePreferences.setTerminalRowEnabled(this@MainActivity, checked)
+            }
+        }
                 }
                 .show()
         }

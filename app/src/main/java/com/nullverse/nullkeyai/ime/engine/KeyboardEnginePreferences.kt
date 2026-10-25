@@ -22,6 +22,38 @@ object KeyboardEnginePreferences {
     const val KEY_INCOGNITO = "incognito_enabled"
     const val KEY_DEVELOPER_OPTIONS = "developer_options_enabled"
     const val KEY_CTRL_A_IN_TEXT_FIELDS = "ctrl_a_in_text_fields"
+    const val KEY_LAYOUT_MODE_PORTRAIT = "layout_mode_portrait"
+    const val KEY_LAYOUT_MODE_LANDSCAPE = "layout_mode_landscape"
+    const val KEY_TERMINAL_ROW = "terminal_row_enabled"
+
+    fun layoutMode(context: Context, orientation: LayoutOrientation): KeyboardLayoutMode {
+        val key = layoutModeKey(orientation)
+        val stored = prefs(context).getString(key, null)
+        return KeyboardLayoutMode.entries.firstOrNull { it.name == stored }
+            ?: KeyboardLayoutConfig.defaultModeFor(orientation)
+    }
+
+    fun setLayoutMode(context: Context, orientation: LayoutOrientation, mode: KeyboardLayoutMode) {
+        prefs(context).edit().putString(layoutModeKey(orientation), mode.name).apply()
+    }
+
+    fun terminalRowEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_TERMINAL_ROW, false)
+
+    fun setTerminalRowEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_TERMINAL_ROW, enabled).apply()
+    }
+
+    fun layoutConfig(context: Context): KeyboardLayoutConfig = KeyboardLayoutConfig(
+        portrait = layoutMode(context, LayoutOrientation.PORTRAIT),
+        landscape = layoutMode(context, LayoutOrientation.LANDSCAPE),
+        terminalRow = terminalRowEnabled(context),
+    )
+
+    private fun layoutModeKey(orientation: LayoutOrientation): String = when (orientation) {
+        LayoutOrientation.PORTRAIT -> KEY_LAYOUT_MODE_PORTRAIT
+        LayoutOrientation.LANDSCAPE -> KEY_LAYOUT_MODE_LANDSCAPE
+    }
 
     fun useCustomEngine(context: Context): Boolean =
         prefs(context).getBoolean(KEY_USE_CUSTOM_ENGINE, true)

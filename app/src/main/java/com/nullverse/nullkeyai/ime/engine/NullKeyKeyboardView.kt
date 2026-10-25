@@ -74,8 +74,16 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     }
     private var theme: KeyboardTheme = KeyboardTheme.from(context, currentOrientation())
 
+    /** Saved layout modes plus any per-app override (terminal mode). */
+    private var layoutConfig: KeyboardLayoutConfig = KeyboardEnginePreferences.layoutConfig(context)
+    private var forceTerminalRow = false
+
+    /** One provider for measuring, hit-testing, and drawing. */
+    private val layoutProvider = DefaultKeyboardLayoutProvider { layoutConfig }
+
     @VisibleForTesting
     internal val controller: KeyboardController = KeyboardController(
+        layouts = layoutProvider,
         scheduler = viewScheduler,
         host = object : KeyboardController.Host {
             override fun requestRedraw() {
@@ -146,13 +154,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = resolveSize(suggestedMinimumWidth, widthMeasureSpec)
         val orientation = currentOrientation()
-        val spec = DefaultKeyboardLayoutProvider().spec(controller.modifiers.layer, orientation)
-        val preferred = preferredKeyboardHeightPx(
-            density = resources.displayMetrics.density,
-            orientation = orientation,
-            rowCount = spec.rows.size,
-            heightScale = KeyboardEnginePreferences.heightScale(context),
-        )
+        val preferred = preferredHeightPx(orientation)
         val heightMode = MeasureSpec.getMode(heightMeasureSpec)
         val heightSize = MeasureSpec.getSize(heightMeasureSpec)
         val height = when (heightMode) {
@@ -481,7 +483,48 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         private const val MAX_CURSOR_TICKS = 12
     }
 
+    /**
+     * Height for the current layout: the taller of its letters and symbols
+     * layers, so switching to ?123 never changes the keyboard height. Capped
+     * so tall layouts leave room for the text field.
+     */
+    private fun preferredHeightPx(orientation: LayoutOrientation): Int {
+        val density = resources.displayMetrics.density
+        val scale = KeyboardEnginePreferences.heightScale(context)
+        val weight = maxOf(
+            layoutProvider.spec(KeyboardLayer.LETTERS, orientation).totalRowWeight,
+            layoutProvider.spec(KeyboardLayer.SYMBOLS, orientation).totalRowWeight,
+        )
+        val default = DefaultKeyboardLayoutProvider().spec(KeyboardLayer.LETTERS, orientation).totalRowWeight
+        return cappedKeyboardHeightPx(
+            preferredPx = preferredKeyboardHeightPx(density, orientation, weight, scale),
+            defaultLayoutPx = preferredKeyboardHeightPx(density, orientation, default, scale),
+            screenHeightPx = resources.displayMetrics.heightPixels,
+        )
+    }
+
+    /** Height the IME should reserve before this view has been measured. */
+    fun estimatedHeightPx(): Int = preferredHeightPx(currentOrientation())
+
+    /** Terminal mode: show the terminal row regardless of layout mode. */
+    fun setForceTerminalRow(force: Boolean) {
+        if (forceTerminalRow == force) return
+        forceTerminalRow = force
+        applyLayoutConfig()
+    }
+
+    private fun applyLayoutConfig() {
+        val next = KeyboardEnginePreferences.layoutConfig(context).copy(forceTerminalRow = forceTerminalRow)
+        if (next == layoutConfig) return
+        layoutConfig = next
+        dismissAccentPopup()
+        controller.layoutsChanged()
+        exploreHelper.invalidateRoot()
+        requestLayout()
+    }
+
     private fun applyTypingSettings() {
+        applyLayoutConfig()
         controller.applyTypingSettings(
             swipeTypingEnabled = KeyboardEnginePreferences.swipeTypingEnabled(context),
             longPressMs = KeyboardEnginePreferences.longPressMs(context).toLong(),

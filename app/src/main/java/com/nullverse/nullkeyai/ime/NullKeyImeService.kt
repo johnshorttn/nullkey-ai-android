@@ -683,10 +683,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private fun keyboardAreaHeight(): Int {
         val measured = maxOf(keyboardEngineView.height, keyboardEngineView.measuredHeight, keyboardView.height, keyboardView.measuredHeight)
         if (measured > 0) return measured
-        val landscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        val orientation = if (landscape) LayoutOrientation.LANDSCAPE else LayoutOrientation.PORTRAIT
-        val rows = if (landscape) 5 else 4
-        return preferredKeyboardHeightPx(resources.displayMetrics.density, orientation, rows)
+        return keyboardEngineView.estimatedHeightPx()
     }
 
     private fun applyTrackpadStep(step: Pair<Int, Int>) {

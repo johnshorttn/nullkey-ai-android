@@ -114,6 +114,17 @@ class ModifierController(
         }
     }
 
+    /** Like [applyToCode], but Shift also picks a PC key's [KeySpec.shiftedCode]. */
+    fun applyToKey(spec: KeySpec): Int {
+        val shiftedCode = spec.shiftedCode
+        if (isShifted && shiftedCode != null) return shiftedCode
+        return applyToCode(spec.code)
+    }
+
+    /** Whether typing [spec] should clear a one-shot Shift. */
+    fun consumesShift(spec: KeySpec): Boolean =
+        spec.code.toChar().isLetter() || (isShifted && spec.shiftedCode != null)
+
     fun applyToCode(code: Int): Int {
         if (code <= 0 || !isShifted) return code
         val ch = code.toChar()
