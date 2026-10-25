@@ -21,6 +21,7 @@ object KeyboardEnginePreferences {
     const val KEY_LONG_PRESS_MS = "long_press_ms"
     const val KEY_INCOGNITO = "incognito_enabled"
     const val KEY_DEVELOPER_OPTIONS = "developer_options_enabled"
+    const val KEY_CTRL_A_IN_TEXT_FIELDS = "ctrl_a_in_text_fields"
 
     fun useCustomEngine(context: Context): Boolean =
         prefs(context).getBoolean(KEY_USE_CUSTOM_ENGINE, true)
@@ -83,6 +84,17 @@ object KeyboardEnginePreferences {
         prefs(context).edit()
             .putInt(KEY_LONG_PRESS_MS, KeyboardInputSettings.clampLongPressMs(ms))
             .apply()
+    }
+
+    /**
+     * Ctrl+A in a normal text field selects everything, and the next key then
+     * replaces it. Off by default; terminals always get Ctrl+A.
+     */
+    fun ctrlAInTextFields(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_CTRL_A_IN_TEXT_FIELDS, false)
+
+    fun setCtrlAInTextFields(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_CTRL_A_IN_TEXT_FIELDS, enabled).apply()
     }
 
     fun incognitoEnabled(context: Context): Boolean =

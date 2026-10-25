@@ -23,6 +23,24 @@ object KeyAccessibility {
         val apostrophe: String,
         val quote: String,
         val incognito: String,
+        val escape: String = "Escape",
+        val tab: String = "Tab",
+        val ctrl: String = "Control",
+        val alt: String = "Alt",
+        val meta: String = "Meta",
+        val modifierOn: String = "%1${'$'}s on",
+        val modifierLocked: String = "%1${'$'}s locked",
+        val arrowLeft: String = "Left arrow",
+        val arrowRight: String = "Right arrow",
+        val arrowUp: String = "Up arrow",
+        val arrowDown: String = "Down arrow",
+        val home: String = "Home",
+        val end: String = "End",
+        val pageUp: String = "Page up",
+        val pageDown: String = "Page down",
+        val insert: String = "Insert",
+        val forwardDelete: String = "Forward delete",
+        val functionKey: String = "F%1${'$'}d",
     ) {
         companion object {
             fun from(context: Context): Strings = Strings(
@@ -39,6 +57,24 @@ object KeyAccessibility {
                 apostrophe = context.getString(R.string.key_a11y_apostrophe),
                 quote = context.getString(R.string.key_a11y_quote),
                 incognito = context.getString(R.string.key_a11y_incognito),
+                escape = context.getString(R.string.key_a11y_escape),
+                tab = context.getString(R.string.key_a11y_tab),
+                ctrl = context.getString(R.string.key_a11y_ctrl),
+                alt = context.getString(R.string.key_a11y_alt),
+                meta = context.getString(R.string.key_a11y_meta),
+                modifierOn = context.getString(R.string.key_a11y_modifier_on),
+                modifierLocked = context.getString(R.string.key_a11y_modifier_locked),
+                arrowLeft = context.getString(R.string.key_a11y_arrow_left),
+                arrowRight = context.getString(R.string.key_a11y_arrow_right),
+                arrowUp = context.getString(R.string.key_a11y_arrow_up),
+                arrowDown = context.getString(R.string.key_a11y_arrow_down),
+                home = context.getString(R.string.key_a11y_home),
+                end = context.getString(R.string.key_a11y_end),
+                pageUp = context.getString(R.string.key_a11y_page_up),
+                pageDown = context.getString(R.string.key_a11y_page_down),
+                insert = context.getString(R.string.key_a11y_insert),
+                forwardDelete = context.getString(R.string.key_a11y_forward_delete),
+                functionKey = context.getString(R.string.key_a11y_function_key),
             )
         }
     }
@@ -49,7 +85,34 @@ object KeyAccessibility {
         shift: ShiftState,
         layer: KeyboardLayer,
         strings: Strings,
+        stickyState: (StickyModifier) -> ShiftState = { ShiftState.OFF },
     ): String = when (code) {
+        KeyCodes.ESCAPE -> strings.escape
+        KeyCodes.TAB -> strings.tab
+        KeyCodes.CTRL, KeyCodes.ALT, KeyCodes.META -> {
+            val modifier = KeyCodes.stickyModifierFor(code)!!
+            val name = when (modifier) {
+                StickyModifier.CTRL -> strings.ctrl
+                StickyModifier.ALT -> strings.alt
+                StickyModifier.META -> strings.meta
+            }
+            when (stickyState(modifier)) {
+                ShiftState.OFF -> name
+                ShiftState.ON -> strings.modifierOn.format(name)
+                ShiftState.LOCKED -> strings.modifierLocked.format(name)
+            }
+        }
+        KeyCodes.ARROW_LEFT -> strings.arrowLeft
+        KeyCodes.ARROW_RIGHT -> strings.arrowRight
+        KeyCodes.ARROW_UP -> strings.arrowUp
+        KeyCodes.ARROW_DOWN -> strings.arrowDown
+        KeyCodes.HOME -> strings.home
+        KeyCodes.END -> strings.end
+        KeyCodes.PAGE_UP -> strings.pageUp
+        KeyCodes.PAGE_DOWN -> strings.pageDown
+        KeyCodes.INSERT -> strings.insert
+        KeyCodes.FORWARD_DELETE -> strings.forwardDelete
+        in KeyCodes.F12..KeyCodes.F1 -> strings.functionKey.format(KeyCodes.functionKeyNumber(code)!!)
         KeyCodes.SPACE -> strings.space
         KeyCodes.SHIFT -> when (shift) {
             ShiftState.LOCKED -> strings.capsLock

@@ -31,6 +31,11 @@ import com.nullverse.nullkeyai.db.NullKeyDatabase
 import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
 import com.nullverse.nullkeyai.ime.engine.KeyFeedback
 import com.nullverse.nullkeyai.ime.engine.KeyCodes
+import com.nullverse.nullkeyai.ime.engine.KeyEventSpec
+import com.nullverse.nullkeyai.ime.engine.KeyStroke
+import com.nullverse.nullkeyai.ime.engine.KeyStrokeEvents
+import com.nullverse.nullkeyai.ime.engine.KeyStrokePlan
+import com.nullverse.nullkeyai.ime.engine.KeyStrokePlanner
 import com.nullverse.nullkeyai.ime.engine.LayoutOrientation
 import com.nullverse.nullkeyai.ime.engine.NullKeyKeyboardView
 import com.nullverse.nullkeyai.ime.engine.TrackpadPointer
@@ -129,6 +134,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         keyboardView.isPreviewEnabled = false
         keyboardEngineView.listener = object : NullKeyKeyboardView.Listener {
             override fun onKey(code: Int) = handleKey(code, alreadyCased = true)
+            override fun onKeyStroke(stroke: KeyStroke) = handleKeyStroke(stroke)
             override fun onGestureWord(path: String) = handleGestureWord(path)
             override fun onGesturePreview(path: String) = previewGestureWord(path)
             override fun onCursorSteps(steps: Int) = handleCursorSteps(steps)
@@ -589,6 +595,32 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     /**
+     * Terminal keys and Ctrl/Alt/Meta chords leave as real KeyEvents with meta
+     * state. Plain keys still go through [handleKey].
+     */
+    private fun handleKeyStroke(stroke: KeyStroke) {
+        if (trackpadActive) return
+        when (val plan = KeyStrokePlanner.plan(stroke, allowCtrlA = ctrlAAllowed())) {
+            KeyStrokePlan.PassThrough -> handleKey(stroke.code, alreadyCased = true)
+            KeyStrokePlan.Blocked -> Unit
+            is KeyStrokePlan.Text -> handleKey(stroke.code, alreadyCased = true)
+            is KeyStrokePlan.Events -> {
+                val sink = keySink() ?: return
+                flushWord()
+                sink.sendKeyEvents(plan.events)
+            }
+        }
+    }
+
+    /** Raw terminal views always get Ctrl+A; normal fields only by opt-in. */
+    private fun ctrlAAllowed(): Boolean {
+        if (KeyboardEnginePreferences.ctrlAInTextFields(this)) return true
+        val info = currentInputEditorInfo ?: return false
+        return (info.inputType and android.text.InputType.TYPE_MASK_CLASS) ==
+            android.text.InputType.TYPE_NULL
+    }
+
+    /**
      * Tools toggles the vault above the keys. Opening grows the IME by the
      * panel height (the host already pads for that inset). Closing returns
      * key routing to the host field and leaves the query in place.
@@ -749,6 +781,20 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
             moveCursor(delta, 0)
         }
 
+        override fun sendKeyEvents(events: List<KeyEventSpec>) {
+            // The in-keyboard search box is a plain EditText: honour the
+            // keys that make sense there and ignore the rest.
+            for (event in events) {
+                if (event.action != KeyEvent.ACTION_DOWN) continue
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_LEFT -> moveCursor(-1, 0)
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> moveCursor(1, 0)
+                    KeyEvent.KEYCODE_DEL -> deleteBeforeCursor(1)
+                    KeyEvent.KEYCODE_ESCAPE, KeyEvent.KEYCODE_ENTER -> enter()
+                }
+            }
+        }
+
         override fun moveCursor(dx: Int, dy: Int) {
             if (!::searchBox.isInitialized) return
             val current = searchBox.text?.toString().orEmpty()
@@ -800,6 +846,13 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
         override fun moveCursor(dx: Int, dy: Int) {
             CursorStep.apply2D(InputConnectionCursor(connection, allowRead), dx, dy)
+        }
+
+        override fun sendKeyEvents(events: List<KeyEventSpec>) {
+            val downTime = android.os.SystemClock.uptimeMillis()
+            for (event in events) {
+                connection.sendKeyEvent(KeyStrokeEvents.toKeyEvent(event, downTime))
+            }
         }
     }
 

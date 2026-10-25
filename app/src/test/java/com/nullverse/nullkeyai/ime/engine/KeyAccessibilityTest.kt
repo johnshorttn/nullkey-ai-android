@@ -82,4 +82,20 @@ class KeyAccessibilityTest {
             KeyAccessibility.spokenLabel('"'.code, "\"", ShiftState.OFF, KeyboardLayer.SYMBOLS, labels),
         )
     }
+
+    @Test
+    fun terminalKeysHaveSpokenNamesAndModifierState() {
+        val labels = strings()
+        fun spoken(code: Int, label: String, sticky: ShiftState = ShiftState.OFF) =
+            KeyAccessibility.spokenLabel(code, label, ShiftState.OFF, KeyboardLayer.LETTERS, labels) { sticky }
+        assertEquals("Escape", spoken(KeyCodes.ESCAPE, "Esc"))
+        assertEquals("Tab", spoken(KeyCodes.TAB, "Tab"))
+        assertEquals("Left arrow", spoken(KeyCodes.ARROW_LEFT, "←"))
+        assertEquals("Page down", spoken(KeyCodes.PAGE_DOWN, "PgDn"))
+        assertEquals("Forward delete", spoken(KeyCodes.FORWARD_DELETE, "Del"))
+        assertEquals("F7", spoken(KeyCodes.functionKey(7), "F7"))
+        assertEquals("Control", spoken(KeyCodes.CTRL, "Ctrl"))
+        assertEquals("Control on", spoken(KeyCodes.CTRL, "Ctrl", ShiftState.ON))
+        assertEquals("Alt locked", spoken(KeyCodes.ALT, "ALT", ShiftState.LOCKED))
+    }
 }

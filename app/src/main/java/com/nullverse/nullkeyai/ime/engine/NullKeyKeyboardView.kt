@@ -34,6 +34,9 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
     interface Listener {
         fun onKey(code: Int)
+
+        /** Terminal key or modified key; see [KeyboardController.Host.onKeyStroke]. */
+        fun onKeyStroke(stroke: KeyStroke) { onKey(stroke.code) }
         fun onLongPress(code: Int, popupCharacters: String) {}
         fun onGestureWord(path: String) {}
 
@@ -86,6 +89,10 @@ class NullKeyKeyboardView @JvmOverloads constructor(
 
             override fun onKey(code: Int) {
                 listener?.onKey(code)
+            }
+
+            override fun onKeyStroke(stroke: KeyStroke) {
+                listener?.onKeyStroke(stroke)
             }
 
             override fun onPressFeedback() {
@@ -439,6 +446,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                 shift = controller.modifiers.shift,
                 layer = controller.modifiers.layer,
                 strings = a11yStrings,
+                stickyState = controller.modifiers::stickyState,
             )
             node.className = Button::class.java.name
             node.isClickable = true
