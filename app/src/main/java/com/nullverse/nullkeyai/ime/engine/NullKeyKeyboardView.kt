@@ -506,12 +506,17 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     /** Height the IME should reserve before this view has been measured. */
     fun estimatedHeightPx(): Int = preferredHeightPx(currentOrientation())
 
-    /** Terminal mode: show the terminal row regardless of layout mode. */
-    fun setForceTerminalRow(force: Boolean) {
-        if (forceTerminalRow == force) return
-        forceTerminalRow = force
-        applyLayoutConfig()
+    /**
+     * Terminal mode: show the terminal row regardless of layout mode and turn
+     * swipe typing off (a swipe would insert a word plus an auto-space).
+     */
+    fun setTerminalMode(enabled: Boolean) {
+        if (forceTerminalRow == enabled) return
+        forceTerminalRow = enabled
+        applyTypingSettings()
     }
+
+    val terminalMode: Boolean get() = forceTerminalRow
 
     private fun applyLayoutConfig() {
         val next = KeyboardEnginePreferences.layoutConfig(context).copy(forceTerminalRow = forceTerminalRow)
@@ -526,7 +531,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
     private fun applyTypingSettings() {
         applyLayoutConfig()
         controller.applyTypingSettings(
-            swipeTypingEnabled = KeyboardEnginePreferences.swipeTypingEnabled(context),
+            swipeTypingEnabled = KeyboardEnginePreferences.swipeTypingEnabled(context) && !forceTerminalRow,
             longPressMs = KeyboardEnginePreferences.longPressMs(context).toLong(),
         )
     }

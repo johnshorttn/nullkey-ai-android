@@ -29,6 +29,7 @@ import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.ui.SystemBarInsets
 import com.nullverse.nullkeyai.db.NullKeyDatabase
 import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
+import com.nullverse.nullkeyai.ime.engine.TerminalMode
 import com.nullverse.nullkeyai.ime.engine.KeyFeedback
 import com.nullverse.nullkeyai.ime.engine.KeyCodes
 import com.nullverse.nullkeyai.ime.engine.KeyEventSpec
@@ -101,6 +102,9 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private var symbolsMode = false
     private var usingEngine = true
     private var pendingSwipeCommit: String? = null
+
+    /** Termux/JuiceSSH/ConnectBot or a raw field: see [TerminalMode]. */
+    private var terminalMode = false
     private var previewPath: String? = null
     private var previewRank: List<String>? = null
     /** True after the user taps the in-keyboard vault search field. */
@@ -238,6 +242,12 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
             activateVaultSearch()
         }
         applyRendererPreference()
+        terminalMode = TerminalMode.detect(
+            packageName = info?.packageName,
+            inputType = info?.inputType ?: 0,
+            enabled = KeyboardEnginePreferences.terminalModeAuto(this),
+        ) && !vaultSearchActive
+        if (::keyboardEngineView.isInitialized) keyboardEngineView.setTerminalMode(terminalMode)
         if (usingEngine) keyboardEngineView.resetEngine()
         if (!restarting) resetComposition()
         else updateSuggestions()
@@ -304,6 +314,11 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     // region suggestions
     private fun updateSuggestions() {
+        if (terminalMode) {
+            // Terminals get no word suggestions.
+            publishSwipeSuggestions(emptyList())
+            return
+        }
         if (pendingSwipeCommit != null || proof != null) return
         val typed = currentWord.toString()
         val completions = suggester.suggest(typed, suggestionViews.size)
@@ -367,7 +382,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     private fun handleGestureWord(path: String) {
-        if (trackpadActive) return
+        if (trackpadActive || terminalMode) return
         val ranked = if (path == previewPath) {
             previewRank
         } else {
@@ -407,6 +422,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     private fun learnTyped(word: String) {
+        if (terminalMode) return
         suggester.learn(word, enabled = KeyboardEnginePreferences.shouldLearn(this))
     }
 
@@ -614,7 +630,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     /** Raw terminal views always get Ctrl+A; normal fields only by opt-in. */
     private fun ctrlAAllowed(): Boolean {
-        if (KeyboardEnginePreferences.ctrlAInTextFields(this)) return true
+        if (terminalMode || KeyboardEnginePreferences.ctrlAInTextFields(this)) return true
         val info = currentInputEditorInfo ?: return false
         return (info.inputType and android.text.InputType.TYPE_MASK_CLASS) ==
             android.text.InputType.TYPE_NULL
