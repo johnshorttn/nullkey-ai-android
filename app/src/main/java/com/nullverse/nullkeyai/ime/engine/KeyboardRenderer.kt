@@ -130,6 +130,14 @@ class KeyboardRenderer {
                 engineLabel
             }
             labelPaint.color = theme.labelColor
+            // Full layout packs 15 keys per row; shrink long labels (PgUp,
+            // Home, F10) to fit their key instead of overlapping neighbours.
+            labelPaint.textSize = theme.labelTextSizePx
+            val maxLabelWidth = key.visual.width * 0.86f
+            val labelWidth = labelPaint.measureText(label)
+            if (labelWidth > maxLabelWidth && labelWidth > 0f) {
+                labelPaint.textSize = theme.labelTextSizePx * (maxLabelWidth / labelWidth)
+            }
             val textY = key.visual.centerY - (labelPaint.descent() + labelPaint.ascent()) / 2f
             canvas.drawText(label, key.visual.centerX, textY, labelPaint)
             val popup = key.spec.popupCharacters
