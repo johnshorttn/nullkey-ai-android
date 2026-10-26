@@ -22,11 +22,13 @@ object PortableVaultCrypto {
     private const val SALT_BYTES = 16
     private const val GCM_IV_BYTES = 12
     private const val MIN_GCM_PAYLOAD_BYTES = 16
-    private val random = SecureRandom()
+    // Created on first use, so a crypto provider that cannot start fails that
+    // call with its real cause instead of poisoning this object's initializer.
+    private val random: SecureRandom by lazy { SecureRandom() }
 
     fun encrypt(plainText: String, password: CharArray): String {
         require(password.size >= 8) { "Backup password must be at least 8 characters" }
-        val salt = ByteArray(16).also(random::nextBytes)
+        val salt = ByteArray(SALT_BYTES).also { random.nextBytes(it) }
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, derive(password, salt))
         val encrypted = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))

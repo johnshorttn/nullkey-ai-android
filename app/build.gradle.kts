@@ -1,5 +1,6 @@
 import java.io.File
 import java.io.FileInputStream
+import java.time.Duration
 import java.util.Properties
 
 plugins {
@@ -115,6 +116,17 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            all { test ->
+                // A hung Robolectric worker must fail the build, not stall CI.
+                test.timeout.set(Duration.ofMinutes(15))
+                // Print full causes so a CI-only failure is diagnosable from the log.
+                test.testLogging {
+                    events("failed", "skipped")
+                    exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+                    showCauses = true
+                    showStackTraces = true
+                }
+            }
         }
     }
 

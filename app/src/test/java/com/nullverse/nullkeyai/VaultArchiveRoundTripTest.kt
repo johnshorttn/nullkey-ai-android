@@ -7,8 +7,11 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.ConscryptMode
 
+// JDK crypto providers: see PortableVaultCryptoTest for why Conscrypt is off.
 @RunWith(RobolectricTestRunner::class)
+@ConscryptMode(ConscryptMode.Mode.OFF)
 class VaultArchiveRoundTripTest {
 
     @Test
