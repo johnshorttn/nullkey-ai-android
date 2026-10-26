@@ -116,6 +116,26 @@
             android:layout_height="wrap_content"
             android:text="@string/keyboard_theme_title" />
 
+        <Button
+            android:id="@+id/btn_layout_portrait"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/layout_mode_title" />
+
+        <Button
+            android:id="@+id/btn_layout_landscape"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/layout_mode_title" />
+
+        <CheckBox
+            android:id="@+id/terminal_row_enabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:buttonTint="@color/neon"
+            android:text="@string/terminal_row_enabled"
+            android:textColor="@color/text_primary" />
+
         <TextView
             android:id="@+id/keyboard_height_label"
             android:layout_width="match_parent"

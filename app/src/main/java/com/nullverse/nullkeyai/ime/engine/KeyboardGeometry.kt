@@ -77,17 +77,21 @@ data class KeyboardGeometry(
             }
             val innerWidth = (widthPx - 2f * paddingHorizontalPx).coerceAtLeast(1f)
             val innerHeight = (heightPx - 2f * paddingVerticalPx).coerceAtLeast(1f)
-            val rowHeight = innerHeight / spec.rows.size
+            val totalRowWeight = spec.totalRowWeight.takeIf { it > 0f } ?: spec.rows.size.toFloat()
+            val unitHeight = innerHeight / totalRowWeight
             val inset = (gapPx / 2f).coerceAtLeast(0f)
             val placed = ArrayList<PlacedKey>()
             var id = 0
-            spec.rows.forEachIndexed { rowIndex, row ->
+            var rowTop = paddingVerticalPx
+            spec.rows.forEach { row ->
+                val rowHeight = unitHeight * row.heightWeight
                 val totalWeight = row.leadingGapWeight + row.trailingGapWeight +
                     row.keys.sumOf { it.widthWeight.toDouble() }.toFloat()
                 val unit = if (totalWeight > 0f) innerWidth / totalWeight else 0f
                 var x = paddingHorizontalPx + row.leadingGapWeight * unit
-                val top = paddingVerticalPx + rowIndex * rowHeight
+                val top = rowTop
                 val bottom = top + rowHeight
+                rowTop = bottom
                 for (key in row.keys) {
                     val width = key.widthWeight * unit
                     val slot = KeyBounds(x, top, x + width, bottom)
@@ -113,6 +117,14 @@ fun preferredKeyboardHeightPx(
     orientation: LayoutOrientation,
     rowCount: Int,
     heightScale: Float = KeyboardInputSettings.HEIGHT_SCALE_DEFAULT,
+): Int = preferredKeyboardHeightPx(density, orientation, rowCount.toFloat(), heightScale)
+
+/** Same as the Int overload, for layouts whose rows have height weights. */
+fun preferredKeyboardHeightPx(
+    density: Float,
+    orientation: LayoutOrientation,
+    rowWeight: Float,
+    heightScale: Float = KeyboardInputSettings.HEIGHT_SCALE_DEFAULT,
 ): Int {
     val keyHeightDp = when (orientation) {
         LayoutOrientation.PORTRAIT -> KeyboardEngineDefaults.PORTRAIT_KEY_HEIGHT_DP
@@ -120,8 +132,22 @@ fun preferredKeyboardHeightPx(
     }
     val paddingDp = KeyboardEngineDefaults.VERTICAL_PADDING_DP
     val scale = KeyboardInputSettings.clampHeightScale(heightScale)
-    return ((rowCount * keyHeightDp + paddingDp) * density * scale).toInt().coerceAtLeast(1)
+    return ((rowWeight * keyHeightDp + paddingDp) * density * scale).toInt().coerceAtLeast(1)
 }
+
+/**
+ * Taller layouts (5-row with terminal row, Full) must not push the text field
+ * off screen. They may grow to [MAX_KEYBOARD_SCREEN_FRACTION] of the screen
+ * height; past that the rows shrink. The default layout's height at the
+ * user's scale is always allowed, so existing setups never get smaller.
+ */
+fun cappedKeyboardHeightPx(preferredPx: Int, defaultLayoutPx: Int, screenHeightPx: Int): Int {
+    if (screenHeightPx <= 0) return preferredPx
+    val cap = maxOf(defaultLayoutPx, (screenHeightPx * MAX_KEYBOARD_SCREEN_FRACTION).toInt())
+    return preferredPx.coerceAtMost(cap).coerceAtLeast(1)
+}
+
+const val MAX_KEYBOARD_SCREEN_FRACTION = 0.5f
 
 fun keyboardGapPx(density: Float, orientation: LayoutOrientation): Float {
     val dp = when (orientation) {

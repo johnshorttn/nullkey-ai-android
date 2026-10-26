@@ -150,6 +150,13 @@
     <string name="keyboard_settings_title">Keyboard</string>
     <string name="keyboard_theme_label">Theme: %1$s</string>
     <string name="keyboard_theme_title">Keyboard theme</string>
+    <string name="layout_mode_title">Keyboard layout</string>
+    <string name="layout_portrait_label">Portrait layout: %1$s</string>
+    <string name="layout_landscape_label">Landscape layout: %1$s</string>
+    <string name="layout_mode_four_row">4-row (standard)</string>
+    <string name="layout_mode_five_row">5-row (number row)</string>
+    <string name="layout_mode_full">Full (PC keys: F1–F12, Esc, Ctrl, arrows)</string>
+    <string name="terminal_row_enabled">Terminal row on 5-row layout (Esc Tab Ctrl Alt arrows - / | ~)</string>
     <string name="keyboard_theme_dark_vault">Dark Vault</string>
     <string name="keyboard_theme_light">Light</string>
     <string name="keyboard_theme_system">System</string>

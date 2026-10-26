@@ -82,6 +82,8 @@ data class KeySpec(
     val isModifier: Boolean = false,
     val isRepeatable: Boolean = false,
     val popupCharacters: String = "",
+    /** Character typed when Shift is on, for non-letter keys like `1` → `!`. */
+    val shiftedCode: Int? = null,
 ) {
     fun displayLabel(shifted: Boolean): String {
         if (shifted) {
@@ -98,13 +100,18 @@ data class KeyRow(
     val keys: List<KeySpec>,
     val leadingGapWeight: Float = 0f,
     val trailingGapWeight: Float = 0f,
+    /** Relative row height. Terminal and F-key rows use less than 1. */
+    val heightWeight: Float = 1f,
 )
 
 data class KeyboardLayoutSpec(
     val id: String,
     val layer: KeyboardLayer,
     val rows: List<KeyRow>,
-)
+) {
+    /** Sum of row height weights; equals the row count when all rows are 1. */
+    val totalRowWeight: Float get() = rows.sumOf { it.heightWeight.toDouble() }.toFloat()
+}
 
 data class KeyBounds(
     val left: Float,
