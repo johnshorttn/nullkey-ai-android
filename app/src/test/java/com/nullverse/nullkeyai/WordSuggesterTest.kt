@@ -52,4 +52,13 @@ class WordSuggesterTest {
         s.learn("h3llo")
         assertEquals(emptyList<String>(), s.suggest("h3", 3))
     }
+
+    @Test
+    fun learn_skipsWhenIncognitoDisablesLearning() {
+        val s = newSuggester()
+        s.learn("zxqvword", enabled = false)
+        assertFalse(s.suggest("zxqv", 3).contains("zxqvword"))
+        s.learn("zxqvword", enabled = true)
+        assertTrue(s.suggest("zxqv", 3).contains("zxqvword"))
+    }
 }

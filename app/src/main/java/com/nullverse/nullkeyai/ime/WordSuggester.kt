@@ -27,8 +27,29 @@ class WordSuggester private constructor(
             .toList()
     }
 
-    /** Record that [word] was used, increasing its future suggestion priority. */
-    fun learn(word: String) {
+    /**
+     * Resolve a swipe-key path. Learned and seeded words win. [fallback] is
+     * consulted only when those words have no match. The keyboard does not
+     * pass the spelling list here: building that map on the UI thread stalls
+     * the gesture. A caller that already has a small map may pass it.
+     */
+    fun suggestGesture(
+        path: String,
+        max: Int = 3,
+        fallback: Map<String, Int> = emptyMap(),
+    ): List<String> {
+        val primary = GestureWordRanker.rank(path, counts, max)
+        if (primary.isNotEmpty() || fallback.isEmpty()) return primary
+        return GestureWordRanker.rank(path, fallback, max)
+    }
+
+    /**
+     * Record that [word] was used, increasing its future suggestion priority.
+     * Pass [enabled] = false for incognito / no-learn sessions so nothing is
+     * persisted. Seeded dictionary suggestions still work.
+     */
+    fun learn(word: String, enabled: Boolean = true) {
+        if (!enabled) return
         val w = word.trim().lowercase()
         if (w.length < MIN_LEARN_LENGTH || !w.all { it.isLetter() }) return
         counts[w] = (counts[w] ?: 0) + 1
@@ -61,7 +82,10 @@ class WordSuggester private constructor(
             "look", "only", "come", "its", "over", "think", "also", "back",
             "after", "use", "two", "how", "our", "work", "first", "well",
             "way", "even", "new", "want", "because", "any", "these", "give",
-            "day", "most", "clipboard", "keyboard", "nullkey", "hello", "thanks"
+            "day", "most", "clipboard", "keyboard", "nullkey", "hello", "thanks",
+            "to", "of", "in", "on", "is", "it", "be", "as", "at", "or", "an",
+            "we", "do", "if", "so", "up", "no", "yes", "go", "me", "my",
+            "please", "help", "here", "need", "great"
         )
 
         fun get(context: Context): WordSuggester {

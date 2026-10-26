@@ -28,7 +28,7 @@ interface ClipDao {
         """
         SELECT * FROM clips
         WHERE trashedAt IS NULL
-          AND (:query = '' OR content LIKE '%' || :query || '%' OR tag LIKE '%' || :query || '%')
+          AND (:query = '' OR content LIKE '%' || :query || '%' OR notes LIKE '%' || :query || '%' OR ocrText LIKE '%' || :query || '%' OR sourceAppLabel LIKE '%' || :query || '%' OR sourcePackage LIKE '%' || :query || '%' OR tag LIKE '%' || :query || '%' OR EXISTS (SELECT 1 FROM clip_tags ct INNER JOIN tags t ON t.id = ct.tagId WHERE ct.clipId = clips.id AND t.name LIKE '%' || :query || '%'))
           AND (:filesOnly = 0 OR isFile = 1)
         ORDER BY pinned DESC, createdAt DESC
         """
@@ -39,15 +39,22 @@ interface ClipDao {
         """
         SELECT * FROM clips
         WHERE trashedAt IS NULL
-          AND (:query = '' OR content LIKE '%' || :query || '%' OR tag LIKE '%' || :query || '%')
+          AND (:query = '' OR content LIKE '%' || :query || '%' OR notes LIKE '%' || :query || '%' OR ocrText LIKE '%' || :query || '%' OR sourceAppLabel LIKE '%' || :query || '%' OR sourcePackage LIKE '%' || :query || '%' OR tag LIKE '%' || :query || '%' OR EXISTS (SELECT 1 FROM clip_tags ct INNER JOIN tags t ON t.id = ct.tagId WHERE ct.clipId = clips.id AND t.name LIKE '%' || :query || '%'))
           AND (:filesOnly = 0 OR isFile = 1)
         ORDER BY pinned DESC, createdAt DESC
         """
     )
     suspend fun searchOnce(query: String, filesOnly: Boolean): List<Clip>
 
-    @Query("SELECT * FROM clips WHERE trashedAt IS NOT NULL ORDER BY trashedAt DESC")
+    @Query("SELECT * FROM clips WHERE trashedAt IS NOT NULL AND syncDeletedAt IS NULL ORDER BY trashedAt DESC")
     fun trash(): Flow<List<Clip>>
+
+    /** Snapshot of visible Trash (not tombstones) for a manual empty. */
+    @Query("SELECT * FROM clips WHERE trashedAt IS NOT NULL AND syncDeletedAt IS NULL")
+    suspend fun trashedClips(): List<Clip>
+
+    @Query("DELETE FROM clips WHERE id = :id")
+    suspend fun deleteById(id: Long): Int
 
     /** All active clips, oldest first, for export. */
     @Query("SELECT * FROM clips WHERE trashedAt IS NULL ORDER BY createdAt ASC")
@@ -63,8 +70,38 @@ interface ClipDao {
     @Query("UPDATE clips SET trashedAt = NULL WHERE id = :id")
     suspend fun restore(id: Long)
 
-    @Query("UPDATE clips SET pinned = :pinned WHERE id = :id")
-    suspend fun setPinned(id: Long, pinned: Boolean)
+    @Query("UPDATE clips SET pinned = :pinned, updatedAt = :now WHERE id = :id")
+    suspend fun setPinned(id: Long, pinned: Boolean, now: Long = System.currentTimeMillis())
+
+    @Query("UPDATE clips SET notes = :notes, updatedAt = :now WHERE id = :id")
+    suspend fun setNotes(id: Long, notes: String, now: Long = System.currentTimeMillis())
+
+    @Query("UPDATE clips SET content = :content, notes = :notes, protected = :isProtected, updatedAt = :now WHERE id = :id")
+    suspend fun setProtectionPayload(id: Long, content: String, notes: String, isProtected: Boolean, now: Long = System.currentTimeMillis())
+
+    @Query("UPDATE clips SET protected = :isProtected, updatedAt = :now WHERE id = :id")
+    suspend fun setProtected(id: Long, isProtected: Boolean, now: Long = System.currentTimeMillis())
+
+    @Query("SELECT * FROM clips WHERE trashedAt IS NOT NULL AND syncDeletedAt IS NULL AND trashedAt < :cutoff")
+    suspend fun expiredTrash(cutoff: Long): List<Clip>
+
+    @Query("SELECT * FROM clips WHERE id = :id LIMIT 1")
+    suspend fun byId(id: Long): Clip?
+
+    @Query("SELECT * FROM clips WHERE syncId = :syncId LIMIT 1")
+    suspend fun bySyncId(syncId: String): Clip?
+
+    @Query("SELECT * FROM clips")
+    suspend fun allRows(): List<Clip>
+
+    @Query("SELECT * FROM clips WHERE syncDeletedAt IS NOT NULL")
+    suspend fun syncTombstones(): List<Clip>
+
+    @Query("DELETE FROM clips WHERE syncId = :syncId")
+    suspend fun deleteBySyncId(syncId: String): Int
+
+    @Query("DELETE FROM clips WHERE syncDeletedAt IS NOT NULL AND syncDeletedAt < :cutoff")
+    suspend fun purgeExpiredTombstones(cutoff: Long): Int
 
     /** Permanently delete trashed clips older than [cutoff] (the 30-day retention). */
     @Query("DELETE FROM clips WHERE trashedAt IS NOT NULL AND trashedAt < :cutoff")

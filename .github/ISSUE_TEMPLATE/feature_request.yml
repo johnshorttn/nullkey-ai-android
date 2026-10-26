@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest an improvement or new NullKey AI capability
+title: "[Feature]: "
+labels: ["feature", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the use case rather than including real clipboard, vault, password, or typed-text examples.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Use case / problem
+      description: What are you trying to accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: What should NullKey AI do?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Keyboard/IME, Clipboard/Vault, OCR, Spelling/Grammar, Themes, Plugins, Settings, Accessibility, Privacy/Security, Beta/Updates, Other]
+    validations:
+      required: true
+  - type: dropdown
+    id: testing
+    attributes:
+      label: Would you test this in Beta?
+      options: ["Yes", "No", "Maybe"]
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Do not include sensitive clipboard, vault, authentication, or typed content.

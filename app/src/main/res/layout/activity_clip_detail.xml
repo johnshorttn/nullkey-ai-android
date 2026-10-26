@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/background">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="20dp">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/clip_details" android:textColor="@color/neon"
+            android:textSize="24sp" android:textStyle="bold"/>
+        <TextView android:id="@+id/detail_meta" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="8dp"
+            android:textColor="@color/slate"/>
+        <ImageView android:id="@+id/detail_image" android:layout_width="match_parent"
+            android:layout_height="280dp" android:layout_marginTop="16dp"
+            android:adjustViewBounds="true" android:contentDescription="@string/image_preview"
+            android:scaleType="centerInside" android:visibility="gone"/>
+        <Button android:id="@+id/detail_extract_text" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="12dp"
+            android:text="@string/extract_text" android:visibility="gone"/>
+        <TextView android:id="@+id/detail_ocr_status" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="8dp"
+            android:textColor="@color/slate" android:visibility="gone"/>
+        <EditText android:id="@+id/detail_ocr" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="8dp"
+            android:gravity="top" android:hint="@string/ocr_text_hint" android:inputType="textMultiLine"
+            android:minLines="3" android:textColor="@color/text_primary"
+            android:textColorHint="@color/slate" android:visibility="gone"/>
+        <Button android:id="@+id/detail_save_ocr_clip" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="@string/save_ocr_as_clip"
+            android:visibility="gone"/>
+        <TextView android:id="@+id/detail_asset_status" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="8dp"
+            android:textColor="@color/slate" android:visibility="gone"/>
+        <Button android:id="@+id/detail_unlock" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="12dp"
+            android:text="@string/unlock_protected" android:visibility="gone"/>
+        <TextView android:id="@+id/detail_content" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="16dp"
+            android:textColor="@color/text_primary" android:textIsSelectable="true" android:textSize="17sp"/>
+        <EditText android:id="@+id/detail_notes" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="18dp"
+            android:hint="@string/notes" android:minLines="3" android:gravity="top"
+            android:inputType="textMultiLine" android:textColor="@color/text_primary"
+            android:textColorHint="@color/slate"/>
+        <Button android:id="@+id/detail_check_writing" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="8dp"
+            android:text="@string/writing_check_button" android:visibility="gone"/>
+        <TextView android:id="@+id/detail_no_tags" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="12dp"
+            android:textColor="@color/violet" android:text="@string/no_tags"/>
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/detail_tags"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="@string/suggested_tags"
+            android:textColor="@color/slate" android:textSize="12sp"/>
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/detail_suggested_tags"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <EditText android:id="@+id/detail_new_tag" android:layout_width="0dp"
+                android:layout_height="wrap_content" android:layout_weight="1"
+                android:hint="@string/add_tag" android:singleLine="true"
+                android:textColor="@color/text_primary" android:textColorHint="@color/slate"/>
+            <Button android:id="@+id/detail_add_tag" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="@string/add"/>
+        </LinearLayout>
+        <CheckBox android:id="@+id/detail_pinned" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="@string/pinned"
+            android:textColor="@color/text_primary" android:buttonTint="@color/neon"/>
+        <CheckBox android:id="@+id/detail_protected" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="@string/protected_label"
+            android:textColor="@color/text_primary" android:buttonTint="@color/neon"/>
+        <LinearLayout android:id="@+id/detail_asset_actions"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:visibility="gone">
+            <Button android:id="@+id/detail_open_asset" android:layout_width="0dp"
+                android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="@string/open_asset"/>
+            <Button android:id="@+id/detail_share_asset" android:layout_width="0dp"
+                android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="@string/share_asset"/>
+        </LinearLayout>
+        <Button android:id="@+id/detail_save" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="@string/save_changes"/>
+        <Button android:id="@+id/detail_trash" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="@string/move_to_trash"/>
+    </LinearLayout>
+</ScrollView>

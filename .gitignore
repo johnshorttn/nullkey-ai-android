@@ -18,5 +18,7 @@ build/
 # Release signing secrets (never commit these)
 keystore.properties
 *.jks
+*.p12
+*.pkcs12
 release.keystore
 upload-keystore.jks

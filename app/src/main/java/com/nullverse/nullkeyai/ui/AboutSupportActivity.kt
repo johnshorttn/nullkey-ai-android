@@ -1,0 +1,56 @@
+package com.nullverse.nullkeyai.ui
+
+import android.content.Intent
+import android.net.Uri
+import android.os.Bundle
+import android.widget.Button
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import com.nullverse.nullkeyai.R
+
+/**
+ * Opens support destinations in an external browser via [Intent.ACTION_VIEW].
+ * That does not require the INTERNET permission.
+ */
+class AboutSupportActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_about_support)
+        SystemBarInsets.applyToActivity(this)
+
+        findViewById<TextView>(R.id.about_version).text =
+            getString(
+                R.string.about_version_format,
+                packageManager.getPackageInfo(packageName, 0).versionName ?: "unknown",
+                if (android.os.Build.VERSION.SDK_INT >= 28)
+                    packageManager.getPackageInfo(packageName, 0).longVersionCode
+                else
+                    @Suppress("DEPRECATION") packageManager.getPackageInfo(packageName, 0).versionCode.toLong()
+            )
+
+        bind(R.id.btn_privacy, PRIVACY_URL)
+        bind(R.id.btn_support, SUPPORT_URL)
+        bind(R.id.btn_beta, BETA_URL)
+        bind(R.id.btn_bug, BUG_URL)
+        bind(R.id.btn_feature, FEATURE_URL)
+        bind(R.id.btn_security, SECURITY_URL)
+        bind(R.id.btn_sponsor, SPONSOR_URL)
+    }
+
+    private fun bind(id: Int, url: String) {
+        findViewById<Button>(id).setOnClickListener {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        }
+    }
+
+    companion object {
+        /** Play IME privacy URL. Pages serves docs/privacy.md from rewrite/v2. */
+        const val PRIVACY_URL = "https://johnshorttn.github.io/nullkey-ai-android/privacy.html"
+        const val SUPPORT_URL = "https://johnshorttn.github.io/nullkey-ai-android/support.html"
+        const val BETA_URL = "https://johnshorttn.github.io/nullkey-ai-android/beta.html"
+        const val BUG_URL = "https://github.com/johnshorttn/nullkey-ai-android/issues/new?template=bug_report.yml"
+        const val FEATURE_URL = "https://github.com/johnshorttn/nullkey-ai-android/issues/new?template=feature_request.yml"
+        const val SECURITY_URL = "https://github.com/johnshorttn/nullkey-ai-android/security/advisories/new"
+        const val SPONSOR_URL = "https://github.com/sponsors/johnshorttn"
+    }
+}

@@ -1,21 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- OCR uses the Latin model bundled in the APK. These removals drop
+         INTERNET and ACCESS_NETWORK_STATE if a library manifest merges them.
+         Do not replace tools:node="remove" with a real uses-permission. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:usesCleartextTraffic="false"
+        android:enableOnBackInvokedCallback="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.NullKey">
 
         <activity
+            android:name=".ui.AboutSupportActivity"
+            android:exported="false"
+            android:label="@string/about_support_title" />
+
+        <activity
+            android:name=".ui.TrashActivity"
+            android:exported="false"
+            android:label="@string/trash" />
+
+        <activity
+            android:name=".ui.ClipDetailActivity"
+            android:exported="false"
+            android:label="@string/clip_details"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".diagnostics.ClipboardLabActivity"
+            android:exported="false"
+            android:label="@string/clipboard_lab_title" />
+
+        <activity
             android:name=".ui.MainActivity"
             android:exported="true"
-            android:label="@string/app_name">
+            android:label="@string/app_name"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -41,8 +74,24 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Clipboard capture for the NullKey clipboard keyboard" />
+                android:value="@string/monitor_fgs_subtype" />
         </service>
+
+        <!-- ML Kit is initialized on the first on-device OCR call, not at process start. -->
+        <provider
+            android:name="com.google.mlkit.common.internal.MlKitInitProvider"
+            android:authorities="${applicationId}.mlkitinitprovider"
+            tools:node="remove" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.vault.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

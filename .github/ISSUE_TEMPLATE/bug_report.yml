@@ -1,0 +1,74 @@
+name: Bug report
+description: Report a reproducible NullKey AI problem
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve NullKey AI.
+
+        **Privacy:** Do not paste clipboard contents, passwords, typed text, vault data, authentication tokens, personal information, or other sensitive content into this report. Attach only diagnostics you have reviewed and intentionally chosen to share.
+  - type: input
+    id: version
+    attributes:
+      label: NullKey version / build
+      placeholder: "e.g. 1.2.0 (120)"
+    validations:
+      required: true
+  - type: dropdown
+    id: channel
+    attributes:
+      label: Release channel
+      options: [Stable, Beta, Internal/Development, Unknown]
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: Android version
+      placeholder: "e.g. Android 16"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      placeholder: "e.g. Pixel 9"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Give the smallest safe sequence that reproduces the issue.
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics (optional)
+      description: Review before posting. Never include clipboard/vault/typed content, passwords, tokens, or private data.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: I reviewed this report and attachments and removed sensitive/private user content.
+          required: true

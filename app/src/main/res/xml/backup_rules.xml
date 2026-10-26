@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Defense in depth: the application sets allowBackup=false. These excludes keep
+  Vault databases, private assets, and preferences out of Auto Backup if that
+  flag is ever re-enabled.
+-->
+<full-backup-content>
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="file" path="vault/" />
+</full-backup-content>
