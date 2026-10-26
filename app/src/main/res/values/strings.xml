@@ -156,6 +156,7 @@
     <string name="layout_mode_four_row">4-row (standard)</string>
     <string name="layout_mode_five_row">5-row (number row)</string>
     <string name="layout_mode_full">Full (PC keys: F1–F12, Esc, Ctrl, arrows)</string>
+    <string name="terminal_mode_auto">Terminal mode in Termux, JuiceSSH, ConnectBot and raw fields (terminal row on; no suggestions, learning or swipe)</string>
     <string name="terminal_row_enabled">Terminal row on 5-row layout (Esc Tab Ctrl Alt arrows - / | ~)</string>
     <string name="keyboard_theme_dark_vault">Dark Vault</string>
     <string name="keyboard_theme_light">Light</string>

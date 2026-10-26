@@ -357,6 +357,12 @@ class MainActivity : AppCompatActivity() {
 
         bindLayoutModeButton(R.id.btn_layout_portrait, LayoutOrientation.PORTRAIT, R.string.layout_portrait_label)
         bindLayoutModeButton(R.id.btn_layout_landscape, LayoutOrientation.LANDSCAPE, R.string.layout_landscape_label)
+        findViewById<CheckBox>(R.id.terminal_mode_auto).apply {
+            isChecked = KeyboardEnginePreferences.terminalModeAuto(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                KeyboardEnginePreferences.setTerminalModeAuto(this@MainActivity, checked)
+            }
+        }
         findViewById<CheckBox>(R.id.terminal_row_enabled).apply {
             isChecked = KeyboardEnginePreferences.terminalRowEnabled(this@MainActivity)
             setOnCheckedChangeListener { _, checked ->

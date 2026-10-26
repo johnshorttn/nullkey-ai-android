@@ -25,6 +25,15 @@ object KeyboardEnginePreferences {
     const val KEY_LAYOUT_MODE_PORTRAIT = "layout_mode_portrait"
     const val KEY_LAYOUT_MODE_LANDSCAPE = "layout_mode_landscape"
     const val KEY_TERMINAL_ROW = "terminal_row_enabled"
+    const val KEY_TERMINAL_MODE_AUTO = "terminal_mode_auto"
+
+    /** Auto terminal mode in Termux/JuiceSSH/ConnectBot and raw fields. On by default. */
+    fun terminalModeAuto(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_TERMINAL_MODE_AUTO, true)
+
+    fun setTerminalModeAuto(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_TERMINAL_MODE_AUTO, enabled).apply()
+    }
 
     fun layoutMode(context: Context, orientation: LayoutOrientation): KeyboardLayoutMode {
         val key = layoutModeKey(orientation)
