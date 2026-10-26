@@ -91,4 +91,53 @@ class ModifierControllerTest {
         assertEquals(KeyboardLayer.LETTERS, mods.layer)
         assertFalse(mods.isShifted)
     }
+
+    @Test
+    fun heldModifiersApplyWithoutChangingTapState() {
+        val mods = ModifierController()
+        mods.holdSticky(StickyModifier.CTRL)
+        mods.holdShift()
+        assertTrue(mods.isShifted)
+        assertTrue(mods.isStickyActive(StickyModifier.CTRL))
+        assertEquals(setOf(StickyModifier.CTRL), mods.activeStickyModifiers())
+        assertEquals(ShiftState.OFF, mods.shift)
+        assertEquals(ShiftState.OFF, mods.stickyState(StickyModifier.CTRL))
+        // Typing keys does not clear a held modifier.
+        mods.consumeOneShot()
+        mods.onLetterCommitted()
+        assertTrue(mods.isShifted)
+        assertTrue(mods.isStickyHeld(StickyModifier.CTRL))
+        mods.releaseShift()
+        mods.releaseSticky(StickyModifier.CTRL)
+        assertFalse(mods.isShifted)
+        assertFalse(mods.isAnyHeld)
+        assertTrue(mods.activeStickyModifiers().isEmpty())
+    }
+
+    @Test
+    fun releasingAHeldModifierKeepsOneShotAndLock() {
+        val mods = ModifierController()
+        mods.onStickyTap(StickyModifier.ALT, nowMs = 0)
+        mods.onShiftLongPress()
+        mods.holdSticky(StickyModifier.ALT)
+        mods.holdShift()
+        mods.releaseSticky(StickyModifier.ALT)
+        mods.releaseShift()
+        assertEquals(ShiftState.ON, mods.stickyState(StickyModifier.ALT))
+        assertEquals(ShiftState.LOCKED, mods.shift)
+    }
+
+    @Test
+    fun restoreUndoesALongPressLockAndResetDropsHeld() {
+        val mods = ModifierController()
+        mods.onStickyLongPress(StickyModifier.META)
+        mods.restoreSticky(StickyModifier.META, ShiftState.OFF)
+        assertEquals(ShiftState.OFF, mods.stickyState(StickyModifier.META))
+        mods.onShiftLongPress()
+        mods.restoreShift(ShiftState.ON)
+        assertEquals(ShiftState.ON, mods.shift)
+        mods.holdSticky(StickyModifier.CTRL)
+        mods.reset()
+        assertFalse(mods.isAnyHeld)
+    }
 }

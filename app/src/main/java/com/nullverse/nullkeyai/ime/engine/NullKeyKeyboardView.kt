@@ -195,8 +195,18 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                 controller.down(event.getPointerId(index), gesturePointerX, gesturePointerY)
             }
             MotionEvent.ACTION_POINTER_DOWN -> {
-                // The engine deliberately tracks one active pointer. Ignore extra
-                // fingers so they cannot steal or corrupt the current gesture.
+                // The engine tracks one active finger. A second finger only takes
+                // over when the first rests on a modifier (a chord) or none is
+                // active; otherwise the engine ignores it so it cannot steal or
+                // corrupt the current gesture.
+                val index = event.actionIndex
+                val wasActive = controller.touch.activePointerId
+                controller.down(event.getPointerId(index), event.getX(index), event.getY(index))
+                if (controller.touch.activePointerId != wasActive) {
+                    gesturePointerX = event.getX(index)
+                    gesturePointerY = event.getY(index)
+                    gesturePointerActive = false
+                }
             }
             MotionEvent.ACTION_MOVE -> {
                 val pointerId = controller.touch.activePointerId
@@ -227,8 +237,9 @@ class NullKeyKeyboardView @JvmOverloads constructor(
                     gesturePointerActive = false
                     replayHistoricalPoints(event, index, pointerId)
                     flushGesturePreview()
-                    controller.up(pointerId, event.getX(index), event.getY(index))
                 }
+                // Also lifts a finger holding a modifier for a chord.
+                controller.up(pointerId, event.getX(index), event.getY(index))
             }
             MotionEvent.ACTION_CANCEL -> {
                 gesturePointerActive = false
@@ -533,6 +544,7 @@ class NullKeyKeyboardView @JvmOverloads constructor(
         controller.applyTypingSettings(
             swipeTypingEnabled = KeyboardEnginePreferences.swipeTypingEnabled(context) && !forceTerminalRow,
             longPressMs = KeyboardEnginePreferences.longPressMs(context).toLong(),
+            chordingEnabled = KeyboardEnginePreferences.chordingEnabled(context),
         )
     }
 

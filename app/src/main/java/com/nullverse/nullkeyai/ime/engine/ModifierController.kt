@@ -11,6 +11,13 @@ package com.nullverse.nullkeyai.ime.engine
  * Ctrl, Alt and Meta ([StickyModifier]) follow the same tap / double-tap /
  * long-press rules, but are consumed by any non-modifier key, not just
  * letters. Locked modifiers stay on until tapped again.
+ *
+ * Chording: while a modifier key is physically held by one finger
+ * ([holdShift] / [holdSticky]) every key typed by another finger gets that
+ * modifier. A held modifier is separate from the tap state above: typing a key
+ * never clears it, and [releaseShift] / [releaseSticky] drop it without
+ * touching one-shot or lock. One-shot modifiers that were already on are still
+ * consumed by the first key, as usual.
  */
 class ModifierController(
     private val doubleTapMs: Long = KeyboardEngineDefaults.SHIFT_DOUBLE_TAP_MS,
@@ -26,7 +33,12 @@ class ModifierController(
     private val sticky = mutableMapOf<StickyModifier, ShiftState>()
     private val lastStickyTapMs = mutableMapOf<StickyModifier, Long>()
 
-    val isShifted: Boolean get() = shift != ShiftState.OFF
+    private var shiftHeld: Boolean = false
+    private val heldSticky = mutableSetOf<StickyModifier>()
+
+    /** Shift is on: tapped (one-shot or caps lock) or held for a chord. */
+    val isShifted: Boolean get() = shift != ShiftState.OFF || shiftHeld
+    val isShiftHeld: Boolean get() = shiftHeld
     val isCapsLock: Boolean get() = shift == ShiftState.LOCKED
 
     fun onShiftTap(nowMs: Long) {
@@ -61,7 +73,44 @@ class ModifierController(
 
     fun stickyState(modifier: StickyModifier): ShiftState = sticky[modifier] ?: ShiftState.OFF
 
-    fun isStickyActive(modifier: StickyModifier): Boolean = stickyState(modifier) != ShiftState.OFF
+    fun isStickyActive(modifier: StickyModifier): Boolean =
+        stickyState(modifier) != ShiftState.OFF || modifier in heldSticky
+
+    fun isStickyHeld(modifier: StickyModifier): Boolean = modifier in heldSticky
+
+    val isAnyHeld: Boolean get() = shiftHeld || heldSticky.isNotEmpty()
+
+    /** A finger is holding Shift down while another finger types. */
+    fun holdShift() {
+        shiftHeld = true
+    }
+
+    /** The holding finger lifted. One-shot and caps lock are left as they were. */
+    fun releaseShift() {
+        shiftHeld = false
+    }
+
+    fun holdSticky(modifier: StickyModifier) {
+        heldSticky += modifier
+    }
+
+    fun releaseSticky(modifier: StickyModifier) {
+        heldSticky -= modifier
+    }
+
+    /**
+     * Put a modifier back to [state]. Used when a long-press lock fired on a
+     * key that then turned out to be held for a chord.
+     */
+    fun restoreShift(state: ShiftState) {
+        shift = state
+        lastShiftTapMs = -1L
+    }
+
+    fun restoreSticky(modifier: StickyModifier, state: ShiftState) {
+        sticky[modifier] = state
+        lastStickyTapMs[modifier] = -1L
+    }
 
     /** Ctrl/Alt/Meta that apply to the next key, in a stable order. */
     fun activeStickyModifiers(): Set<StickyModifier> =
@@ -153,5 +202,7 @@ class ModifierController(
         lastShiftTapMs = -1L
         sticky.clear()
         lastStickyTapMs.clear()
+        shiftHeld = false
+        heldSticky.clear()
     }
 }

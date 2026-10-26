@@ -38,6 +38,16 @@ class KeyboardController(
 
     var swipeTypingEnabled: Boolean = true
 
+    /** Hold a modifier with one finger and type with another. On by default. */
+    var chordingEnabled: Boolean
+        get() = touch.chordingEnabled
+        set(value) {
+            touch.chordingEnabled = value
+        }
+
+    /** State to restore if a modifier's long-press lock turns into a chord hold. */
+    private var modifierLongPressUndo: Pair<Int, ShiftState>? = null
+
     var orientation: LayoutOrientation = LayoutOrientation.PORTRAIT
         private set
 
@@ -110,11 +120,13 @@ class KeyboardController(
 
             override fun onLongPress(key: PlacedKey): Boolean {
                 if (key.spec.code == KeyCodes.SHIFT) {
+                    modifierLongPressUndo = KeyCodes.SHIFT to modifiers.shift
                     modifiers.onShiftLongPress()
                     host.requestRedraw()
                     return true
                 }
                 KeyCodes.stickyModifierFor(key.spec.code)?.let { modifier ->
+                    modifierLongPressUndo = key.spec.code to modifiers.stickyState(modifier)
                     modifiers.onStickyLongPress(modifier)
                     host.requestRedraw()
                     return true
@@ -144,6 +156,31 @@ class KeyboardController(
 
             override fun onCursorSteps(steps: Int) {
                 host.onCursorSteps(steps)
+            }
+
+            override fun isChordModifier(key: PlacedKey): Boolean =
+                key.spec.code == KeyCodes.SHIFT || KeyCodes.stickyModifierFor(key.spec.code) != null
+
+            override fun onChordHold(key: PlacedKey, longPressFired: Boolean) {
+                val code = key.spec.code
+                // Resting on the modifier long enough to lock it, then typing with
+                // another finger, is a chord: put the lock back the way it was.
+                val undo = modifierLongPressUndo
+                if (longPressFired && undo != null && undo.first == code) {
+                    if (code == KeyCodes.SHIFT) modifiers.restoreShift(undo.second)
+                    else KeyCodes.stickyModifierFor(code)?.let { modifiers.restoreSticky(it, undo.second) }
+                }
+                modifierLongPressUndo = null
+                if (code == KeyCodes.SHIFT) modifiers.holdShift()
+                else KeyCodes.stickyModifierFor(code)?.let(modifiers::holdSticky)
+                host.requestRedraw()
+            }
+
+            override fun onChordRelease(key: PlacedKey) {
+                val code = key.spec.code
+                if (code == KeyCodes.SHIFT) modifiers.releaseShift()
+                else KeyCodes.stickyModifierFor(code)?.let(modifiers::releaseSticky)
+                host.requestRedraw()
             }
 
             override fun onGesturePath(keys: List<PlacedKey>) {
@@ -187,8 +224,9 @@ class KeyboardController(
         host.requestRedraw()
     }
 
-    fun applyTypingSettings(swipeTypingEnabled: Boolean, longPressMs: Long) {
+    fun applyTypingSettings(swipeTypingEnabled: Boolean, longPressMs: Long, chordingEnabled: Boolean = true) {
         this.swipeTypingEnabled = swipeTypingEnabled
+        this.chordingEnabled = chordingEnabled
         touch.longPressMs = longPressMs.coerceAtLeast(1L)
     }
 
