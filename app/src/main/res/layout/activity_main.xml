@@ -93,6 +93,22 @@
             android:textColor="@color/text_primary" />
 
         <CheckBox
+            android:id="@+id/modifier_chording_enabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:buttonTint="@color/neon"
+            android:text="@string/modifier_chording_enabled"
+            android:textColor="@color/text_primary" />
+
+        <TextView
+            android:id="@+id/modifier_chording_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/modifier_chording_hint"
+            android:textColor="@color/slate"
+            android:textSize="12sp" />
+
+        <CheckBox
             android:id="@+id/ctrl_a_in_text_fields"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

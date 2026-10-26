@@ -13,6 +13,17 @@ interface TaskScheduler {
  * Pointer tracker for a single active finger: hit-testing, press/release,
  * sliding between keys, long-press, and key-repeat.
  *
+ * Two-finger chording: when a second finger lands on a key while the active
+ * finger is still resting on a modifier ([Listener.isChordModifier]) and has
+ * not slid off it, the first finger becomes a held modifier
+ * ([Listener.onChordHold]) and the second finger becomes the active one. Every
+ * key typed while it is held gets the modifier. Lifting the held finger calls
+ * [Listener.onChordRelease] and never produces a tap, so it does not toggle
+ * one-shot or lock. A key whose finger landed while the modifier was held still
+ * gets it if the modifier finger lifts first (a rolling chord). A modifier
+ * touched by one finger alone still taps, double-taps and long-presses as
+ * before. Swipe typing only starts from single-finger gestures.
+ *
  * Geometry is supplied through [Listener.hitTest] so this class stays free of
  * Android view types and is unit-testable with a fake [TaskScheduler].
  */
@@ -37,6 +48,18 @@ class TouchEngine(
         fun onGestureProgress(keys: List<PlacedKey>) {}
         fun onCursorSteps(steps: Int) {}
 
+        /** Shift, Ctrl, Alt or Meta: keys one finger can hold while another types. */
+        fun isChordModifier(key: PlacedKey): Boolean = false
+
+        /**
+         * [key]'s finger is now holding it for a chord. [longPressFired] is true
+         * when its long-press already ran (for a modifier, a lock to undo).
+         */
+        fun onChordHold(key: PlacedKey, longPressFired: Boolean) {}
+
+        /** The finger holding [key] lifted, or the touch was cancelled. */
+        fun onChordRelease(key: PlacedKey) {}
+
         /** A move may cross several keys. Hosts should redraw once, after [endGestureFrame]. */
         fun beginGestureFrame() {}
         fun endGestureFrame() {}
@@ -47,6 +70,20 @@ class TouchEngine(
 
     var pressed: PlacedKey? = null
         private set
+
+    /** Off: a second finger is ignored, as before chording existed. */
+    var chordingEnabled: Boolean = true
+
+    /** Modifier keys held by fingers other than the active one, by pointer id. */
+    private val heldChords = linkedMapOf<Int, PlacedKey>()
+
+    /** Held fingers that lifted while a chorded key was still down. */
+    private val pendingChordReleases = mutableListOf<PlacedKey>()
+
+    /** The active finger landed while a modifier was held. */
+    private var chordedGesture = false
+
+    val heldChordKeys: List<PlacedKey> get() = heldChords.values.toList()
 
     private var longPressConsumed: Boolean = false
     private var longPressFired: Boolean = false
@@ -63,13 +100,11 @@ class TouchEngine(
     private var gestureFrameDirty = false
 
     fun down(pointerId: Int, x: Float, y: Float) {
-        if (activePointerId != null) return
+        if (pointerId in heldChords) return
+        if (activePointerId != null && !holdActiveForChord(x, y)) return
+        val key = listener.hitTest(x, y) ?: return
         activePointerId = pointerId
-        val key = listener.hitTest(x, y)
-        if (key == null) {
-            activePointerId = null
-            return
-        }
+        chordedGesture = heldChords.isNotEmpty()
         gesturePath.clear()
         gesturePath += key
         gestureFrameDirty = false
@@ -183,12 +218,39 @@ class TouchEngine(
         }
     }
 
+    /**
+     * A second finger is landing at [x], [y]. If the active finger rests on a
+     * modifier, keep that modifier held and free the engine for the new finger.
+     */
+    private fun holdActiveForChord(x: Float, y: Float): Boolean {
+        if (!chordingEnabled) return false
+        val holder = activePointerId ?: return false
+        val modifierKey = pressed ?: return false
+        if (gesturePath.size != 1 || cursorDrag != null) return false
+        if (!listener.isChordModifier(modifierKey)) return false
+        if (listener.hitTest(x, y) == null) return false
+        val fired = longPressFired
+        cancelTasks()
+        heldChords[holder] = modifierKey
+        listener.onRelease(modifierKey)
+        resetPointer()
+        listener.onChordHold(modifierKey, fired)
+        return true
+    }
+
     fun up(pointerId: Int, x: Float, y: Float) {
+        heldChords.remove(pointerId)?.let { key ->
+            // A key already down with this modifier keeps it until it is typed.
+            if (activePointerId != null && chordedGesture) pendingChordReleases += key
+            else listener.onChordRelease(key)
+            return
+        }
         if (activePointerId != pointerId) return
         if (cursorDrag?.engaged == true) {
             cancelTasks()
             listener.onRelease(pressed)
             resetPointer()
+            flushChordReleases()
             return
         }
         // A sideways drift that never reached a cursor step is still a space tap.
@@ -218,7 +280,7 @@ class TouchEngine(
         // one-key slip after that timer stays a long-press, not a word.
         val continuedPastHold = gesturePath.size >= CONTINUED_SWIPE_KEYS ||
             gestureDistancePx >= minGestureDistance * CONTINUED_SWIPE_DISTANCE
-        val isSwipe = letterTrail && farEnough && (!heldLongPress || continuedPastHold)
+        val isSwipe = !chordedGesture && letterTrail && farEnough && (!heldLongPress || continuedPastHold)
         when {
             isSwipe -> listener.onGesturePath(gesturePath.toList())
             current != null && !wasRepeatable && !consumed && !(heldLongPress && gestureStarted) -> {
@@ -226,6 +288,7 @@ class TouchEngine(
             }
         }
         resetPointer()
+        flushChordReleases()
     }
 
     fun cancel() {
@@ -233,6 +296,17 @@ class TouchEngine(
         cancelTasks()
         if (current != null) listener.onRelease(current)
         resetPointer()
+        val held = heldChords.values.toList()
+        heldChords.clear()
+        pendingChordReleases += held
+        flushChordReleases()
+    }
+
+    private fun flushChordReleases() {
+        if (pendingChordReleases.isEmpty()) return
+        val keys = pendingChordReleases.toList()
+        pendingChordReleases.clear()
+        keys.forEach(listener::onChordRelease)
     }
 
     private fun press(key: PlacedKey) {
@@ -285,6 +359,7 @@ class TouchEngine(
         gestureStartX = 0f
         gestureStartY = 0f
         cursorDrag = null
+        chordedGesture = false
         listener.onGestureProgress(emptyList())
     }
 

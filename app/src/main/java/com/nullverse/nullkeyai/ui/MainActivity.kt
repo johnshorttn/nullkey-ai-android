@@ -192,6 +192,12 @@ class MainActivity : AppCompatActivity() {
                 KeyboardEnginePreferences.setSwipeTypingEnabled(this@MainActivity, checked)
             }
         }
+        findViewById<CheckBox>(R.id.modifier_chording_enabled).apply {
+            isChecked = KeyboardEnginePreferences.chordingEnabled(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                KeyboardEnginePreferences.setChordingEnabled(this@MainActivity, checked)
+            }
+        }
         findViewById<CheckBox>(R.id.ctrl_a_in_text_fields).apply {
             isChecked = KeyboardEnginePreferences.ctrlAInTextFields(this@MainActivity)
             setOnCheckedChangeListener { _, checked ->

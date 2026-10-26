@@ -26,6 +26,15 @@ object KeyboardEnginePreferences {
     const val KEY_LAYOUT_MODE_LANDSCAPE = "layout_mode_landscape"
     const val KEY_TERMINAL_ROW = "terminal_row_enabled"
     const val KEY_TERMINAL_MODE_AUTO = "terminal_mode_auto"
+    const val KEY_CHORDING = "modifier_chording_enabled"
+
+    /** Hold Shift/Ctrl/Alt/Meta with one finger while tapping keys with another. On by default. */
+    fun chordingEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_CHORDING, true)
+
+    fun setChordingEnabled(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(KEY_CHORDING, enabled).apply()
+    }
 
     /** Auto terminal mode in Termux/JuiceSSH/ConnectBot and raw fields. On by default. */
     fun terminalModeAuto(context: Context): Boolean =

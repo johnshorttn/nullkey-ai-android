@@ -75,6 +75,82 @@ class NullKeyKeyboardViewTest {
         assertEquals(listOf('A'.code), codes)
     }
 
+    /** One MotionEvent with every finger in [fingers] (pointer id to position). */
+    private fun multiTouch(
+        downTime: Long,
+        eventTime: Long,
+        action: Int,
+        fingers: List<Pair<Int, PlacedKey>>,
+    ): MotionEvent {
+        val props = fingers.map { (id, _) ->
+            MotionEvent.PointerProperties().apply {
+                this.id = id
+                toolType = MotionEvent.TOOL_TYPE_FINGER
+            }
+        }.toTypedArray()
+        val coords = fingers.map { (_, key) ->
+            MotionEvent.PointerCoords().apply {
+                x = key.slot.centerX
+                y = key.slot.centerY
+                pressure = 1f
+                size = 1f
+            }
+        }.toTypedArray()
+        return MotionEvent.obtain(
+            downTime, eventTime, action, fingers.size, props, coords,
+            0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0,
+        )
+    }
+
+    private fun pointerAction(action: Int, index: Int) =
+        action or (index shl MotionEvent.ACTION_POINTER_INDEX_SHIFT)
+
+    @Test
+    fun holdingShiftWithOneFingerUppercasesTapsFromAnother() {
+        val view = layoutView()
+        val codes = mutableListOf<Int>()
+        view.listener = object : NullKeyKeyboardView.Listener {
+            override fun onKey(code: Int) {
+                codes += code
+            }
+        }
+        val shift = view.keyWithLabel("⇧")
+        val a = view.keyWithLabel("a")
+        val b = view.keyWithLabel("b")
+        val c = view.keyWithLabel("c")
+        val t = SystemClock.uptimeMillis()
+        view.dispatchTouchEvent(multiTouch(t, t, MotionEvent.ACTION_DOWN, listOf(0 to shift)))
+        for ((i, key) in listOf(a, b).withIndex()) {
+            val at = t + 20L + i * 40L
+            val both = listOf(0 to shift, 1 to key)
+            view.dispatchTouchEvent(multiTouch(t, at, pointerAction(MotionEvent.ACTION_POINTER_DOWN, 1), both))
+            view.dispatchTouchEvent(multiTouch(t, at + 16, pointerAction(MotionEvent.ACTION_POINTER_UP, 1), both))
+        }
+        view.dispatchTouchEvent(multiTouch(t, t + 120, MotionEvent.ACTION_UP, listOf(0 to shift)))
+        tap(view, c.slot.centerX, c.slot.centerY)
+        assertEquals(listOf('A'.code, 'B'.code, 'c'.code), codes)
+    }
+
+    @Test
+    fun secondFingerOnALetterDoesNotBreakTheFirst() {
+        val view = layoutView()
+        val codes = mutableListOf<Int>()
+        view.listener = object : NullKeyKeyboardView.Listener {
+            override fun onKey(code: Int) {
+                codes += code
+            }
+        }
+        val q = view.keyWithLabel("q")
+        val w = view.keyWithLabel("w")
+        val t = SystemClock.uptimeMillis()
+        val both = listOf(0 to q, 1 to w)
+        view.dispatchTouchEvent(multiTouch(t, t, MotionEvent.ACTION_DOWN, listOf(0 to q)))
+        view.dispatchTouchEvent(multiTouch(t, t + 10, pointerAction(MotionEvent.ACTION_POINTER_DOWN, 1), both))
+        view.dispatchTouchEvent(multiTouch(t, t + 20, pointerAction(MotionEvent.ACTION_POINTER_UP, 1), both))
+        view.dispatchTouchEvent(multiTouch(t, t + 30, MotionEvent.ACTION_UP, listOf(0 to q)))
+        assertEquals(listOf('q'.code), codes)
+    }
+
     private fun swipe(view: View, start: PlacedKey, end: PlacedKey) {
         val downTime = SystemClock.uptimeMillis()
         view.dispatchTouchEvent(

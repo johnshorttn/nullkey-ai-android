@@ -201,6 +201,8 @@
     <string name="key_a11y_insert">Insert</string>
     <string name="key_a11y_forward_delete">Forward delete</string>
     <string name="key_a11y_function_key">F%1$d</string>
+    <string name="modifier_chording_enabled">Hold a modifier and tap keys (two-finger chording)</string>
+    <string name="modifier_chording_hint">While one finger holds Shift, Ctrl, Alt or Meta, keys tapped with another finger get that modifier. Lifting it leaves one-shot and lock unchanged. With TalkBack, use tap for one-shot and double-tap for lock.</string>
     <string name="ctrl_a_in_text_fields">Allow Ctrl+A (select all) in normal text fields</string>
     <string name="key_a11y_incognito">Incognito. Typed words will not be learned.</string>
     <string name="suggestion_empty">Suggestion %1$d, empty</string>
