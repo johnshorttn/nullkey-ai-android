@@ -190,6 +190,12 @@ class MainActivity : AppCompatActivity() {
                 KeyboardEnginePreferences.setSwipeTypingEnabled(this@MainActivity, checked)
             }
         }
+        findViewById<CheckBox>(R.id.ctrl_a_in_text_fields).apply {
+            isChecked = KeyboardEnginePreferences.ctrlAInTextFields(this@MainActivity)
+            setOnCheckedChangeListener { _, checked ->
+                KeyboardEnginePreferences.setCtrlAInTextFields(this@MainActivity, checked)
+            }
+        }
         bindKeyboardInputSettings()
         findViewById<CheckBox>(R.id.incognito_enabled).apply {
             isChecked = KeyboardEnginePreferences.incognitoEnabled(this@MainActivity)

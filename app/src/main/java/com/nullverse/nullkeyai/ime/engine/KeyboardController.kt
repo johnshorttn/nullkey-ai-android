@@ -20,6 +20,12 @@ class KeyboardController(
         fun requestGestureFrame() { requestRedraw() }
 
         fun onKey(code: Int)
+
+        /**
+         * A terminal/PC key, or any key pressed while Ctrl/Alt/Meta is on.
+         * Hosts that cannot send key events fall back to [onKey].
+         */
+        fun onKeyStroke(stroke: KeyStroke) { onKey(stroke.code) }
         fun onLongPress(code: Int, popupCharacters: String)
         fun onPopupCharacter(code: Int) { onKey(code) }
         fun onGestureWord(path: String) {}
@@ -52,6 +58,9 @@ class KeyboardController(
     private var slopPx: Float = 0f
     private var batchingGestureFrame = false
     private var gestureFramePending = false
+
+    /** A repeating key was sent with one-shot modifiers; clear them on release. */
+    private var consumeOnRelease = false
 
     val touch: TouchEngine = TouchEngine(
         scheduler = scheduler,
@@ -87,6 +96,10 @@ class KeyboardController(
             }
 
             override fun onRelease(key: PlacedKey?) {
+                if (consumeOnRelease) {
+                    consumeOnRelease = false
+                    modifiers.consumeOneShot()
+                }
                 if (batchingGestureFrame) gestureFramePending = true
                 else host.requestRedraw()
             }
@@ -101,6 +114,11 @@ class KeyboardController(
                     host.requestRedraw()
                     return true
                 }
+                KeyCodes.stickyModifierFor(key.spec.code)?.let { modifier ->
+                    modifiers.onStickyLongPress(modifier)
+                    host.requestRedraw()
+                    return true
+                }
                 host.onLongPress(key.spec.code, key.spec.popupCharacters)
                 // Popup-capable keys consume release so selecting an accent does
                 // not also commit the base character underneath the picker.
@@ -108,7 +126,14 @@ class KeyboardController(
             }
 
             override fun onRepeat(key: PlacedKey) {
-                host.onKey(key.spec.code)
+                if (needsKeyStroke(key.spec.code)) {
+                    // Keep Ctrl/Shift held for the whole repeat (Shift+arrow
+                    // selection, Ctrl+Backspace); clear one-shots on release.
+                    host.onKeyStroke(strokeFor(key.spec.code))
+                    consumeOnRelease = true
+                } else {
+                    host.onKey(key.spec.code)
+                }
             }
 
             override fun onGestureProgress(keys: List<PlacedKey>) {
@@ -122,7 +147,8 @@ class KeyboardController(
             }
 
             override fun onGesturePath(keys: List<PlacedKey>) {
-                if (!swipeTypingEnabled) {
+                if (!swipeTypingEnabled || modifiers.activeStickyModifiers().isNotEmpty()) {
+                    // Ctrl+swipe has no meaning; treat it as a tap on the last key.
                     keys.lastOrNull()?.let(::handleTap)
                     return
                 }
@@ -179,7 +205,7 @@ class KeyboardController(
         return when (key.spec.code) {
             KeyCodes.SHIFT -> modifiers.isShifted
             KeyCodes.MODE_CHANGE -> modifiers.layer == KeyboardLayer.SYMBOLS
-            else -> false
+            else -> KeyCodes.stickyModifierFor(key.spec.code)?.let(modifiers::isStickyActive) ?: false
         }
     }
 
@@ -209,7 +235,17 @@ class KeyboardController(
                 rebuildGeometry(geometry.widthPx, geometry.heightPx)
                 host.requestRedraw()
             }
+            KeyCodes.CTRL, KeyCodes.ALT, KeyCodes.META -> {
+                modifiers.onStickyTap(KeyCodes.stickyModifierFor(key.spec.code)!!, scheduler.nowMs())
+                host.requestRedraw()
+            }
             else -> {
+                if (needsKeyStroke(key.spec.code)) {
+                    host.onKeyStroke(strokeFor(key.spec.code))
+                    modifiers.consumeOneShot()
+                    host.requestRedraw()
+                    return
+                }
                 val code = modifiers.applyToCode(key.spec.code)
                 if (key.spec.code.toChar().isLetter()) {
                     modifiers.onLetterCommitted()
@@ -219,6 +255,15 @@ class KeyboardController(
             }
         }
     }
+
+    private fun needsKeyStroke(code: Int): Boolean =
+        KeyCodes.isKeyEventKey(code) || modifiers.activeStickyModifiers().isNotEmpty()
+
+    private fun strokeFor(code: Int): KeyStroke = KeyStroke(
+        code = modifiers.applyToCode(code),
+        modifiers = modifiers.activeStickyModifiers(),
+        shift = modifiers.isShifted,
+    )
 
     private fun rebuildGeometry(widthPx: Float, heightPx: Float) {
         val spec = layouts.spec(modifiers.layer, orientation)

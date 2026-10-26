@@ -15,6 +15,9 @@ internal interface ImeKeyOutput {
     fun enter()
     fun moveCursor(delta: Int)
     fun moveCursor(dx: Int, dy: Int)
+
+    /** Real key events (terminal keys, Ctrl/Alt/Meta chords). */
+    fun sendKeyEvents(events: List<com.nullverse.nullkeyai.ime.engine.KeyEventSpec>) {}
 }
 
 internal object VaultSearchInput {
