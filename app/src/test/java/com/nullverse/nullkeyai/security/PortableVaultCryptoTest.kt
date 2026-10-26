@@ -7,8 +7,19 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.ConscryptMode
 
+/**
+ * Runs on the JDK's own AES-GCM, PBKDF2 and SecureRandom. Robolectric's default
+ * Conscrypt mode loads a host-native BoringSSL library the first time
+ * [PortableVaultCrypto] creates its SecureRandom; on CI that load intermittently
+ * failed inside the class initializer (ExceptionInInitializerError ->
+ * NoClassDefFoundError) and then left the Gradle test worker hung. The
+ * envelope format, KDF parameters and tamper checks under test are the same
+ * standard algorithms on either provider, so nothing is skipped or relaxed.
+ */
 @RunWith(RobolectricTestRunner::class)
+@ConscryptMode(ConscryptMode.Mode.OFF)
 class PortableVaultCryptoTest {
     @Test
     fun roundTripRestoresPlaintext() {
