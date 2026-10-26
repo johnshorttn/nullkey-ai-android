@@ -29,14 +29,13 @@ import com.nullverse.nullkeyai.clipboard.ClipRepository
 import com.nullverse.nullkeyai.ui.SystemBarInsets
 import com.nullverse.nullkeyai.db.NullKeyDatabase
 import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
-import com.nullverse.nullkeyai.ime.engine.TerminalMode
+import com.nullverse.nullkeyai.ime.engine.TerminalOutputPolicy
 import com.nullverse.nullkeyai.ime.engine.KeyFeedback
 import com.nullverse.nullkeyai.ime.engine.KeyCodes
 import com.nullverse.nullkeyai.ime.engine.KeyEventSpec
 import com.nullverse.nullkeyai.ime.engine.KeyStroke
 import com.nullverse.nullkeyai.ime.engine.KeyStrokeEvents
 import com.nullverse.nullkeyai.ime.engine.KeyStrokePlan
-import com.nullverse.nullkeyai.ime.engine.KeyStrokePlanner
 import com.nullverse.nullkeyai.ime.engine.LayoutOrientation
 import com.nullverse.nullkeyai.ime.engine.NullKeyKeyboardView
 import com.nullverse.nullkeyai.ime.engine.TrackpadPointer
@@ -242,11 +241,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
             activateVaultSearch()
         }
         applyRendererPreference()
-        terminalMode = TerminalMode.detect(
-            packageName = info?.packageName,
-            inputType = info?.inputType ?: 0,
-            enabled = KeyboardEnginePreferences.terminalModeAuto(this),
-        ) && !vaultSearchActive
+        terminalMode = terminalDecision(info).terminalMode
         if (::keyboardEngineView.isInitialized) keyboardEngineView.setTerminalMode(terminalMode)
         if (usingEngine) keyboardEngineView.resetEngine()
         if (!restarting) resetComposition()
@@ -612,11 +607,13 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     /**
      * Terminal keys and Ctrl/Alt/Meta chords leave as real KeyEvents with meta
-     * state. Plain keys still go through [handleKey].
+     * state, or as escape-sequence text when the fallback is on for this field
+     * (see [TerminalOutputPolicy]). Plain keys still go through [handleKey].
      */
     private fun handleKeyStroke(stroke: KeyStroke) {
         if (trackpadActive) return
-        when (val plan = KeyStrokePlanner.plan(stroke, allowCtrlA = ctrlAAllowed())) {
+        val decision = terminalDecision(currentInputEditorInfo)
+        when (val plan = TerminalOutputPolicy.plan(stroke, decision)) {
             KeyStrokePlan.PassThrough -> handleKey(stroke.code, alreadyCased = true)
             KeyStrokePlan.Blocked -> Unit
             is KeyStrokePlan.Text -> handleKey(stroke.code, alreadyCased = true)
@@ -625,16 +622,28 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
                 flushWord()
                 sink.sendKeyEvents(plan.events)
             }
+            is KeyStrokePlan.Escape -> {
+                val sink = keySink() ?: return
+                flushWord()
+                sink.commitText(plan.text)
+            }
         }
     }
 
-    /** Raw terminal views always get Ctrl+A; normal fields only by opt-in. */
-    private fun ctrlAAllowed(): Boolean {
-        if (terminalMode || KeyboardEnginePreferences.ctrlAInTextFields(this)) return true
-        val info = currentInputEditorInfo ?: return false
-        return (info.inputType and android.text.InputType.TYPE_MASK_CLASS) ==
-            android.text.InputType.TYPE_NULL
-    }
+    /**
+     * Terminal mode, Ctrl+A and escape output for [info]. Raw terminal views
+     * always get Ctrl+A; normal fields only by opt-in. The in-keyboard vault
+     * search never gets terminal mode or escapes.
+     */
+    private fun terminalDecision(info: EditorInfo?): TerminalOutputPolicy.Decision =
+        TerminalOutputPolicy.decide(
+            packageName = info?.packageName,
+            inputType = info?.inputType ?: 0,
+            terminalModeAuto = KeyboardEnginePreferences.terminalModeAuto(this),
+            ctrlAInTextFields = KeyboardEnginePreferences.ctrlAInTextFields(this),
+            output = KeyboardEnginePreferences.terminalKeyOutput(this),
+            vaultSearch = vaultSearchActive,
+        )
 
     /**
      * Tools toggles the vault above the keys. Opening grows the IME by the

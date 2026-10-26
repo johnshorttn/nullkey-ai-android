@@ -55,3 +55,18 @@ Instrumented tests locally (boot a Google APIs emulator first; API 36 matches `c
 ```bash
 ./gradlew :app:connectedDebugAndroidTest
 ```
+
+## Terminal keys
+
+Terminal mode, the terminal row, two-finger chording and the escape-sequence
+fallback are described in [docs/TERMINAL_TEST_MATRIX.md](docs/TERMINAL_TEST_MATRIX.md),
+along with the device checks for Termux, JuiceSSH, ConnectBot and the Nullink
+web terminal in Chrome.
+
+## Credits
+
+The full-keyboard layouts, terminal keys, modifier chording and escape-sequence
+fallback are modelled on ideas from
+[Hacker's Keyboard](https://github.com/klausw/hackerskeyboard) by Klaus Weidner,
+licensed under the Apache License 2.0. NullKey's versions were written from
+scratch in Kotlin; no Hacker's Keyboard code is included.
