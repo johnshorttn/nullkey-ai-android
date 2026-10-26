@@ -27,6 +27,7 @@ object KeyboardEnginePreferences {
     const val KEY_TERMINAL_ROW = "terminal_row_enabled"
     const val KEY_TERMINAL_MODE_AUTO = "terminal_mode_auto"
     const val KEY_CHORDING = "modifier_chording_enabled"
+    const val KEY_TERMINAL_KEY_OUTPUT = "terminal_key_output"
 
     /** Hold Shift/Ctrl/Alt/Meta with one finger while tapping keys with another. On by default. */
     fun chordingEnabled(context: Context): Boolean =
@@ -37,6 +38,14 @@ object KeyboardEnginePreferences {
     }
 
     /** Auto terminal mode in Termux/JuiceSSH/ConnectBot and raw fields. On by default. */
+    /** Key events (default) or the escape-sequence fallback; see [TerminalOutputPolicy]. */
+    fun terminalKeyOutput(context: Context): TerminalKeyOutput =
+        TerminalKeyOutput.parse(prefs(context).getString(KEY_TERMINAL_KEY_OUTPUT, null))
+
+    fun setTerminalKeyOutput(context: Context, output: TerminalKeyOutput) {
+        prefs(context).edit().putString(KEY_TERMINAL_KEY_OUTPUT, output.name).apply()
+    }
+
     fun terminalModeAuto(context: Context): Boolean =
         prefs(context).getBoolean(KEY_TERMINAL_MODE_AUTO, true)
 

@@ -52,6 +52,7 @@ import com.nullverse.nullkeyai.security.VaultCrypto
 import com.nullverse.nullkeyai.sync.DeviceIdentity
 import com.nullverse.nullkeyai.ime.ClipAdapter
 import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
+import com.nullverse.nullkeyai.ime.engine.TerminalKeyOutput
 import com.nullverse.nullkeyai.ime.engine.KeyboardInputSettings
 import com.nullverse.nullkeyai.ime.engine.KeyboardLayoutMode
 import com.nullverse.nullkeyai.ime.engine.LayoutOrientation
@@ -347,6 +348,36 @@ class MainActivity : AppCompatActivity() {
         refresh()
     }
 
+    private fun bindTerminalKeyOutputButton() {
+        val button = findViewById<Button>(R.id.btn_terminal_key_output)
+        val outputs = TerminalKeyOutput.entries
+        fun label(output: TerminalKeyOutput): String = getString(
+            when (output) {
+                TerminalKeyOutput.KEY_EVENTS -> R.string.terminal_key_output_key_events
+                TerminalKeyOutput.ESCAPES_IN_TERMINAL_MODE -> R.string.terminal_key_output_escapes_terminal
+                TerminalKeyOutput.ESCAPES_EVERYWHERE -> R.string.terminal_key_output_escapes_everywhere
+            },
+        )
+        fun refresh() {
+            button.text = getString(
+                R.string.terminal_key_output_label,
+                label(KeyboardEnginePreferences.terminalKeyOutput(this)),
+            )
+        }
+        button.setOnClickListener {
+            val current = outputs.indexOf(KeyboardEnginePreferences.terminalKeyOutput(this))
+            AlertDialog.Builder(this)
+                .setTitle(R.string.terminal_key_output_title)
+                .setSingleChoiceItems(outputs.map(::label).toTypedArray(), current) { dialog, which ->
+                    KeyboardEnginePreferences.setTerminalKeyOutput(this, outputs[which])
+                    refresh()
+                    dialog.dismiss()
+                }
+                .show()
+        }
+        refresh()
+    }
+
     private fun bindKeyboardInputSettings() {
         val themeButton = findViewById<Button>(R.id.btn_keyboard_theme)
         fun refreshTheme() {
@@ -369,6 +400,7 @@ class MainActivity : AppCompatActivity() {
                 KeyboardEnginePreferences.setTerminalModeAuto(this@MainActivity, checked)
             }
         }
+        bindTerminalKeyOutputButton()
         findViewById<CheckBox>(R.id.terminal_row_enabled).apply {
             isChecked = KeyboardEnginePreferences.terminalRowEnabled(this@MainActivity)
             setOnCheckedChangeListener { _, checked ->

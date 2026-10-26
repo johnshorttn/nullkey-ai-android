@@ -31,6 +31,9 @@ sealed interface KeyStrokePlan {
     data class Text(val text: String) : KeyStrokePlan
 
     data class Events(val events: List<KeyEventSpec>) : KeyStrokePlan
+
+    /** Escape-sequence fallback: commit [text] instead of key events. */
+    data class Escape(val text: String) : KeyStrokePlan
 }
 
 /**

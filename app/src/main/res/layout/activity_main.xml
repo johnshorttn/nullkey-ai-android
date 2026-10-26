@@ -160,6 +160,19 @@
             android:text="@string/terminal_mode_auto"
             android:textColor="@color/text_primary" />
 
+        <Button
+            android:id="@+id/btn_terminal_key_output"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/terminal_key_output_title" />
+
+        <TextView
+            android:id="@+id/terminal_key_output_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/terminal_key_output_hint"
+            android:textColor="@color/slate" />
+
         <TextView
             android:id="@+id/keyboard_height_label"
             android:layout_width="match_parent"
