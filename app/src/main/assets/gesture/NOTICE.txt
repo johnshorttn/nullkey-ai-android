@@ -1,0 +1,39 @@
+NullKey gesture frequency list (en_top_n.txt)
+=============================================
+
+This asset is a top-N word frequency table used for on-device swipe/gesture
+ranking. It is bundled in the APK. The keyboard never downloads word lists or
+frequency data at runtime, and the app does not declare the INTERNET permission.
+
+How the weights were produced
+-----------------------------
+Word occurrence counts were taken from the following Project Gutenberg plain
+texts (United States public domain), then intersected with letter-keys
+(length ≥ 2, a–z only) from the SCOWL-derived spelling list shipped as
+spelling/en_words.txt:
+
+  - Alice's Adventures in Wonderland (pg11) — Lewis Carroll
+  - The Adventures of Sherlock Holmes (pg1661) — Arthur Conan Doyle
+  - Pride and Prejudice (pg1342) — Jane Austen
+  - Frankenstein (pg84) — Mary Shelley
+  - A Christmas Carol (pg46) — Charles Dickens
+  - The Time Machine (pg35) — H. G. Wells
+
+Raw books are not shipped. Committed count data lives at
+third_party/gesture_freq/corpus_counts.tsv. Regenerate with:
+
+  python3 scripts/build-gesture-freq.py
+
+This frequency table is NOT derived from wordfreq, FrequencyWords, or any
+CC-BY-SA corpus. Do not replace it with those sources.
+
+Project Gutenberg license
+-------------------------
+Project Gutenberg eBooks are free of U.S. copyright. Their trademark terms
+apply to the name “Project Gutenberg”; this project does not claim affiliation.
+See https://www.gutenberg.org/policy/license.html
+
+SCOWL intersection
+------------------
+The spelling word list used for the intersection is SCOWL 2020.12.07; see
+spelling/SCOWL_COPYRIGHT.txt and third_party/scowl/.
