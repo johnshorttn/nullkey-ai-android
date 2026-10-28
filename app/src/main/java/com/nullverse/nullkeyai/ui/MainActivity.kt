@@ -347,20 +347,13 @@ class MainActivity : AppCompatActivity() {
         refresh()
     }
 
-    private fun bindKeyboardInputSettings() {
-        val themeButton = findViewById<Button>(R.id.btn_keyboard_theme)
-        fun refreshTheme() {
-            val themeId = KeyboardEnginePreferences.themeId(this)
-            themeButton.text = getString(R.string.keyboard_theme_label, getString(themeId.labelRes))
-        }
-        themeButton.setOnClickListener {
-            val themes = KeyboardThemeId.entries.toTypedArray()
-            AlertDialog.Builder(this)
-                .setTitle(R.string.keyboard_theme_title)
-                .setItems(themes.map { getString(it.labelRes) }.toTypedArray()) { _, which ->
-                    KeyboardEnginePreferences.setThemeId(this, themes[which])
-                    refreshTheme()
-
+    /**
+     * Layout mode buttons and terminal checkboxes. Bound once in onCreate so
+     * their labels, checked state and listeners are right on first launch;
+     * this used to sit inside the theme picker's click handler by mistake,
+     * so it only ran after the user changed the theme.
+     */
+    private fun bindLayoutAndTerminalSettings() {
         bindLayoutModeButton(R.id.btn_layout_portrait, LayoutOrientation.PORTRAIT, R.string.layout_portrait_label)
         bindLayoutModeButton(R.id.btn_layout_landscape, LayoutOrientation.LANDSCAPE, R.string.layout_landscape_label)
         findViewById<CheckBox>(R.id.terminal_mode_auto).apply {
@@ -375,10 +368,26 @@ class MainActivity : AppCompatActivity() {
                 KeyboardEnginePreferences.setTerminalRowEnabled(this@MainActivity, checked)
             }
         }
+    }
+
+    private fun bindKeyboardInputSettings() {
+        val themeButton = findViewById<Button>(R.id.btn_keyboard_theme)
+        fun refreshTheme() {
+            val themeId = KeyboardEnginePreferences.themeId(this)
+            themeButton.text = getString(R.string.keyboard_theme_label, getString(themeId.labelRes))
+        }
+        themeButton.setOnClickListener {
+            val themes = KeyboardThemeId.entries.toTypedArray()
+            AlertDialog.Builder(this)
+                .setTitle(R.string.keyboard_theme_title)
+                .setItems(themes.map { getString(it.labelRes) }.toTypedArray()) { _, which ->
+                    KeyboardEnginePreferences.setThemeId(this, themes[which])
+                    refreshTheme()
                 }
                 .show()
         }
         refreshTheme()
+        bindLayoutAndTerminalSettings()
 
         val heightLabel = findViewById<TextView>(R.id.keyboard_height_label)
         val heightSeek = findViewById<SeekBar>(R.id.keyboard_height_seek)
