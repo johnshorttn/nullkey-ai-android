@@ -136,4 +136,30 @@ class MainActivityInstrumentedTest {
             onView(withId(R.id.tagline)).check(matches(withText(R.string.tagline)))
         }
     }
+
+    /**
+     * Regression: on a fresh install the layout buttons showed the generic
+     * "Keyboard layout" text (and the terminal checkboxes were unbound) until
+     * the theme was changed once.
+     */
+    @Test
+    fun firstLaunch_withClearedPrefs_showsLayoutSummariesAndTerminalState() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        context.getSharedPreferences(KeyboardEnginePreferences.PREFS, android.content.Context.MODE_PRIVATE)
+            .edit().clear().commit()
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onView(withId(R.id.btn_layout_portrait))
+                .perform(scrollTo())
+                .check(matches(withText("Portrait layout: 4-row (standard)")))
+            onView(withId(R.id.btn_layout_landscape))
+                .perform(scrollTo())
+                .check(matches(withText("Landscape layout: 5-row (number row)")))
+            onView(withId(R.id.terminal_mode_auto)).perform(scrollTo()).check(matches(isChecked()))
+            onView(withId(R.id.terminal_row_enabled)).perform(scrollTo()).check(matches(isNotChecked()))
+            onView(withId(R.id.terminal_row_enabled)).perform(scrollTo(), click())
+            org.junit.Assert.assertTrue(KeyboardEnginePreferences.terminalRowEnabled(context))
+        }
+        context.getSharedPreferences(KeyboardEnginePreferences.PREFS, android.content.Context.MODE_PRIVATE)
+            .edit().clear().commit()
+    }
 }
