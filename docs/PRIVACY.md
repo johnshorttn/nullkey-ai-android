@@ -44,6 +44,20 @@ NullKey can read text in the focused field only as needed to compose, suggest, a
 
 Enabling a third-party keyboard is a sensitive system setting. Android will show its own warnings. You can switch keyboards in system settings at any time.
 
+## Keyboard after a restart (before first unlock)
+
+After the phone restarts, Android keeps most app data encrypted until you unlock the device once. NullKey's keyboard service is marked *direct-boot aware*, so it can still type on the lock screen (for example your PIN or password) instead of Android warning that the app "can't start until you unlock your device."
+
+Until that first unlock the keyboard runs in **basic mode**:
+
+- Layout, theme, height, vibration/sound, and similar look-and-feel settings come from a small copy kept in Android's *device-protected* storage. That copy contains **only** those non-sensitive settings. It never contains Vault items, clipboard data, learned words, encryption keys, passwords, incognito or developer settings.
+- The **Vault is not opened** and no clipboard history is shown or captured.
+- **No learning:** typed words are not added to suggestions, and your learned-word list is not read. Only the bundled English word list (part of the app) is used.
+- **No OCR**, and **nothing is written** to the encrypted (credential-protected) storage.
+- Settings cannot be changed in basic mode.
+
+When you unlock, the keyboard switches to full mode in place (no restart) and the Vault, learned words, and your other settings become available as usual. Vault encryption keys stay in Android Keystore and the encrypted storage; none are moved to device-protected storage. No permission is added for this, and NullKey still has no `INTERNET` permission and no accessibility service.
+
 ## Clipboard capture
 
 Clipboard access follows Android rules. Capture sources include:
