@@ -72,7 +72,7 @@ import kotlinx.coroutines.withContext
  * legacy [KeyboardView] remains wired as a fallback while the engine is
  * developed; toggle it from the NullKey app.
  */
-class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionListener {
+class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionListener, ShowKeyboardBridge.Target {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private lateinit var repository: ClipRepository
@@ -115,8 +115,16 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private var trackpadActive = false
     private lateinit var trackpadPointer: TrackpadPointer
 
+    /** Set by the notification's Show keyboard action; see [showWhenEditorReady]. */
+    private var pendingHelperShow = false
+    /** Last editor Android bound us to; currentInputEditorInfo can lag behind it. */
+    private var lastStartedEditor: EditorInfo? = null
+    private val helperHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val helperTimeout = Runnable { finishHelperShow(timedOut = true) }
+
     override fun onCreate() {
         super.onCreate()
+        ShowKeyboardBridge.attach(this)
         repository = ClipRepository(NullKeyDatabase.get(this).clipDao(), deviceIdentity = DeviceIdentity.from(this))
         suggester = WordSuggester.get(this)
         scope.launch(Dispatchers.IO) {
@@ -234,6 +242,49 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
         if (!restarting) resetComposition()
+        lastStartedEditor = attribute
+        if (pendingHelperShow && ShowKeyboardBridge.isTextEditor(attribute)) {
+            // Focus came back to the app's text field after the helper's
+            // trampoline closed: show now instead of waiting for the timeout.
+            helperHandler.post { finishHelperShow(timedOut = false) }
+        }
+    }
+
+    /**
+     * Notification helper: the trampoline activity has just taken focus, so the
+     * field the user was in is not bound yet. Wait for it to come back (onStartInput)
+     * or for a short timeout, then requestShowSelf, or tell the user there is no
+     * text field to type into.
+     */
+    override fun showWhenEditorReady() {
+        pendingHelperShow = true
+        helperHandler.removeCallbacks(helperTimeout)
+        helperHandler.postDelayed(helperTimeout, HELPER_SHOW_TIMEOUT_MS)
+    }
+
+    private fun finishHelperShow(timedOut: Boolean) {
+        if (!pendingHelperShow) return
+        val editor = currentInputEditorInfo ?: lastStartedEditor
+        if (!ShowKeyboardBridge.isTextEditor(editor) || currentInputConnection == null) {
+            if (!timedOut) return
+            pendingHelperShow = false
+            Toast.makeText(this, R.string.show_keyboard_no_field, Toast.LENGTH_LONG).show()
+            return
+        }
+        pendingHelperShow = false
+        helperHandler.removeCallbacks(helperTimeout)
+        showSelfFromHelper()
+    }
+
+    private fun showSelfFromHelper() {
+        if (ShowKeyboardBridge.usesRequestShowSelf()) {
+            requestShowSelf(0)
+        } else {
+            val token = window?.window?.attributes?.token ?: return
+            @Suppress("DEPRECATION")
+            (getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
+                .showSoftInputFromInputMethod(token, 0)
+        }
     }
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
@@ -255,6 +306,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     override fun onFinishInput() {
+        lastStartedEditor = null
         resetComposition()
         super.onFinishInput()
     }
@@ -904,9 +956,16 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     override fun onDestroy() {
+        ShowKeyboardBridge.detach(this)
+        helperHandler.removeCallbacks(helperTimeout)
         refreshClipsJob?.cancel()
         if (::keyboardEngineView.isInitialized) keyboardEngineView.resetEngine()
         scope.cancel()
         super.onDestroy()
+    }
+
+    companion object {
+        /** How long the helper waits for the app's field to be bound again. */
+        const val HELPER_SHOW_TIMEOUT_MS = 1_200L
     }
 }

@@ -19,6 +19,7 @@ import com.nullverse.nullkeyai.db.ClipCaptureMethod
 import com.nullverse.nullkeyai.db.ClipContentType
 import com.nullverse.nullkeyai.db.ClipSourceConfidence
 import com.nullverse.nullkeyai.ui.MainActivity
+import com.nullverse.nullkeyai.ui.ShowKeyboardActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -136,16 +137,38 @@ class ClipboardMonitorService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val showKeyboard = PendingIntent.getActivity(
+            this, REQUEST_SHOW_KEYBOARD, helperIntent(ShowKeyboardActivity.ACTION_SHOW),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val switchKeyboard = PendingIntent.getActivity(
+            this, REQUEST_SWITCH_KEYBOARD, helperIntent(ShowKeyboardActivity.ACTION_SWITCH),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.monitor_title))
             .setContentText(getString(R.string.monitor_text))
             .setSmallIcon(R.drawable.ic_clip)
             .setContentIntent(vaultPendingIntent)
+            .addAction(R.drawable.ic_keyboard, getString(R.string.show_keyboard_action), showKeyboard)
+            .addAction(R.drawable.ic_keyboard, getString(R.string.switch_keyboard_action), switchKeyboard)
             .addAction(R.drawable.ic_clip, getString(R.string.open_vault), vaultPendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .build()
     }
+
+    /**
+     * Explicit, non-exported trampoline in its own task so finishing it
+     * returns to the app the user was in, not to NullKey's main screen.
+     */
+    private fun helperIntent(action: String): Intent =
+        Intent(this, ShowKeyboardActivity::class.java).apply {
+            this.action = action
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION or
+                Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+        }
 
     override fun onDestroy() {
         clipboard.removePrimaryClipChangedListener(listener)
@@ -158,6 +181,8 @@ class ClipboardMonitorService : Service() {
     companion object {
         private const val CHANNEL_ID = "nullkey_clipboard_monitor"
         private const val NOTIFICATION_ID = 42
+        private const val REQUEST_SHOW_KEYBOARD = 1
+        private const val REQUEST_SWITCH_KEYBOARD = 2
 
         fun start(context: Context) {
             val intent = Intent(context, ClipboardMonitorService::class.java)
