@@ -10,7 +10,8 @@ import android.content.SharedPreferences
  * model is involved, so it stays private and dependency-free.
  */
 class WordSuggester private constructor(
-    private val prefs: SharedPreferences,
+    /** Null in direct-boot basic mode: seed words only, nothing is learned or stored. */
+    private val prefs: SharedPreferences?,
     private val counts: MutableMap<String, Int>
 ) {
 
@@ -49,7 +50,7 @@ class WordSuggester private constructor(
      * persisted. Seeded dictionary suggestions still work.
      */
     fun learn(word: String, enabled: Boolean = true) {
-        if (!enabled) return
+        if (!enabled || prefs == null) return
         val w = word.trim().lowercase()
         if (w.length < MIN_LEARN_LENGTH || !w.all { it.isLetter() }) return
         counts[w] = (counts[w] ?: 0) + 1
@@ -62,7 +63,7 @@ class WordSuggester private constructor(
             .sortedByDescending { it.value }
             .take(MAX_WORDS)
         val encoded = top.joinToString(SEP) { "${it.key}:${it.value}" }
-        prefs.edit().putString(KEY_WORDS, encoded).apply()
+        prefs?.edit()?.putString(KEY_WORDS, encoded)?.apply()
     }
 
     companion object {
@@ -94,6 +95,13 @@ class WordSuggester private constructor(
             if (counts.isEmpty()) SEED.forEach { counts[it] = 1 }
             return WordSuggester(prefs, counts)
         }
+
+        /**
+         * Before the first unlock: the bundled seed words only. Learned words
+         * live in credential-encrypted storage and are neither read nor written.
+         */
+        fun seedOnly(): WordSuggester =
+            WordSuggester(null, HashMap<String, Int>().apply { SEED.forEach { this[it] = 1 } })
 
         private fun decode(encoded: String?): MutableMap<String, Int> {
             val map = HashMap<String, Int>()

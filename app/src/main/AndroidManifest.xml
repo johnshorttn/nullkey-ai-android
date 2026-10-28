@@ -55,8 +55,16 @@
             </intent-filter>
         </activity>
 
+        <!--
+            directBootAware: the keyboard can start on the lock screen after a
+            reboot, before the first unlock, in basic mode (no Vault, no learned
+            words, no clipboard history; see boot/DirectBootGate.kt). Only this
+            service is direct-boot aware; every other component still waits for
+            unlock.
+        -->
         <service
             android:name=".ime.NullKeyImeService"
+            android:directBootAware="true"
             android:exported="true"
             android:label="@string/ime_label"
             android:permission="android.permission.BIND_INPUT_METHOD">

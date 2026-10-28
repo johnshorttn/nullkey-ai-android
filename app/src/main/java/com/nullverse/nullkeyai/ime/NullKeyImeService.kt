@@ -26,6 +26,13 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.nullverse.nullkeyai.R
 import com.nullverse.nullkeyai.clipboard.ClipRepository
+import com.nullverse.nullkeyai.boot.DirectBootGate
+import androidx.core.content.ContextCompat
+import androidx.annotation.VisibleForTesting
+import android.content.IntentFilter
+import android.content.Intent
+import android.content.Context
+import android.content.BroadcastReceiver
 import com.nullverse.nullkeyai.ui.SystemBarInsets
 import com.nullverse.nullkeyai.db.NullKeyDatabase
 import com.nullverse.nullkeyai.ime.engine.KeyboardEnginePreferences
@@ -75,7 +82,8 @@ import kotlinx.coroutines.withContext
 class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionListener {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private lateinit var repository: ClipRepository
+    /** Null until the user has unlocked once since boot (see [DirectBootGate]). */
+    private var repository: ClipRepository? = null
     private lateinit var suggester: WordSuggester
 
     private lateinit var keyboardView: KeyboardView
@@ -115,14 +123,66 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     private var trackpadActive = false
     private lateinit var trackpadPointer: TrackpadPointer
 
+    /**
+     * False in direct-boot basic mode (before the first unlock): no Vault,
+     * no learned words, no clipboard history, no reads or writes of
+     * credential-encrypted storage. Becomes true on ACTION_USER_UNLOCKED.
+     */
+    @VisibleForTesting
+    internal var fullMode = false
+        private set
+    private var unlockReceiver: BroadcastReceiver? = null
+
     override fun onCreate() {
         super.onCreate()
-        repository = ClipRepository(NullKeyDatabase.get(this).clipDao(), deviceIdentity = DeviceIdentity.from(this))
-        suggester = WordSuggester.get(this)
+        if (DirectBootGate.isUserUnlocked(this)) enterFullMode() else enterBasicMode()
+        // The bundled spelling list is an APK asset, readable before unlock.
         scope.launch(Dispatchers.IO) {
             val assistant = WritingAssistant(BundledSpellingDictionary.get(this@NullKeyImeService))
             withContext(Dispatchers.Main) { writing = assistant }
         }
+    }
+
+    private fun enterBasicMode() {
+        suggester = WordSuggester.seedOnly()
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action == Intent.ACTION_USER_UNLOCKED) upgradeToFullModeIfUnlocked()
+            }
+        }
+        unlockReceiver = receiver
+        ContextCompat.registerReceiver(
+            this,
+            receiver,
+            IntentFilter(Intent.ACTION_USER_UNLOCKED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+    }
+
+    private fun enterFullMode() {
+        repository = ClipRepository(NullKeyDatabase.get(this).clipDao(), deviceIdentity = DeviceIdentity.from(this))
+        suggester = WordSuggester.get(this)
+        KeyboardEnginePreferences.syncBootMirror(this)
+        fullMode = true
+    }
+
+    /** Switch from basic to full mode in place, without restarting the keyboard. */
+    private fun upgradeToFullModeIfUnlocked() {
+        if (fullMode || !DirectBootGate.isUserUnlocked(this)) return
+        unregisterUnlockReceiver()
+        enterFullMode()
+        if (::keyboardEngineView.isInitialized) {
+            applyRendererPreference()
+            keyboardEngineView.resetEngine()
+            keyboardEngineView.requestLayout()
+        }
+        if (::suggestionViews.isInitialized) updateSuggestions()
+        refreshClips()
+    }
+
+    private fun unregisterUnlockReceiver() {
+        unlockReceiver?.let { runCatching { unregisterReceiver(it) } }
+        unlockReceiver = null
     }
 
     override fun onCreateInputView(): View {
@@ -238,6 +298,8 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        // Safety net in case ACTION_USER_UNLOCKED was missed.
+        upgradeToFullModeIfUnlocked()
         if (::searchBox.isInitialized && editorIsVaultSearch(info)) {
             activateVaultSearch()
         }
@@ -291,10 +353,17 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
         val query = searchBox.text?.toString().orEmpty()
         val onlyFiles = filesOnly.isChecked
         refreshClipsJob?.cancel()
+        val repo = repository
+        if (!fullMode || repo == null) {
+            adapter.submit(emptyList())
+            clipsEmpty.setText(R.string.ime_vault_locked_until_unlock)
+            clipsEmpty.visibility = View.VISIBLE
+            return
+        }
         refreshClipsJob = scope.launch {
             val results = runCatching {
                 withContext(Dispatchers.IO) {
-                    repository.searchOnce(query, onlyFiles)
+                    repo.searchOnce(query, onlyFiles)
                 }
             }.getOrDefault(emptyList())
             if (!isActive) return@launch
@@ -422,7 +491,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     private fun learnTyped(word: String) {
-        if (terminalMode) return
+        if (terminalMode || !fullMode) return
         suggester.learn(word, enabled = KeyboardEnginePreferences.shouldLearn(this))
     }
 
@@ -904,6 +973,7 @@ class NullKeyImeService : InputMethodService(), KeyboardView.OnKeyboardActionLis
     }
 
     override fun onDestroy() {
+        unregisterUnlockReceiver()
         refreshClipsJob?.cancel()
         if (::keyboardEngineView.isInitialized) keyboardEngineView.resetEngine()
         scope.cancel()

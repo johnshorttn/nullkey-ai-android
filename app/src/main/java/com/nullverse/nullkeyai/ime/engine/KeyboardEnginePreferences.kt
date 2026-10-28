@@ -1,7 +1,10 @@
 package com.nullverse.nullkeyai.ime.engine
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.res.Configuration
+import com.nullverse.nullkeyai.boot.BootSettingsMirror
+import com.nullverse.nullkeyai.boot.DirectBootGate
 
 /**
  * IME renderer, input, and privacy/developer preferences. The custom engine is
@@ -33,7 +36,7 @@ object KeyboardEnginePreferences {
         prefs(context).getBoolean(KEY_CHORDING, true)
 
     fun setChordingEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_CHORDING, enabled).apply()
+        edit(context) { it.putBoolean(KEY_CHORDING, enabled) }
     }
 
     /** Auto terminal mode in Termux/JuiceSSH/ConnectBot and raw fields. On by default. */
@@ -41,7 +44,7 @@ object KeyboardEnginePreferences {
         prefs(context).getBoolean(KEY_TERMINAL_MODE_AUTO, true)
 
     fun setTerminalModeAuto(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_TERMINAL_MODE_AUTO, enabled).apply()
+        edit(context) { it.putBoolean(KEY_TERMINAL_MODE_AUTO, enabled) }
     }
 
     fun layoutMode(context: Context, orientation: LayoutOrientation): KeyboardLayoutMode {
@@ -52,14 +55,14 @@ object KeyboardEnginePreferences {
     }
 
     fun setLayoutMode(context: Context, orientation: LayoutOrientation, mode: KeyboardLayoutMode) {
-        prefs(context).edit().putString(layoutModeKey(orientation), mode.name).apply()
+        edit(context) { it.putString(layoutModeKey(orientation), mode.name) }
     }
 
     fun terminalRowEnabled(context: Context): Boolean =
         prefs(context).getBoolean(KEY_TERMINAL_ROW, false)
 
     fun setTerminalRowEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_TERMINAL_ROW, enabled).apply()
+        edit(context) { it.putBoolean(KEY_TERMINAL_ROW, enabled) }
     }
 
     fun layoutConfig(context: Context): KeyboardLayoutConfig = KeyboardLayoutConfig(
@@ -77,21 +80,21 @@ object KeyboardEnginePreferences {
         prefs(context).getBoolean(KEY_USE_CUSTOM_ENGINE, true)
 
     fun setUseCustomEngine(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_USE_CUSTOM_ENGINE, enabled).apply()
+        edit(context) { it.putBoolean(KEY_USE_CUSTOM_ENGINE, enabled) }
     }
 
     fun swipeTypingEnabled(context: Context): Boolean =
         prefs(context).getBoolean(KEY_SWIPE_TYPING, true)
 
     fun setSwipeTypingEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_SWIPE_TYPING, enabled).apply()
+        edit(context) { it.putBoolean(KEY_SWIPE_TYPING, enabled) }
     }
 
     fun themeId(context: Context): KeyboardThemeId =
         KeyboardThemeId.parse(prefs(context).getString(KEY_THEME, null))
 
     fun setThemeId(context: Context, themeId: KeyboardThemeId) {
-        prefs(context).edit().putString(KEY_THEME, themeId.name).apply()
+        edit(context) { it.putString(KEY_THEME, themeId.name) }
     }
 
     fun resolvedThemeId(context: Context): KeyboardThemeId {
@@ -106,23 +109,22 @@ object KeyboardEnginePreferences {
         )
 
     fun setHeightScale(context: Context, scale: Float) {
-        prefs(context).edit()
-            .putFloat(KEY_HEIGHT_SCALE, KeyboardInputSettings.clampHeightScale(scale))
-            .apply()
+        edit(context) { it
+            .putFloat(KEY_HEIGHT_SCALE, KeyboardInputSettings.clampHeightScale(scale)) }
     }
 
     fun hapticsEnabled(context: Context): Boolean =
         prefs(context).getBoolean(KEY_HAPTICS, true)
 
     fun setHapticsEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_HAPTICS, enabled).apply()
+        edit(context) { it.putBoolean(KEY_HAPTICS, enabled) }
     }
 
     fun soundEnabled(context: Context): Boolean =
         prefs(context).getBoolean(KEY_SOUND, false)
 
     fun setSoundEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_SOUND, enabled).apply()
+        edit(context) { it.putBoolean(KEY_SOUND, enabled) }
     }
 
     fun longPressMs(context: Context): Int =
@@ -131,9 +133,8 @@ object KeyboardEnginePreferences {
         )
 
     fun setLongPressMs(context: Context, ms: Int) {
-        prefs(context).edit()
-            .putInt(KEY_LONG_PRESS_MS, KeyboardInputSettings.clampLongPressMs(ms))
-            .apply()
+        edit(context) { it
+            .putInt(KEY_LONG_PRESS_MS, KeyboardInputSettings.clampLongPressMs(ms)) }
     }
 
     /**
@@ -144,26 +145,56 @@ object KeyboardEnginePreferences {
         prefs(context).getBoolean(KEY_CTRL_A_IN_TEXT_FIELDS, false)
 
     fun setCtrlAInTextFields(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_CTRL_A_IN_TEXT_FIELDS, enabled).apply()
+        edit(context) { it.putBoolean(KEY_CTRL_A_IN_TEXT_FIELDS, enabled) }
     }
 
+    /** Before the first unlock nothing is learned, so report incognito as on. */
     fun incognitoEnabled(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_INCOGNITO, false)
+        !DirectBootGate.isUserUnlocked(context) ||
+            credentialPrefs(context).getBoolean(KEY_INCOGNITO, false)
 
     fun setIncognitoEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_INCOGNITO, enabled).apply()
+        edit(context) { it.putBoolean(KEY_INCOGNITO, enabled) }
     }
 
     /** Learning is on unless the user opts into incognito / no-learn. */
     fun shouldLearn(context: Context): Boolean = !incognitoEnabled(context)
 
     fun developerOptionsEnabled(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_DEVELOPER_OPTIONS, false)
+        DirectBootGate.isUserUnlocked(context) &&
+            credentialPrefs(context).getBoolean(KEY_DEVELOPER_OPTIONS, false)
 
     fun setDeveloperOptionsEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_DEVELOPER_OPTIONS, enabled).apply()
+        edit(context) { it.putBoolean(KEY_DEVELOPER_OPTIONS, enabled) }
     }
 
-    private fun prefs(context: Context) =
+    /**
+     * Copy the non-sensitive subset into device-protected storage so the
+     * keyboard looks right on the lock screen after a reboot. No-op while locked.
+     */
+    fun syncBootMirror(context: Context) {
+        if (!DirectBootGate.isUserUnlocked(context)) return
+        BootSettingsMirror.sync(context, credentialPrefs(context))
+    }
+
+    /**
+     * Unlocked: the real settings in credential-encrypted storage. Before the
+     * first unlock (direct boot): the read-only [BootSettingsMirror].
+     */
+    private fun prefs(context: Context): SharedPreferences =
+        if (DirectBootGate.isUserUnlocked(context)) credentialPrefs(context)
+        else BootSettingsMirror.deviceProtectedPrefs(context)
+
+    private fun credentialPrefs(context: Context): SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    /** Settings never change before the first unlock; CE storage is untouched then. */
+    private inline fun edit(context: Context, block: (SharedPreferences.Editor) -> Unit) {
+        if (!DirectBootGate.isUserUnlocked(context)) return
+        val prefs = credentialPrefs(context)
+        val editor = prefs.edit()
+        block(editor)
+        editor.apply()
+        BootSettingsMirror.sync(context, prefs)
+    }
 }

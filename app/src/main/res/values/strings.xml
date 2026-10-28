@@ -46,6 +46,7 @@
     <string name="ime_status_disabled">Keyboard is not enabled. Tap Enable keyboard, then Switch keyboard.</string>
     <string name="ime_status_enabled">Keyboard is enabled. Tap Switch keyboard to make NullKey the current input method.</string>
     <string name="ime_status_selected">NullKey is the current keyboard.</string>
+    <string name="ime_vault_locked_until_unlock">Vault is unavailable until you unlock this device after a restart.</string>
     <string name="ime_protected_clip_blocked">Unlock this protected clip in Vault before pasting it.</string>
 
     <string name="monitor_channel_name">Clipboard monitor</string>

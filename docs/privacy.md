@@ -13,6 +13,10 @@ NullKey AI operates as an Android input method. Text you type is processed on th
 
 Features that can operate locally are designed to do so. This build has no network AI. Typed text is not transmitted to an external AI, cloud, analytics, or other service.
 
+## Keyboard after a restart
+
+The keyboard can start on the lock screen after a reboot, before you first unlock the device, so you can type your PIN or password. In that state it uses only a small copy of non-sensitive look-and-feel settings (layout, theme, height, vibration) kept in Android's device-protected storage. It does not open the Vault, show or capture clipboard history, learn or read learned words, run OCR, or write to encrypted app storage. No secrets or encryption keys are stored in device-protected storage. Full features return as soon as you unlock.
+
 ## Clipboard and Vault
 
 Clipboard items and Vault content are stored on the user's device as part of NullKey AI's core functionality. This build does not upload clipboard contents or Vault items to a cloud service, and it does not include cloud sync. Sensitive Vault or clipboard content is not intentionally included in diagnostics or public support reports.
