@@ -44,6 +44,17 @@
             android:exported="false"
             android:label="@string/clipboard_lab_title" />
 
+        <!-- Notification helper: invisible, own task, never in recents. -->
+        <activity
+            android:name=".ui.ShowKeyboardActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:launchMode="singleInstance"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:windowSoftInputMode="stateUnchanged|adjustNothing" />
+
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
